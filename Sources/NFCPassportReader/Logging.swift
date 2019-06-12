@@ -17,22 +17,22 @@ public enum LogLevel : Int {
     case error = 4
 }
 
-internal class log {
-    internal static var logLevel : LogLevel = .debug
+public class Log {
+    public static var logLevel : LogLevel = .debug
 
-    internal class func verbose( _ msg : String ) {
+    public class func verbose( _ msg : String ) {
         log( .verbose, msg )
     }
-    internal class func debug( _ msg : String ) {
+    public class func debug( _ msg : String ) {
         log( .debug, msg )
     }
-    internal class func info( _ msg : String ) {
+    public class func info( _ msg : String ) {
         log( .info, msg )
     }
-    internal class func warning( _ msg : String ) {
+    public class func warning( _ msg : String ) {
         log( .warning, msg )
     }
-    internal class func error( _ msg : String ) {
+    public class func error( _ msg : String ) {
         log( .error, msg )
     }
     

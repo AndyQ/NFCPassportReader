@@ -15,7 +15,6 @@
 		A16EB23D22A9E9E20008F53F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */; };
 		A16EB25522AEC1460008F53F /* DetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB25422AEC1460008F53F /* DetailViewController.swift */; };
 		A16FC0BF22B0279D00144B5B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16FC0BE22B0279D00144B5B /* ContentView.swift */; };
-		A16FC0C422B0F22C00144B5B /* NFCPassportReader in Frameworks */ = {isa = PBXBuildFile; productRef = A16FC0C322B0F22C00144B5B /* NFCPassportReader */; };
 		A16FC0CA22B11E7200144B5B /* NFCPassportReader in Frameworks */ = {isa = PBXBuildFile; productRef = A16FC0C922B11E7200144B5B /* NFCPassportReader */; };
 /* End PBXBuildFile section */
 
@@ -38,7 +37,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A16FC0C422B0F22C00144B5B /* NFCPassportReader in Frameworks */,
 				A16FC0CA22B11E7200144B5B /* NFCPassportReader in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -104,7 +102,6 @@
 			);
 			name = NFCPassportReaderApp;
 			packageProductDependencies = (
-				A16FC0C322B0F22C00144B5B /* NFCPassportReader */,
 				A16FC0C922B11E7200144B5B /* NFCPassportReader */,
 			);
 			productName = NFCTest;
@@ -386,10 +383,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		A16FC0C322B0F22C00144B5B /* NFCPassportReader */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = NFCPassportReader;
-		};
 		A16FC0C922B11E7200144B5B /* NFCPassportReader */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A16FC0C822B11E7200144B5B /* XCRemoteSwiftPackageReference "NFCPassportReader" */;

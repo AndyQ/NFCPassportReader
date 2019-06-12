@@ -136,19 +136,19 @@ public func mac(key : [UInt8], msg : [UInt8]) -> [UInt8]{
     
     for i in 0 ..< size {
         let tmp = [UInt8](msg[i*8 ..< i*8+8])
-        log.debug("x\(i): \(binToHexRep(tmp))" )
+        Log.debug("x\(i): \(binToHexRep(tmp))" )
         y = DESEncrypt(key: [UInt8](key[0..<8]), message: tmp, iv: y)
-        log.debug("y\(i): \(binToHexRep(y))" )
+        Log.debug("y\(i): \(binToHexRep(y))" )
     }
     
-    log.debug("y: \(binToHexRep(y))" )
-    log.debug("bkey: \(binToHexRep([UInt8](key[8..<16])))" )
-    log.debug("akey: \(binToHexRep([UInt8](key[0..<8])))" )
+    Log.debug("y: \(binToHexRep(y))" )
+    Log.debug("bkey: \(binToHexRep([UInt8](key[8..<16])))" )
+    Log.debug("akey: \(binToHexRep([UInt8](key[0..<8])))" )
     let iv : [UInt8] = [0,0,0,0,0,0,0,0]
     let b = DESDecrypt(key: [UInt8](key[8..<16]), message: y, iv: iv, options:UInt32(kCCOptionECBMode))
-    log.debug( "b: \(binToHexRep(b))" )
+    Log.debug( "b: \(binToHexRep(b))" )
     let a = DESEncrypt(key: [UInt8](key[0..<8]), message: b, iv: iv, options:UInt32(kCCOptionECBMode))
-    log.debug( "a: \(binToHexRep(a))" )
+    Log.debug( "a: \(binToHexRep(a))" )
     
     return a
 }

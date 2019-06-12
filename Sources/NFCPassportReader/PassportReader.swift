@@ -24,7 +24,7 @@ public class PassportReader : NSObject {
     public init( logLevel: LogLevel = .warning ) {
         super.init()
         
-        log.logLevel = logLevel
+        Log.logLevel = logLevel
     }
     
     public func readPassport( mrzKey : String, completed: @escaping (TagError?)->() ) {
@@ -51,19 +51,19 @@ extension PassportReader : NFCTagReaderSessionDelegate {
     public func tagReaderSessionDidBecomeActive(_ session: NFCTagReaderSession) {
         // If necessary, you may perform additional operations on session start.
         // At this point RF polling is enabled.
-        log.debug( "tagReaderSessionDidBecomeActive" )
+        Log.debug( "tagReaderSessionDidBecomeActive" )
     }
     
     public func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
         // If necessary, you may handle the error. Note session is no longer valid.
         // You must create a new session to restart RF polling.
-        log.debug( "tagReaderSession:didInvalidateWithError - \(error)" )
+        Log.debug( "tagReaderSession:didInvalidateWithError - \(error)" )
         self.readerSession = nil
         
     }
     
     public func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
-        log.debug( "tagReaderSession:didDetect - \(tags[0])" )
+        Log.debug( "tagReaderSession:didDetect - \(tags[0])" )
         if tags.count > 1 {
             session.alertMessage = "More than 1 tags was found. Please present only 1 tag."
             return
@@ -195,13 +195,13 @@ extension PassportReader {
                             let jpg = UIImage(data: iData)
                             
                             self.passportImage = jpg
-                            log.debug( "DONE" )
+                            Log.debug( "DONE" )
                             break
                         }
                     }
                 }
             } else if let err = error {
-                log.debug( "error - \(err.localizedDescription)" )
+                Log.debug( "error - \(err.localizedDescription)" )
             }
             completed( error )
         }

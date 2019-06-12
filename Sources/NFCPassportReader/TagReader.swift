@@ -110,7 +110,7 @@ public class TagReader {
                 leftToRead = Int(len)
                 let offset = o + 1
                 
-                log.info( "Amount of data to read - \(leftToRead)" )
+                Log.info( "Amount of data to read - \(leftToRead)" )
                 self.readBinaryData(leftToRead: leftToRead, amountRead: offset, completed: completed)
 
             }
@@ -141,11 +141,11 @@ public class TagReader {
                 completed( nil, err)
                 return
             }
-            log.debug( "got resp - \(response)" )
+            Log.debug( "got resp - \(response)" )
             self.header += response.data
             
             let remaining = leftToRead - response.data.count
-            log.info( "Amount of data left read - \(remaining)" )
+            Log.info( "Amount of data left read - \(remaining)" )
             if remaining > 0 {
                 self.readBinaryData(leftToRead: remaining, amountRead: amountRead + response.data.count, completed: completed )
             } else {
@@ -165,7 +165,7 @@ public class TagReader {
             } catch {
                 completed( nil, TagError.UnableToProtectAPDU )
             }
-            log.debug("[SM] \(toSend)" )
+            Log.debug("[SM] \(toSend)" )
         }
 
         tag.sendCommand(apdu: toSend) { [unowned self] (data, sw1, sw2, error) in
@@ -175,7 +175,7 @@ public class TagReader {
                 if let sm = self.secureMessaging {
                     do {
                         rep = try sm.unprotect(rapdu:rep)
-                        log.debug(String(format:"[SM] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
+                        Log.debug(String(format:"[SM] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
                     } catch {
                         completed( nil, TagError.UnableToUnprotectAPDU )
                         return
@@ -185,7 +185,7 @@ public class TagReader {
                 if rep.sw1 == 0x90 && rep.sw2 == 0x00 {
                     completed( rep, nil )
                 } else {
-                    log.error( "Error reading tag: sw1 - \(binToHexRep(sw1)), sw2 - \(binToHexRep(sw2))" )
+                    Log.error( "Error reading tag: sw1 - \(binToHexRep(sw1)), sw2 - \(binToHexRep(sw2))" )
                     completed( nil, TagError.InvalidResponse )
                 }
             }
