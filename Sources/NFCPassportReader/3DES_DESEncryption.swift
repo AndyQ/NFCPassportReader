@@ -55,7 +55,7 @@ public func tripleDESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8
         
         return [UInt8](cryptData)
     } else {
-        log.debug("Error: \(cryptStatus)")
+        Log.debug("Error: \(cryptStatus)")
     }
     return []
 }
@@ -103,7 +103,7 @@ public func tripleDESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8
         
         return [UInt8](cryptData)
     } else {
-        log.debug("Error: \(cryptStatus)")
+        Log.debug("Error: \(cryptStatus)")
     }
     return []
 }
@@ -149,7 +149,7 @@ public func DESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8], options:UInt32 
         
         return [UInt8](cryptData)
     } else {
-        log.debug("Error: \(cryptStatus)")
+        Log.debug("Error: \(cryptStatus)")
     }
     return []
 }
@@ -194,7 +194,7 @@ public func DESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8], options:UInt32 
         
         return [UInt8](cryptData)
     } else {
-        log.debug("Error: \(cryptStatus)")
+        Log.debug("Error: \(cryptStatus)")
     }
     return []
 }

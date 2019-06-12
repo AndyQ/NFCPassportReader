@@ -8,7 +8,7 @@
 
 import UIKit
 import NFCPassportReader
-
+import CoreNFC
 
 class ViewController: UIViewController {
     
@@ -23,8 +23,6 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // Set log level
-
         let d = UserDefaults.standard
         
         self.passportNrText.text = d.string(forKey: "passportNumber") ?? ""
