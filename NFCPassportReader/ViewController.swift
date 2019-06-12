@@ -18,15 +18,14 @@ class ViewController: UIViewController {
     @IBOutlet weak var dateOfBirthText: UITextField!
     @IBOutlet weak var passportExpiryText: UITextField!
 
-    var readerSession: NFCTagReaderSession?
+//    var readerSession: NFCTagReaderSession?
             
-    var passportReader : PassportReader?
+    var passportReader = PassportReader()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
         // Set log level
-        log.logLevel = .warning
 
         let d = UserDefaults.standard
         
@@ -46,33 +45,77 @@ class ViewController: UIViewController {
     @IBAction func scanTag(_ sender: Any) {
         self.view.endEditing(true)
 
+        guard let passportNr = self.passportNrText.text, passportNr.count > 8,
+            let dateOfBirth = self.dateOfBirthText.text, dateOfBirth.count == 6,
+            let expiryDate = self.passportExpiryText.text, expiryDate.count == 6 else {
+                
+                let alertController = UIAlertController( title: "Invalid Passport details", message:"The passport details specified are invalid. Please check", preferredStyle: .alert)
+                alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                self.present(alertController, animated: true, completion: nil)
+
+                return
+        }
+
         // Store last entered details
         let d = UserDefaults.standard
-        d.set(self.passportNrText.text, forKey: "passportNumber")
-        d.set(self.dateOfBirthText.text, forKey: "dateOfBirth")
-        d.set(self.passportExpiryText.text, forKey: "expiryDate")
+        d.set(passportNr, forKey: "passportNumber")
+        d.set(dateOfBirth, forKey: "dateOfBirth")
+        d.set(expiryDate, forKey: "expiryDate")
         
-        guard NFCNDEFReaderSession.readingAvailable else {
-            let alertController = UIAlertController(
-                title: "Scanning Not Supported",
-                message: "This device doesn't support tag scanning.",
-                preferredStyle: .alert
-            )
-            alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
-            self.present(alertController, animated: true, completion: nil)
-            return
-        }
+        // Calculate checksums
+        let passportNrChksum = calcCheckSum(self.passportNrText.text!)
+        let dateOfBirthChksum = calcCheckSum(self.dateOfBirthText.text!)
+        let expiryDateChksum = calcCheckSum(self.passportExpiryText.text!)
+
+        let mrzKey = "\(passportNr)\(passportNrChksum)\(dateOfBirth)\(dateOfBirthChksum)\(expiryDate)\(expiryDateChksum)"
         
-        if NFCTagReaderSession.readingAvailable {
-            readerSession = NFCTagReaderSession(pollingOption: [.iso14443], delegate: self, queue: nil)
-            readerSession?.alertMessage = "Hold your iPhone near an NFC enabled passport."
-            readerSession?.begin()
-        }
+        passportReader.readPassport(mrzKey: mrzKey, completed: { (error) in
+            if let error = error {
+                var title : String
+                var message : String
+                if error == .NFCNotSupported {
+                    title = "Scanning Not Supported"
+                    message = "This device doesn't support tag scanning."
+                } else {
+                    title = "Problem reading passport"
+                    message = "\(error)"
+                }
+                
+                DispatchQueue.main.async {
+                    let alertController = UIAlertController( title: title, message:message, preferredStyle: .alert)
+                    alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                    self.present(alertController, animated: true, completion: nil)
+                }
+
+
+            } else {
+                DispatchQueue.main.async {
+                    self.performSegue(withIdentifier: "ShowPassport", sender: self)
+                }
+
+            }
+        })
     }
     
+    func calcCheckSum( _ checkString : String ) -> Int {
+        let characterDict  = ["0" : "0", "1" : "1", "2" : "2", "3" : "3", "4" : "4", "5" : "5", "6" : "6", "7" : "7", "8" : "8", "9" : "9", "<" : "0", " " : "0", "A" : "10", "B" : "11", "C" : "12", "D" : "13", "E" : "14", "F" : "15", "G" : "16", "H" : "17", "I" : "18", "J" : "19", "K" : "20", "L" : "21", "M" : "22", "N" : "23", "O" : "24", "P" : "25", "Q" : "26", "R" : "27", "S" : "28","T" : "29", "U" : "30", "V" : "31", "W" : "32", "X" : "33", "Y" : "34", "Z" : "35"]
+
+        var sum = 0
+        var m = 0
+        let multipliers : [Int] = [7, 3, 1]
+        for c in checkString {
+            guard let lookup = characterDict["\(c)"],
+                let number = Int(lookup) else { return 0 }
+            let product = number * multipliers[m]
+            sum += product
+            m = (m+1) % 3
+        }
+            
+        return (sum % 10)
+    }
     
     @IBSegueAction func prepareDetailsView(_ coder: NSCoder) -> DetailViewController? {
-        return DetailViewController(coder: coder, mrz:passportReader?.passportMRZ, image:passportReader?.passportImage)
+        return DetailViewController(coder: coder, mrz:passportReader.passportMRZ, image:passportReader.passportImage)
     }
 }
 
@@ -82,71 +125,3 @@ extension ViewController : UITextFieldDelegate {
     }
 
 }
-
-extension ViewController : NFCTagReaderSessionDelegate {
-    // MARK: - NFCTagReaderSessionDelegate
-    func tagReaderSessionDidBecomeActive(_ session: NFCTagReaderSession) {
-        // If necessary, you may perform additional operations on session start.
-        // At this point RF polling is enabled.
-        log.debug( "tagReaderSessionDidBecomeActive" )
-    }
-    
-    func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
-        // If necessary, you may handle the error. Note session is no longer valid.
-        // You must create a new session to restart RF polling.
-        log.debug( "tagReaderSession:didInvalidateWithError - \(error)" )
-        self.readerSession = nil
-    }
-    
-    func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
-        log.debug( "tagReaderSession:didDetect - \(tags[0])" )
-        if tags.count > 1 {
-            session.alertMessage = "More than 1 tags was found. Please present only 1 tag."
-            return
-        }
-        
-        let tag = tags.first!
-        var ppttag: NFCISO7816Tag
-        switch tags.first! {
-        case let .iso7816(tag):
-            ppttag = tag
-        default:
-            session.invalidate(errorMessage: "Tag not valid.")
-            return
-        }
-
-        // Connect to tag
-        session.connect(to: tag) { [unowned self] (error: Error?) in
-            if error != nil {
-                session.invalidate(errorMessage: "Connection error. Please try again.")
-                return
-            }
-            
-            self.readerSession?.alertMessage = "Authenticating with passport....."
-
-            var mrzKey : String = ""
-            DispatchQueue.main.sync {
-                mrzKey = self.passportNrText.text! + self.dateOfBirthText.text! + self.passportExpiryText.text!
-            }
-
-            self.passportReader = PassportReader( passportTag:ppttag )
-            self.passportReader?.sendUpdateMessage = { [unowned self] msg in
-                self.readerSession?.alertMessage = msg
-            }
-            
-            self.passportReader?.readPassport(mrzKey: mrzKey, completed: { (error) in
-                if error == nil {
-                    session.invalidate()
-                    DispatchQueue.main.async {
-                        self.performSegue(withIdentifier: "ShowPassport", sender: self)
-                    }
-                } else {
-                    session.invalidate(errorMessage: "Sorry, there was a problem reading the passport. Please try again" )
-
-                }
-
-            })
-        }
-    }
-}
-

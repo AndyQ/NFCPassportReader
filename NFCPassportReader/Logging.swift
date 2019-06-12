@@ -18,7 +18,7 @@ enum LogLevel : Int {
 }
 
 class log {
-    static var logLevel : LogLevel = .info
+    static var logLevel : LogLevel = .debug
 
     class func verbose( _ msg : String ) {
         log( .verbose, msg )

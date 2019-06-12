@@ -31,9 +31,9 @@ class BACHandler {
         self.tagReader = tagReader
     }
 
-    func performBACAndGetSessionKeys( mrzKey : String, completed: @escaping (_ success : Bool, _ error : Error?)->() ) {
+    func performBACAndGetSessionKeys( mrzKey : String, completed: @escaping (_ error : TagError?)->() ) {
         guard let tagReader = self.tagReader else {
-            completed( false, TagError.noConnectedTag)
+            completed( TagError.noConnectedTag)
             return
         }
         
@@ -44,7 +44,7 @@ class BACHandler {
             
             guard let response = response else {
                 log.debug( "ERROR - \(error?.localizedDescription ?? "")" )
-                completed( false, error )
+                completed( error )
                 return
             }
             
@@ -53,14 +53,14 @@ class BACHandler {
             tagReader.doMutualAuthentication(cmdData: Data(cmd_data)) { [unowned self] (response, error) in
                 guard let response = response else {
                     log.debug( "ERROR - \(error?.localizedDescription ?? "")" )
-                    completed( false, error )
+                    completed( error )
                     return
                 }
                 log.debug( "DATA - \(response.data)" )
                 
                 let (KSenc, KSmac, ssc) = self.sessionKeys(data: [UInt8](response.data))
                 tagReader.secureMessaging = SecureMessaging(ksenc: KSenc, ksmac: KSmac, ssc: ssc)
-                completed( true, nil)
+                completed( nil)
             }
         }
     }

@@ -10,6 +10,7 @@ import Foundation
 import CoreNFC
 
 enum TagError: Error {
+    case NFCNotSupported
     case noConnectedTag
     case InvalidResponse
     case D087Malformed
@@ -48,36 +49,39 @@ class TagReader {
         self.tag = tag
     }
 
-    func readDataGroup( dataGroup: DataGroup, completed: @escaping ([UInt8]?, Error?)->() )  throws {
-        guard let tag = DGMap[dataGroup] else { throw TagError.UnsupportedDataGroup }
+    func readDataGroup( dataGroup: DataGroup, completed: @escaping ([UInt8]?, TagError?)->() )  {
+        guard let tag = DGMap[dataGroup] else {
+            completed(nil, TagError.UnsupportedDataGroup)
+            return
+        }
         
         selectFileAndRead(tag: tag, completed:completed )
     }
     
-    func getChallenge( completed: @escaping (ResponseAPDU?, Error?)->() ) {
+    func getChallenge( completed: @escaping (ResponseAPDU?, TagError?)->() ) {
         let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x84, p1Parameter: 0, p2Parameter: 0, data: Data(), expectedResponseLength: 8)
         
         send( cmd: cmd, completed: completed )
     }
 
-    func doMutualAuthentication( cmdData : Data, completed: @escaping (ResponseAPDU?, Error?)->() ) {
+    func doMutualAuthentication( cmdData : Data, completed: @escaping (ResponseAPDU?, TagError?)->() ) {
         let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x82, p1Parameter: 0, p2Parameter: 0, data: cmdData, expectedResponseLength: 40)
 
         send( cmd: cmd, completed: completed )
     }
     
 
-    func readCOM( completed: @escaping ([UInt8]?, Error?)->() ) {
+    func readCOM( completed: @escaping ([UInt8]?, TagError?)->() ) {
         selectFileAndRead(tag: [0x01,0x1E], completed:completed )
     }
     
-    func readDG1( completed: @escaping ([UInt8]?, Error?)->() ) {
+    func readDG1( completed: @escaping ([UInt8]?, TagError?)->() ) {
         selectFileAndRead(tag: [0x01,0x02], completed:completed )
     }
     
     
     var header = [UInt8]()
-    func selectFileAndRead( tag: [UInt8], completed: @escaping ([UInt8]?, Error?)->() ) {
+    func selectFileAndRead( tag: [UInt8], completed: @escaping ([UInt8]?, TagError?)->() ) {
         selectFile(tag: tag ) { [unowned self] (resp,err) in
             
             // Read first 4 bytes of header to see how big the data structure is
@@ -91,10 +95,10 @@ class TagReader {
                 // Header looks like:  <tag><length of data><nextTag> e.g.60145F01 -
                 // the total length is the 2nd value plus the two header 2 bytes
                 // We've read 4 bytes so we now need to read the remaining bytes from offset 4
-                self.header = response.data
+                self.header = []//response.data
                 var leftToRead = 0
                 
-                let (len, o) = try! asn1Length(data: [UInt8](self.header[1..<4]))
+                let (len, o) = try! asn1Length(data: [UInt8](response.data[1..<4]))
                 leftToRead = Int(len)
                 let offset = o + 1
                 
@@ -105,7 +109,7 @@ class TagReader {
         }
     }
     
-    func selectFile( tag: [UInt8], completed: @escaping (ResponseAPDU?, Error?)->() ) {
+    func selectFile( tag: [UInt8], completed: @escaping (ResponseAPDU?, TagError?)->() ) {
         
         let data : [UInt8] = [0x00, 0xA4, 0x02, 0x0C, 0x02] + tag
         let cmd = NFCISO7816APDU(data:Data(data))!
@@ -113,7 +117,7 @@ class TagReader {
         send( cmd: cmd, completed: completed )
     }
 
-    func readBinaryData( leftToRead: Int, amountRead : Int, completed: @escaping ([UInt8]?, Error?)->() ) {
+    func readBinaryData( leftToRead: Int, amountRead : Int, completed: @escaping ([UInt8]?, TagError?)->() ) {
         let maxSize : UInt8 = 0xDF
         var readAmount : UInt8 = maxSize
         if leftToRead < maxSize {
@@ -144,7 +148,7 @@ class TagReader {
     }
 
     
-    func send( cmd: NFCISO7816APDU, completed: @escaping (ResponseAPDU?, Error?)->() ) {
+    func send( cmd: NFCISO7816APDU, completed: @escaping (ResponseAPDU?, TagError?)->() ) {
         
         var toSend = cmd
         if let sm = secureMessaging {
