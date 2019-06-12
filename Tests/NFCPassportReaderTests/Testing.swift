@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import NFCPassportReader
 import CoreNFC
 
 /// Just a quick class for testing stuff

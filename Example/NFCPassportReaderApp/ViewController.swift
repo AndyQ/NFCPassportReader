@@ -7,9 +7,7 @@
 //
 
 import UIKit
-import CoreNFC
-import CryptoKit
-
+import NFCPassportReader
 
 
 class ViewController: UIViewController {

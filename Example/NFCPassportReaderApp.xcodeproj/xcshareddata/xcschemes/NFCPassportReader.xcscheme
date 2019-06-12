@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A16EB22C22A9E9E10008F53F"
-               BuildableName = "NFCPassportReader.app"
-               BlueprintName = "NFCPassportReader"
-               ReferencedContainer = "container:NFCPassportReader.xcodeproj">
+               BuildableName = "NFCPassportReaderApp.app"
+               BlueprintName = "NFCPassportReaderApp"
+               ReferencedContainer = "container:NFCPassportReaderApp.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A16EB22C22A9E9E10008F53F"
-            BuildableName = "NFCPassportReader.app"
-            BlueprintName = "NFCPassportReader"
-            ReferencedContainer = "container:NFCPassportReader.xcodeproj">
+            BuildableName = "NFCPassportReaderApp.app"
+            BlueprintName = "NFCPassportReaderApp"
+            ReferencedContainer = "container:NFCPassportReaderApp.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A16EB22C22A9E9E10008F53F"
-            BuildableName = "NFCPassportReader.app"
-            BlueprintName = "NFCPassportReader"
-            ReferencedContainer = "container:NFCPassportReader.xcodeproj">
+            BuildableName = "NFCPassportReaderApp.app"
+            BlueprintName = "NFCPassportReaderApp"
+            ReferencedContainer = "container:NFCPassportReaderApp.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

@@ -9,7 +9,7 @@
 import Foundation
 
 // TODO: Quick log functions - will move this to something better
-enum LogLevel : Int {
+public enum LogLevel : Int {
     case verbose = 0
     case debug = 1
     case info = 2
@@ -17,22 +17,22 @@ enum LogLevel : Int {
     case error = 4
 }
 
-class log {
-    static var logLevel : LogLevel = .debug
+internal class log {
+    internal static var logLevel : LogLevel = .debug
 
-    class func verbose( _ msg : String ) {
+    internal class func verbose( _ msg : String ) {
         log( .verbose, msg )
     }
-    class func debug( _ msg : String ) {
+    internal class func debug( _ msg : String ) {
         log( .debug, msg )
     }
-    class func info( _ msg : String ) {
+    internal class func info( _ msg : String ) {
         log( .info, msg )
     }
-    class func warning( _ msg : String ) {
+    internal class func warning( _ msg : String ) {
         log( .warning, msg )
     }
-    class func error( _ msg : String ) {
+    internal class func error( _ msg : String ) {
         log( .error, msg )
     }
     

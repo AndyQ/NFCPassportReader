@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import CommonCrypto
 
 extension FileManager {
     static var documentDir : URL {
@@ -34,7 +35,7 @@ extension StringProtocol {
 }
 
 
-func binToHexRep( _ val : [UInt8] ) -> String {
+public func binToHexRep( _ val : [UInt8] ) -> String {
     var string = ""
     for x in val {
         string += String(format:"%02x", x )
@@ -42,27 +43,27 @@ func binToHexRep( _ val : [UInt8] ) -> String {
     return string.uppercased()
 }
 
-func binToHexRep( _ val : UInt8 ) -> String {
+public func binToHexRep( _ val : UInt8 ) -> String {
     let string = String(format:"%02x", val ).uppercased()
     return string
 }
 
-func binToHex( _ val: UInt8 ) -> UInt32 {
+public func binToHex( _ val: UInt8 ) -> UInt32 {
     let hexRep = String(format:"%02X", val)
     return UInt32(hexRep, radix:16)!
 }
 
-func binToHex( _ val: [UInt8] ) -> UInt64 {
+public func binToHex( _ val: [UInt8] ) -> UInt64 {
     let hexVal = UInt64(binToHexRep(val), radix:16)!
     return hexVal
 }
 
-func hexToBin( _ val : UInt64 ) -> [UInt8] {
+public func hexToBin( _ val : UInt64 ) -> [UInt8] {
     let hexRep = String(format:"%lx", val)
     return hexRepToBin( hexRep)
 }
 
-func intToBin(_ data : Int, pad : Int = 2) -> [UInt8] {
+public func intToBin(_ data : Int, pad : Int = 2) -> [UInt8] {
     if pad == 2 {
         let hex = String(format:"%02x", data)
         return hexRepToBin(hex)
@@ -74,7 +75,7 @@ func intToBin(_ data : Int, pad : Int = 2) -> [UInt8] {
 }
 
 /// 'AABB' --> \xaa\xbb'"""
-func hexRepToBin(_ val : String) -> [UInt8] {
+public func hexRepToBin(_ val : String) -> [UInt8] {
     var output : [UInt8] = []
     var x = 0
     while x < val.count {
@@ -89,7 +90,7 @@ func hexRepToBin(_ val : String) -> [UInt8] {
     return output
 }
 
-func xor(_ kifd : [UInt8], _ response_kicc : [UInt8] ) -> [UInt8] {
+public func xor(_ kifd : [UInt8], _ response_kicc : [UInt8] ) -> [UInt8] {
     var kseed = [UInt8]()
     for i in 0 ..< kifd.count {
         kseed.append( kifd[i] ^ response_kicc[i] )
@@ -97,7 +98,7 @@ func xor(_ kifd : [UInt8], _ response_kicc : [UInt8] ) -> [UInt8] {
     return kseed
 }
 
-func generateRandomUInt8Array( _ size: Int ) -> [UInt8] {
+public func generateRandomUInt8Array( _ size: Int ) -> [UInt8] {
     
     var ret : [UInt8] = []
     for _ in 0 ..< size {
@@ -106,14 +107,14 @@ func generateRandomUInt8Array( _ size: Int ) -> [UInt8] {
     return ret
 }
 
-func pad(_ toPad : [UInt8]) -> [UInt8] {
+public func pad(_ toPad : [UInt8]) -> [UInt8] {
     let size = 8
     let padBlock : [UInt8] = [0x80, 0, 0, 0, 0, 0, 0, 0]
     let left = size - (toPad.count % size)
     return (toPad + [UInt8](padBlock[0 ..< left]))
 }
 
-func unpad( _ tounpad : [UInt8]) -> [UInt8] {
+public func unpad( _ tounpad : [UInt8]) -> [UInt8] {
     var i = tounpad.count-1
     while tounpad[i] == 0x00 {
         i -= 1
@@ -127,7 +128,7 @@ func unpad( _ tounpad : [UInt8]) -> [UInt8] {
     }
 }
 
-func mac(key : [UInt8], msg : [UInt8]) -> [UInt8]{
+public func mac(key : [UInt8], msg : [UInt8]) -> [UInt8]{
     
     let size = msg.count / 8
     var y : [UInt8] = [0,0,0,0,0,0,0,0]
@@ -152,7 +153,7 @@ func mac(key : [UInt8], msg : [UInt8]) -> [UInt8]{
     return a
 }
     
-func asn1Length(data : [UInt8]) throws -> (UInt64, Int)  {
+public func asn1Length(data : [UInt8]) throws -> (UInt64, Int)  {
     if data[0] <= 0x7F {
         return (UInt64(binToHex(data[0])), 1)
     }
@@ -181,7 +182,7 @@ func asn1Length(data : [UInt8]) throws -> (UInt64, Int)  {
 /// @return: The asn.1 encoded value
 /// @rtype: A binary string
 /// @raise asn1Exception: If the parameter is too big, must be >= 0 and <= FFFF
-func toAsn1Length(data : UInt64) throws -> [UInt8] {
+public func toAsn1Length(data : UInt64) throws -> [UInt8] {
     if data <= 0x7F {
         return hexToBin(data)
     }

@@ -14,13 +14,13 @@ import CoreNFC
 /// It gives a new transmit method that takes an APDU object formed by the iso7816 layer,
 /// ciphers it following the doc9303 specification, sends the ciphered APDU to the reader
 /// layer and returns the unciphered APDU.
-class SecureMessaging {
+public class SecureMessaging {
     private var ksenc : [UInt8]
     private var ksmac : [UInt8]
     private var ssc : [UInt8]
     
     
-    init(ksenc : [UInt8], ksmac : [UInt8], ssc : [UInt8]) {
+    public init(ksenc : [UInt8], ksmac : [UInt8], ssc : [UInt8]) {
         self.ksenc = ksenc
         self.ksmac = ksmac
         self.ssc = ssc

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -13,20 +13,13 @@
 		A16EB23822A9E9E10008F53F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A16EB23622A9E9E10008F53F /* Main.storyboard */; };
 		A16EB23A22A9E9E20008F53F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A16EB23922A9E9E20008F53F /* Assets.xcassets */; };
 		A16EB23D22A9E9E20008F53F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */; };
-		A16EB24622AB04140008F53F /* BACHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB24522AB04140008F53F /* BACHandler.swift */; };
-		A16EB24822AB3D770008F53F /* 3DES_DESEncryption.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB24722AB3D770008F53F /* 3DES_DESEncryption.swift */; };
-		A16EB25022AD9FFD0008F53F /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB24F22AD9FFD0008F53F /* Utils.swift */; };
-		A16EB25122ADA0480008F53F /* SecureMessaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB24D22AD2F460008F53F /* SecureMessaging.swift */; };
-		A16EB25322ADA5410008F53F /* TagReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB25222ADA5410008F53F /* TagReader.swift */; };
 		A16EB25522AEC1460008F53F /* DetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB25422AEC1460008F53F /* DetailViewController.swift */; };
-		A16FC0B922AF91BE00144B5B /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16FC0B822AF91BE00144B5B /* Logging.swift */; };
-		A16FC0BB22AFA71E00144B5B /* Testing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16FC0BA22AFA71E00144B5B /* Testing.swift */; };
-		A16FC0BD22AFB25300144B5B /* PassportReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16FC0BC22AFB25300144B5B /* PassportReader.swift */; };
 		A16FC0BF22B0279D00144B5B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16FC0BE22B0279D00144B5B /* ContentView.swift */; };
+		A16FC0C422B0F22C00144B5B /* NFCPassportReader in Frameworks */ = {isa = PBXBuildFile; productRef = A16FC0C322B0F22C00144B5B /* NFCPassportReader */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		A16EB22D22A9E9E10008F53F /* NFCPassportReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NFCPassportReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NFCPassportReaderApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A16EB23022A9E9E10008F53F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A16EB23222A9E9E10008F53F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		A16EB23422A9E9E10008F53F /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -35,16 +28,8 @@
 		A16EB23C22A9E9E20008F53F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		A16EB23E22A9E9E20008F53F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A16EB24422A9EA000008F53F /* NFCPassportReader.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NFCPassportReader.entitlements; sourceTree = "<group>"; };
-		A16EB24522AB04140008F53F /* BACHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BACHandler.swift; sourceTree = "<group>"; };
-		A16EB24722AB3D770008F53F /* 3DES_DESEncryption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = 3DES_DESEncryption.swift; sourceTree = "<group>"; };
 		A16EB24922AB3EE00008F53F /* NFCPassportReader-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NFCPassportReader-Bridging-Header.h"; sourceTree = "<group>"; };
-		A16EB24D22AD2F460008F53F /* SecureMessaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureMessaging.swift; sourceTree = "<group>"; };
-		A16EB24F22AD9FFD0008F53F /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
-		A16EB25222ADA5410008F53F /* TagReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagReader.swift; sourceTree = "<group>"; };
 		A16EB25422AEC1460008F53F /* DetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViewController.swift; sourceTree = "<group>"; };
-		A16FC0B822AF91BE00144B5B /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
-		A16FC0BA22AFA71E00144B5B /* Testing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Testing.swift; sourceTree = "<group>"; };
-		A16FC0BC22AFB25300144B5B /* PassportReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassportReader.swift; sourceTree = "<group>"; };
 		A16FC0BE22B0279D00144B5B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -53,6 +38,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A16FC0C422B0F22C00144B5B /* NFCPassportReader in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -62,59 +48,51 @@
 		A16EB22422A9E9E10008F53F = {
 			isa = PBXGroup;
 			children = (
-				A16EB22F22A9E9E10008F53F /* NFCPassportReader */,
+				A16EB22F22A9E9E10008F53F /* NFCPassportReaderApp */,
 				A16EB22E22A9E9E10008F53F /* Products */,
+				A16FC0C222B0F22C00144B5B /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
 		A16EB22E22A9E9E10008F53F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A16EB22D22A9E9E10008F53F /* NFCPassportReader.app */,
+				A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		A16EB22F22A9E9E10008F53F /* NFCPassportReader */ = {
+		A16EB22F22A9E9E10008F53F /* NFCPassportReaderApp */ = {
 			isa = PBXGroup;
 			children = (
 				A16EB24422A9EA000008F53F /* NFCPassportReader.entitlements */,
-				A16FC0C022B0DC4100144B5B /* PassportReading */,
 				A16EB23022A9E9E10008F53F /* AppDelegate.swift */,
 				A16EB23222A9E9E10008F53F /* SceneDelegate.swift */,
 				A16FC0BE22B0279D00144B5B /* ContentView.swift */,
 				A16EB23422A9E9E10008F53F /* ViewController.swift */,
 				A16EB25422AEC1460008F53F /* DetailViewController.swift */,
-				A16FC0B822AF91BE00144B5B /* Logging.swift */,
 				A16EB23622A9E9E10008F53F /* Main.storyboard */,
-				A16FC0BA22AFA71E00144B5B /* Testing.swift */,
 				A16EB23922A9E9E20008F53F /* Assets.xcassets */,
 				A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */,
 				A16EB23E22A9E9E20008F53F /* Info.plist */,
 				A16EB24922AB3EE00008F53F /* NFCPassportReader-Bridging-Header.h */,
 			);
-			path = NFCPassportReader;
+			path = NFCPassportReaderApp;
 			sourceTree = "<group>";
 		};
-		A16FC0C022B0DC4100144B5B /* PassportReading */ = {
+		A16FC0C222B0F22C00144B5B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				A16FC0BC22AFB25300144B5B /* PassportReader.swift */,
-				A16EB25222ADA5410008F53F /* TagReader.swift */,
-				A16EB24522AB04140008F53F /* BACHandler.swift */,
-				A16EB24D22AD2F460008F53F /* SecureMessaging.swift */,
-				A16EB24722AB3D770008F53F /* 3DES_DESEncryption.swift */,
-				A16EB24F22AD9FFD0008F53F /* Utils.swift */,
 			);
-			path = PassportReading;
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A16EB22C22A9E9E10008F53F /* NFCPassportReader */ = {
+		A16EB22C22A9E9E10008F53F /* NFCPassportReaderApp */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A16EB24122A9E9E20008F53F /* Build configuration list for PBXNativeTarget "NFCPassportReader" */;
+			buildConfigurationList = A16EB24122A9E9E20008F53F /* Build configuration list for PBXNativeTarget "NFCPassportReaderApp" */;
 			buildPhases = (
 				A16EB22922A9E9E10008F53F /* Sources */,
 				A16EB22A22A9E9E10008F53F /* Frameworks */,
@@ -124,9 +102,12 @@
 			);
 			dependencies = (
 			);
-			name = NFCPassportReader;
+			name = NFCPassportReaderApp;
+			packageProductDependencies = (
+				A16FC0C322B0F22C00144B5B /* NFCPassportReader */,
+			);
 			productName = NFCTest;
-			productReference = A16EB22D22A9E9E10008F53F /* NFCPassportReader.app */;
+			productReference = A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -145,7 +126,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A16EB22822A9E9E10008F53F /* Build configuration list for PBXProject "NFCPassportReader" */;
+			buildConfigurationList = A16EB22822A9E9E10008F53F /* Build configuration list for PBXProject "NFCPassportReaderApp" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -154,11 +135,13 @@
 				Base,
 			);
 			mainGroup = A16EB22422A9E9E10008F53F;
+			packageReferences = (
+			);
 			productRefGroup = A16EB22E22A9E9E10008F53F /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A16EB22C22A9E9E10008F53F /* NFCPassportReader */,
+				A16EB22C22A9E9E10008F53F /* NFCPassportReaderApp */,
 			);
 		};
 /* End PBXProject section */
@@ -182,18 +165,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				A16EB25522AEC1460008F53F /* DetailViewController.swift in Sources */,
-				A16FC0B922AF91BE00144B5B /* Logging.swift in Sources */,
-				A16FC0BD22AFB25300144B5B /* PassportReader.swift in Sources */,
 				A16EB23522A9E9E10008F53F /* ViewController.swift in Sources */,
 				A16EB23122A9E9E10008F53F /* AppDelegate.swift in Sources */,
 				A16EB23322A9E9E10008F53F /* SceneDelegate.swift in Sources */,
-				A16EB25122ADA0480008F53F /* SecureMessaging.swift in Sources */,
-				A16EB24822AB3D770008F53F /* 3DES_DESEncryption.swift in Sources */,
-				A16FC0BB22AFA71E00144B5B /* Testing.swift in Sources */,
-				A16EB25322ADA5410008F53F /* TagReader.swift in Sources */,
 				A16FC0BF22B0279D00144B5B /* ContentView.swift in Sources */,
-				A16EB24622AB04140008F53F /* BACHandler.swift in Sources */,
-				A16EB25022AD9FFD0008F53F /* Utils.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -338,17 +313,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = NFCPassportReader/NFCPassportReader.entitlements;
+				CODE_SIGN_ENTITLEMENTS = NFCPassportReaderApp/NFCPassportReader.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = A4ZM73UFF5;
-				INFOPLIST_FILE = NFCPassportReader/Info.plist;
+				INFOPLIST_FILE = NFCPassportReaderApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.andyqua.nfcpassportreader;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = "NFCPassportReader/NFCPassportReader-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "NFCPassportReaderApp/NFCPassportReader-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -360,17 +335,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = NFCPassportReader/NFCPassportReader.entitlements;
+				CODE_SIGN_ENTITLEMENTS = NFCPassportReaderApp/NFCPassportReader.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = A4ZM73UFF5;
-				INFOPLIST_FILE = NFCPassportReader/Info.plist;
+				INFOPLIST_FILE = NFCPassportReaderApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.andyqua.nfcpassportreader;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = "NFCPassportReader/NFCPassportReader-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "NFCPassportReaderApp/NFCPassportReader-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -379,7 +354,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A16EB22822A9E9E10008F53F /* Build configuration list for PBXProject "NFCPassportReader" */ = {
+		A16EB22822A9E9E10008F53F /* Build configuration list for PBXProject "NFCPassportReaderApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A16EB23F22A9E9E20008F53F /* Debug */,
@@ -388,7 +363,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A16EB24122A9E9E20008F53F /* Build configuration list for PBXNativeTarget "NFCPassportReader" */ = {
+		A16EB24122A9E9E20008F53F /* Build configuration list for PBXNativeTarget "NFCPassportReaderApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A16EB24222A9E9E20008F53F /* Debug */,
@@ -398,6 +373,13 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A16FC0C322B0F22C00144B5B /* NFCPassportReader */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NFCPassportReader;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A16EB22522A9E9E10008F53F /* Project object */;
 }

@@ -9,7 +9,7 @@
 import Foundation
 import CoreNFC
 
-enum TagError: Error {
+public enum TagError: Error {
     case NFCNotSupported
     case noConnectedTag
     case InvalidResponse
@@ -23,7 +23,7 @@ enum TagError: Error {
     case UnsupportedDataGroup
 }
 
-enum DataGroup {
+public enum DataGroup {
     case COM
     case DG1
     case DG2
@@ -35,13 +35,21 @@ private let DGMap : [DataGroup: [UInt8]] = [
     .DG2 : [0x01,0x02]
 ]
 
-struct ResponseAPDU {
-    var data : [UInt8]
-    var sw1 : UInt8
-    var sw2 : UInt8
+
+public struct ResponseAPDU {
+    
+    public var data : [UInt8]
+    public var sw1 : UInt8
+    public var sw2 : UInt8
+
+    public init(data: [UInt8], sw1: UInt8, sw2: UInt8) {
+        self.data = data
+        self.sw1 = sw1
+        self.sw2 = sw2
+    }
 }
 
-class TagReader {
+public class TagReader {
     var tag : NFCISO7816Tag
     var secureMessaging : SecureMessaging?
 

@@ -7,9 +7,10 @@
 //
 
 import Foundation
+import CommonCrypto
 
 
-func tripleDESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
+public func tripleDESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
     // Fix key data - if length is 16 then take the first 98 bytes and append them to the end to make 24 bytes
     var fixedKey = key
     if key.count == 16 {
@@ -59,7 +60,7 @@ func tripleDESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
     return []
 }
 
-func tripleDESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
+public func tripleDESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
     var fixedKey = key
     if key.count == 16 {
         fixedKey += key[0..<8]
@@ -108,7 +109,7 @@ func tripleDESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
 }
 
 
-func DESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8], options:UInt32 = 0) -> [UInt8] {
+public func DESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8], options:UInt32 = 0) -> [UInt8] {
     
     let dataLength = message.count
     
@@ -153,7 +154,7 @@ func DESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8], options:UInt32 = 0) ->
     return []
 }
 
-func DESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8], options:UInt32 = 0) -> [UInt8] {
+public func DESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8], options:UInt32 = 0) -> [UInt8] {
     
     let dataLength = message.count
     

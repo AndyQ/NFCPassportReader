@@ -10,28 +10,28 @@ import Foundation
 import CryptoKit
 import CoreNFC
 
-class BACHandler {
+public class BACHandler {
     let KENC : [UInt8] = [0,0,0,1]
     let KMAC : [UInt8] = [0,0,0,2]
     
-    var ksenc : [UInt8] = []
-    var ksmac : [UInt8] = []
+    public var ksenc : [UInt8] = []
+    public var ksmac : [UInt8] = []
 
     var rnd_icc : [UInt8] = []
     var rnd_ifd : [UInt8] = []
-    var kifd : [UInt8] = []
+    public var kifd : [UInt8] = []
     
     var tagReader : TagReader?
     
-    init() {
+    public init() {
         // For testing only
     }
     
-    init(tagReader: TagReader) {
+    public init(tagReader: TagReader) {
         self.tagReader = tagReader
     }
 
-    func performBACAndGetSessionKeys( mrzKey : String, completed: @escaping (_ error : TagError?)->() ) {
+    public func performBACAndGetSessionKeys( mrzKey : String, completed: @escaping (_ error : TagError?)->() ) {
         guard let tagReader = self.tagReader else {
             completed( TagError.noConnectedTag)
             return
@@ -263,7 +263,7 @@ class BACHandler {
     /// @param data: the data received from the mutual authenticate command send to the chip.
     /// @type data: a binary string
     /// @return: A set of two 16 bytes keys (KSenc, KSmac) and the SSC
-    func sessionKeys(data : [UInt8] ) -> ([UInt8], [UInt8], [UInt8]) {
+    public func sessionKeys(data : [UInt8] ) -> ([UInt8], [UInt8], [UInt8]) {
         log.debug("Decrypt and verify received data and compare received RND.IFD with generated RND.IFD \(binToHexRep(self.ksmac))" )
         
         let response = tripleDESDecrypt(key: self.ksenc, message: [UInt8](data[0..<32]), iv: [0,0,0,0,0,0,0,0] )

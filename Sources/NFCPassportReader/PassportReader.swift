@@ -9,9 +9,9 @@
 import UIKit
 import CoreNFC
 
-class PassportReader : NSObject {
-    var passportMRZ : String?
-    var passportImage : UIImage?
+public class PassportReader : NSObject {
+    public var passportMRZ : String?
+    public var passportImage : UIImage?
 
     private var readerSession: NFCTagReaderSession?
 
@@ -21,11 +21,13 @@ class PassportReader : NSObject {
     
     private var scanCompletedHandler: ((TagError?)->())!
 
-    override init() {
+    public init( logLevel: LogLevel = .warning ) {
         super.init()
+        
+        log.logLevel = logLevel
     }
     
-    func readPassport( mrzKey : String, completed: @escaping (TagError?)->() ) {
+    public func readPassport( mrzKey : String, completed: @escaping (TagError?)->() ) {
         self.mrzKey = mrzKey
         self.scanCompletedHandler = completed
         
@@ -46,13 +48,13 @@ class PassportReader : NSObject {
 
 extension PassportReader : NFCTagReaderSessionDelegate {
     // MARK: - NFCTagReaderSessionDelegate
-    func tagReaderSessionDidBecomeActive(_ session: NFCTagReaderSession) {
+    public func tagReaderSessionDidBecomeActive(_ session: NFCTagReaderSession) {
         // If necessary, you may perform additional operations on session start.
         // At this point RF polling is enabled.
         log.debug( "tagReaderSessionDidBecomeActive" )
     }
     
-    func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
+    public func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
         // If necessary, you may handle the error. Note session is no longer valid.
         // You must create a new session to restart RF polling.
         log.debug( "tagReaderSession:didInvalidateWithError - \(error)" )
@@ -60,7 +62,7 @@ extension PassportReader : NFCTagReaderSessionDelegate {
         
     }
     
-    func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
+    public func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
         log.debug( "tagReaderSession:didDetect - \(tags[0])" )
         if tags.count > 1 {
             session.alertMessage = "More than 1 tags was found. Please present only 1 tag."
