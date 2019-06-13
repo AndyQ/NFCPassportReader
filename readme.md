@@ -20,7 +20,9 @@ E.g. <passport number><passport number checksum><date of birth><date of birth ch
 
 Then on an instance of PassportReader, call the readPassport method passing in the mrzKey, and a completion block.  
 e.g.
-`passportReader.readPassport(mrzKey: mrzKey, completed: { (error) in
+
+`
+passportReader.readPassport(mrzKey: mrzKey, completed: { (error) in
 ...
 }
 `
