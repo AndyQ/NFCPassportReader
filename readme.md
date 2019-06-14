@@ -14,16 +14,34 @@ It reads my passport (and others I've been able to test) fine, however your mila
 
 ## Usage 
 To use, you first need to create the Passport MRZ Key which consists of the passport number, date of birth and expiry date (including the checksums).
-`
-E.g. <passport number><passport number checksum><date of birth><date of birth checksum><expiry date><expiry date checksum>
-`
+Dates are in YYMMDD format
+
+For example:
+
+```
+<passport number><passport number checksum><date of birth><date of birth checksum><expiry date><expiry date checksum>
+
+e.g. for Passport nr 12345678, Date of birth 27-Jan-1998, Expiry 30-Aug-2025 the MRZ Key would be:
+
+Passport number - 12345678
+Passport number checksum - 8
+Date Of birth - 980127
+Date of birth checksum - 7
+Expiry date - 250831
+Expiry date checksum - 5
+
+mrzKey = "12345678898012772508315"
+```
 
 Then on an instance of PassportReader, call the readPassport method passing in the mrzKey, and a completion block.  
 e.g.
-`passportReader.readPassport(mrzKey: mrzKey, completed: { (error) in
-...
+
+```
+passportReader.readPassport(mrzKey: mrzKey, completed: { (error) in
+   ...
 }
-`
+```
+
 This will then handle the reading of the passport, and image and will call the completion block either with an TagError error if there was an error of some kind, or nil if successful.
 
 If successful, the passportReader object will then contain valid data for the passportMRZ and passportImage fields.
@@ -31,8 +49,10 @@ If successful, the passportReader object will then contain valid data for the pa
 ## Logging
 Additional logging (very verbose)  can be enabled on the PassportReader by passing in a log level on creation:
 e.g.
-`let reader = PassportReader(logLevel: .debug)
-`
+
+```
+let reader = PassportReader(logLevel: .debug)
+```
 
 NOTE - currently this is just printing out to the console - I'd like to implement better logging later - probably using SwiftyBeaver 
 
