@@ -19,6 +19,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A133D55F22B3D5A000E928EB /* NFCPassportReader */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NFCPassportReader; path = ..; sourceTree = "<group>"; };
 		A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NFCPassportReaderApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A16EB23022A9E9E10008F53F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A16EB23222A9E9E10008F53F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -30,7 +31,6 @@
 		A16EB24422A9EA000008F53F /* NFCPassportReader.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NFCPassportReader.entitlements; sourceTree = "<group>"; };
 		A16EB25422AEC1460008F53F /* DetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViewController.swift; sourceTree = "<group>"; };
 		A16FC0BE22B0279D00144B5B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A187587E22B376DC00EC3FC2 /* NFCPassportReader */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NFCPassportReader; path = ..; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -48,7 +48,7 @@
 		A16EB22422A9E9E10008F53F = {
 			isa = PBXGroup;
 			children = (
-				A187587E22B376DC00EC3FC2 /* NFCPassportReader */,
+				A133D55F22B3D5A000E928EB /* NFCPassportReader */,
 				A16EB22F22A9E9E10008F53F /* NFCPassportReaderApp */,
 				A16EB22E22A9E9E10008F53F /* Products */,
 				A16FC0C222B0F22C00144B5B /* Frameworks */,

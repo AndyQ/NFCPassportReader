@@ -230,14 +230,48 @@ final class NFCPassportReaderTests: XCTestCase {
             XCTAssertTrue( dg is DataGroup1 )
         }
     }
-
+        
+    func testDatagroup2ParsingJPEG2000() {
+        
+        // This is a cut down version of the DG2 record. It contains everything up to the end of the image header - no actuall image data as its way too big to include here
+        // I've also adjusted the record lengths accordingly
+        
+        let dg2 = hexRepToBin("75617F618220470201017F6082203FA1128002010081010282010087020101880200085F2E38464143003031300000002026000100002018000000000000000000010000000000000001000000000000000000000000000C6A5020200D0A")
+        
+        let dgp = DataGroupParser()
+        XCTAssertNoThrow(try dgp.parseDG(data: dg2)) { dg in
+            XCTAssertNotNil(dg)
+            XCTAssertTrue( dg is DataGroup2 )
+        }
+        
+    }
+    
+    func testDatagroup2ParsingJPEG() {
+        
+        // This is a cut down version of the DG2 record. It contains everything up to the end of the image header - no actuall image data as its way too big to include here
+        // I've also adjusted the record lengths accordingly
+        
+        let dg2 = hexRepToBin("75617F618220470201017F6082203FA1128002010081010282010087020101880200085F2E3846414300303130000000202600010000201800000000000000000001000000000000000100000000000000000000FFD8FFE000104A464946")
+        let dgp = DataGroupParser()
+        XCTAssertNoThrow(try dgp.parseDG(data: dg2)) { dg in
+            XCTAssertNotNil(dg)
+            XCTAssertTrue( dg is DataGroup2 )
+        }
+        
+    }
+    
     static var allTests = [
         ("testBinToHexRep", testBinToHexRep),
         ("testHexRepToBin", testHexRepToBin),
+        ("testAsn1Length", testAsn1Length),
+        ("testToASNLength", testToASNLength),
         ("testDES3Encryption", testDES3Encryption),
         ("testDES3Decryption", testDES3Decryption),
         ("testSecureMessagingProtect", testSecureMessagingProtect),
         ("testSecureMessagingUnprotectNoData", testSecureMessagingUnprotectNoData),
-        ("testSecureMessagingUnprotectWithData", testSecureMessagingUnprotectWithData)
+        ("testSecureMessagingUnprotectWithData", testSecureMessagingUnprotectWithData),
+        ("testDatagroup1Parsing", testDatagroup1Parsing),
+        ("testDatagroup2Parsing", testDatagroup2ParsingJPEG2000),
+        ("testDatagroup2ParsingJPEG", testDatagroup2ParsingJPEG)
     ]
 }

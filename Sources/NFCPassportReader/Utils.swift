@@ -48,9 +48,9 @@ public func binToHexRep( _ val : UInt8 ) -> String {
     return string
 }
 
-public func binToHex( _ val: UInt8 ) -> UInt32 {
+public func binToHex( _ val: UInt8 ) -> Int {
     let hexRep = String(format:"%02X", val)
-    return UInt32(hexRep, radix:16)!
+    return Int(hexRep, radix:16)!
 }
 
 public func binToHex( _ val: [UInt8] ) -> UInt64 {
@@ -58,9 +58,19 @@ public func binToHex( _ val: [UInt8] ) -> UInt64 {
     return hexVal
 }
 
+public func binToHex( _ val: ArraySlice<UInt8> ) -> UInt64 {
+    return binToHex( [UInt8](val) )
+}
+
+
 public func hexToBin( _ val : UInt64 ) -> [UInt8] {
     let hexRep = String(format:"%lx", val)
     return hexRepToBin( hexRep)
+}
+
+public func binToInt( _ val: ArraySlice<UInt8> ) -> Int {
+    let hexVal = Int(binToHexRep([UInt8](val)), radix:16)!
+    return hexVal
 }
 
 public func intToBin(_ data : Int, pad : Int = 2) -> [UInt8] {
