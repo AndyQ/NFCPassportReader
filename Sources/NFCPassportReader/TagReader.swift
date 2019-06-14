@@ -11,7 +11,7 @@ import CoreNFC
 
 public enum TagError: Error {
     case NFCNotSupported
-    case noConnectedTag
+    case NoConnectedTag
     case InvalidResponse
     case D087Malformed
     case InvalidResponseChecksum
@@ -21,15 +21,19 @@ public enum TagError: Error {
     case UnableToProtectAPDU
     case UnableToUnprotectAPDU
     case UnsupportedDataGroup
+    case UnknownTag
+    case NotImplemented
 }
 
-public enum DataGroup {
+public enum DataGroupId {
     case COM
     case DG1
     case DG2
+    case SOD
+    case Unknown
 }
 
-private let DGMap : [DataGroup: [UInt8]] = [
+private let DataGroupToFileIdMap : [DataGroupId: [UInt8]] = [
     .COM : [0x01,0x1E],
     .DG1 : [0x01,0x01],
     .DG2 : [0x01,0x02]
@@ -57,8 +61,8 @@ public class TagReader {
         self.tag = tag
     }
 
-    func readDataGroup( dataGroup: DataGroup, completed: @escaping ([UInt8]?, TagError?)->() )  {
-        guard let tag = DGMap[dataGroup] else {
+    func readDataGroup( dataGroup: DataGroupId, completed: @escaping ([UInt8]?, TagError?)->() )  {
+        guard let tag = DataGroupToFileIdMap[dataGroup] else {
             completed(nil, TagError.UnsupportedDataGroup)
             return
         }
@@ -103,12 +107,14 @@ public class TagReader {
                 // Header looks like:  <tag><length of data><nextTag> e.g.60145F01 -
                 // the total length is the 2nd value plus the two header 2 bytes
                 // We've read 4 bytes so we now need to read the remaining bytes from offset 4
-                self.header = []//response.data
                 var leftToRead = 0
                 
-                let (len, o) = try! asn1Length(data: [UInt8](response.data[1..<4]))
+                let (len, o) = try! asn1Length([UInt8](response.data[1..<4]))
                 leftToRead = Int(len)
                 let offset = o + 1
+                
+                self.header = [UInt8](response.data[..<offset])//response.data
+
                 
                 Log.info( "Amount of data to read - \(leftToRead)" )
                 self.readBinaryData(leftToRead: leftToRead, amountRead: offset, completed: completed)

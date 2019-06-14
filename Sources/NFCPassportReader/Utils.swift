@@ -152,16 +152,38 @@ public func mac(key : [UInt8], msg : [UInt8]) -> [UInt8]{
     
     return a
 }
-    
-public func asn1Length(data : [UInt8]) throws -> (UInt64, Int)  {
+
+
+/// Take an asn.1 length, and return a couple with the decoded length in hexa and the total length of the encoding (1,2 or 3 bytes)
+///
+/// >>> from pyPassport.asn1.asn1 import *
+/// >>> asn1Length("\x22")
+/// (34, 1)
+/// >>> asn1Length("\x81\xaa")
+/// (170, 2)
+/// >>> asn1Length("\x82\xaa\xbb")
+/// (43707, 3)
+///
+/// @param data: A length value encoded in the asn.1 format.
+/// @type data: A binary string.
+/// @return: A tuple with the decoded hexa length and the length of the asn.1 encoded value.
+/// @raise asn1Exception: If the parameter does not follow the asn.1 notation.
+
+
+public func asn1Length( _ data: ArraySlice<UInt8> ) throws -> (Int, Int) {
+    return try asn1Length( Array(data) )
+}
+
+public func asn1Length(_ data : [UInt8]) throws -> (Int, Int)  {
     if data[0] <= 0x7F {
-        return (UInt64(binToHex(data[0])), 1)
+        return (Int(binToHex(data[0])), 1)
     }
     if data[0] == 0x81 {
-        return (UInt64(binToHex(data[1])), 2)
+        return (Int(binToHex(data[1])), 2)
     }
     if data[0] == 0x82 {
-        return (binToHex([UInt8](data[1..<3])), 3)
+        let val = binToHex([UInt8](data[1..<3]))
+        return (Int(val), 3)
     }
     
     throw TagError.CannotDecodeASN1Length
@@ -182,9 +204,10 @@ public func asn1Length(data : [UInt8]) throws -> (UInt64, Int)  {
 /// @return: The asn.1 encoded value
 /// @rtype: A binary string
 /// @raise asn1Exception: If the parameter is too big, must be >= 0 and <= FFFF
-public func toAsn1Length(data : UInt64) throws -> [UInt8] {
+
+public func toAsn1Length(_ data : Int) throws -> [UInt8] {
     if data <= 0x7F {
-        return hexToBin(data)
+        return hexRepToBin(String(format:"%02x", data))
     }
     if data >= 0x80 && data <= 0xFF {
         return [0x81] + hexRepToBin( String(format:"%02x",data))

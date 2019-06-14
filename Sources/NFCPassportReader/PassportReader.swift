@@ -120,7 +120,7 @@ extension PassportReader {
     
     func handleBAC( completed: @escaping (TagError?)->()) {
         guard let tagReader = self.tagReader else {
-            completed(TagError.noConnectedTag)
+            completed(TagError.NoConnectedTag)
             return
         }
         
@@ -136,7 +136,7 @@ extension PassportReader {
     }
     
     func readDG1( completed : @escaping (TagError?)->() ) {
-        guard let tagReader = self.tagReader else { completed(TagError.noConnectedTag ); return }
+        guard let tagReader = self.tagReader else { completed(TagError.NoConnectedTag ); return }
         
         self.readerSession?.alertMessage = "Reading passport data....."
         
@@ -154,7 +154,7 @@ extension PassportReader {
     }
     
     func readDG2( completed : @escaping (TagError?)->() )  {
-        guard let tagReader = self.tagReader else { completed(TagError.noConnectedTag ); return }
+        guard let tagReader = self.tagReader else { completed(TagError.NoConnectedTag ); return }
         
         self.readerSession?.alertMessage = "Reading passport image....."
         

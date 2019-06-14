@@ -97,7 +97,7 @@ public class SecureMessaging {
         // DO'87'
         // Mandatory if data is returned, otherwise absent
         if rapduBin[0] == 0x87 {
-            let (encDataLength, o) = try asn1Length(data:[UInt8](rapduBin[1...]))
+            let (encDataLength, o) = try asn1Length([UInt8](rapduBin[1...]))
             offset = 1 + o
             
             if rapduBin[offset] != 0x1 {
@@ -190,7 +190,7 @@ public class SecureMessaging {
     
     func buildD087(apdu : NFCISO7816APDU) throws -> [UInt8] {
         let cipher = [0x01] + self.padAndEncryptData(apdu)
-        let res = try [0x87] + toAsn1Length(data:UInt64(cipher.count)) + cipher
+        let res = try [0x87] + toAsn1Length(cipher.count) + cipher
         Log.debug("Build DO'87")
         Log.debug("\tDO87: " + binToHexRep(res))
         return res
@@ -231,20 +231,4 @@ public class SecureMessaging {
         return res
     }
     
-    
-    /// Take an asn.1 length, and return a couple with the decoded length in hexa and the total length of the encoding (1,2 or 3 bytes)
-    ///
-    /// >>> from pyPassport.asn1.asn1 import *
-    /// >>> asn1Length("\x22")
-    /// (34, 1)
-    /// >>> asn1Length("\x81\xaa")
-    /// (170, 2)
-    /// >>> asn1Length("\x82\xaa\xbb")
-    /// (43707, 3)
-    ///
-    /// @param data: A length value encoded in the asn.1 format.
-    /// @type data: A binary string.
-    /// @return: A tuple with the decoded hexa length and the length of the asn.1 encoded value.
-    /// @raise asn1Exception: If the parameter does not follow the asn.1 notation.
-
 }

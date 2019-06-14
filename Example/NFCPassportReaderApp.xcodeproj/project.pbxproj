@@ -30,6 +30,7 @@
 		A16EB24422A9EA000008F53F /* NFCPassportReader.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NFCPassportReader.entitlements; sourceTree = "<group>"; };
 		A16EB25422AEC1460008F53F /* DetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViewController.swift; sourceTree = "<group>"; };
 		A16FC0BE22B0279D00144B5B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A187587E22B376DC00EC3FC2 /* NFCPassportReader */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NFCPassportReader; path = ..; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,6 +48,7 @@
 		A16EB22422A9E9E10008F53F = {
 			isa = PBXGroup;
 			children = (
+				A187587E22B376DC00EC3FC2 /* NFCPassportReader */,
 				A16EB22F22A9E9E10008F53F /* NFCPassportReaderApp */,
 				A16EB22E22A9E9E10008F53F /* Products */,
 				A16FC0C222B0F22C00144B5B /* Frameworks */,

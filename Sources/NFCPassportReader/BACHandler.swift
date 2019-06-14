@@ -33,7 +33,7 @@ public class BACHandler {
 
     public func performBACAndGetSessionKeys( mrzKey : String, completed: @escaping (_ error : TagError?)->() ) {
         guard let tagReader = self.tagReader else {
-            completed( TagError.noConnectedTag)
+            completed( TagError.NoConnectedTag)
             return
         }
         

@@ -27,6 +27,109 @@ final class NFCPassportReaderTests: XCTestCase {
         XCTAssertEqual( hexRepToBin("12245577"), val  )
     }
     
+    func testAsn1Length() {
+        // Test < 127
+        XCTAssertNoThrow(try asn1Length([0x32])) { (len, offset) in
+            XCTAssertEqual(len, 0x32)
+            XCTAssertEqual(offset, 1)
+        }
+        
+        // Test 127
+        XCTAssertNoThrow(try asn1Length([0x7f])) { (len, offset) in
+            XCTAssertEqual(len, 0x7f)
+            XCTAssertEqual(offset, 1)
+        }
+        
+        // Test 128
+        XCTAssertNoThrow(try asn1Length([0x81, 0x80])) { (len, offset) in
+            XCTAssertEqual(len, 128)
+            XCTAssertEqual(offset, 2)
+        }
+        
+        // Test 255
+        XCTAssertNoThrow(try asn1Length([0x81, 0xFF])) { (len, offset) in
+            XCTAssertEqual(len, 255)
+            XCTAssertEqual(offset, 2)
+        }
+        
+        // Test 256
+        XCTAssertNoThrow(try asn1Length([0x82, 0x01,0x00])) { (len, offset) in
+            XCTAssertEqual(len, 256)
+            XCTAssertEqual(offset, 3)
+        }
+        
+        // Test 1000
+        XCTAssertNoThrow(try asn1Length([0x82, 0x03, 0xE8])) { (len, offset) in
+            XCTAssertEqual(len, 1000)
+            XCTAssertEqual(offset, 3)
+        }
+        
+        // Test Max value - 65535
+        XCTAssertNoThrow(try asn1Length([0x82, 0xff, 0xff])) { (len, offset) in
+            XCTAssertEqual(len, 65535)
+            XCTAssertEqual(offset, 3)
+        }
+        
+        // Test Too Big
+        XCTAssertThrowsError(try toAsn1Length(65536))
+    }
+    
+    func testToASNLength() {
+        // Test < 127
+        XCTAssertNoThrow(try toAsn1Length(50)) { data in
+            XCTAssertEqual(data.count, 1)
+            XCTAssertEqual(data[0], 0x32)
+        }
+        
+        // Test 127
+        XCTAssertNoThrow(try toAsn1Length(127)) { data in
+            XCTAssertEqual(data.count, 1)
+            XCTAssertEqual(data[0], 0x7f)
+        }
+        
+        // Test 128
+        XCTAssertNoThrow(try toAsn1Length(128)) { data in
+            XCTAssertEqual(data.count, 2)
+            XCTAssertEqual(data[0], 0x81)
+            XCTAssertEqual(data[1], 0x80)
+        }
+        
+        // Test 255
+        XCTAssertNoThrow(try toAsn1Length(255)) { data in
+            XCTAssertEqual(data.count, 2)
+            XCTAssertEqual(data[0], 0x81)
+            XCTAssertEqual(data[1], 0xff)
+        }
+        
+        // Test 256
+        XCTAssertNoThrow(try toAsn1Length(256)) { data in
+            XCTAssertEqual(data.count, 3)
+            XCTAssertEqual(data[0], 0x82)
+            XCTAssertEqual(data[1], 0x01)
+            XCTAssertEqual(data[2], 0x00)
+        }
+        
+        // Test 1000
+        XCTAssertNoThrow(try toAsn1Length(1000)) { data in
+            XCTAssertEqual(data.count, 3)
+            XCTAssertEqual(data[0], 0x82)
+            XCTAssertEqual(data[1], 0x03)
+            XCTAssertEqual(data[2], 0xE8)
+        }
+        
+        // Test Max value - 65535
+        XCTAssertNoThrow(try toAsn1Length(65535)) { data in
+            XCTAssertEqual(data.count, 3)
+            XCTAssertEqual(data[0], 0x82)
+            XCTAssertEqual(data[1], 0xff)
+            XCTAssertEqual(data[2], 0xff)
+        }
+        
+        // Test Too Big
+        XCTAssertThrowsError(try toAsn1Length(65536))
+    }
+    
+
     func testDES3Encryption() {
         let msg = [UInt8]("maryhadalittlelambaaaaaa".data(using: .utf8)!)
         let iv : [UInt8] = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -110,6 +213,21 @@ final class NFCPassportReaderTests: XCTestCase {
             XCTAssertEqual( rapdu.sw1, 0x90 )
             XCTAssertEqual( rapdu.sw2, 0x00 )
 
+        }
+    }
+    
+    func testDatagroup1Parsing() {
+        
+        // Random generated test MRZ
+        let mrz = "P<GBRTHATCHER<<BOB<<<<<<<<<<<<<<<<<<<<<<<<<<7125143269GBR3906022M1601013<<<<<<<<<<<<<<08"
+        let mrzBin = [UInt8](mrz.data(using: .utf8)!)
+        let tag = try! [0x5F,0x1F] +  toAsn1Length(mrzBin.count) + mrzBin
+        let dg1 = try! [0x61] + toAsn1Length(tag.count) + tag
+        
+        let dgp = DataGroupParser()
+        XCTAssertNoThrow(try dgp.parseDG(data: dg1)) { dg in
+            XCTAssertNotNil(dg)
+            XCTAssertTrue( dg is DataGroup1 )
         }
     }
 
