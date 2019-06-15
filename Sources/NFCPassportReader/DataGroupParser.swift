@@ -13,7 +13,7 @@ class DataGroupParser {
     let tags : [UInt8] = [0x60, 0x61, 0x75, 0x63, 0x76, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F, 0x70, 0x77]
     let classes : [DataGroup.Type] = [COM.self, DataGroup1.self, DataGroup2.self,
                                       NotImplementedDG.self, NotImplementedDG.self, NotImplementedDG.self,
-                                      NotImplementedDG.self, NotImplementedDG.self, NotImplementedDG.self,
+                                      NotImplementedDG.self, DataGroup7.self, NotImplementedDG.self,
                                       NotImplementedDG.self, NotImplementedDG.self, NotImplementedDG.self,
                                       NotImplementedDG.self, NotImplementedDG.self, NotImplementedDG.self,
                                       NotImplementedDG.self, NotImplementedDG.self, SOD.self]
@@ -39,13 +39,42 @@ class DataGroupParser {
 
 class DataGroup {
     var datagroupType : DataGroupId = .Unknown
+    var data : [UInt8]
+    var pos = 0
     
     required init( _ data : [UInt8] ) throws {
+        self.data = data
         try parse(data)
     }
     
     func parse( _ data:[UInt8] ) throws {
         throw TagError.NotImplemented
+    }
+    
+    func getNextTag() throws -> Int {
+        var tag = 0
+        if binToHex(data[pos]) & 0x0F == 0x0F {
+            tag = Int(binToHex(data[pos..<pos+2]))
+            pos += 2
+        } else {
+            tag = Int(data[pos])
+            pos += 1
+        }
+        return tag
+    }
+
+    func getNextLength() throws -> Int  {
+        let end = pos+4 < data.count ? pos+4 : data.count
+        let (len, lenOffset) = try asn1Length([UInt8](data[pos..<end]))
+        pos += lenOffset
+        return len
+    }
+    
+    func getNextValue() throws -> [UInt8] {
+        let length = try getNextLength()
+        let value = [UInt8](data[pos ..< pos+length])
+        pos += length
+        return value
     }
 }
 
@@ -58,17 +87,47 @@ class NotImplementedDG : DataGroup {
 }
 
 class COM : DataGroup {
+    public var version : Int = 0
+    public var unicodeVersion : Int = 0
+    public var dataGroupsPresent : [UInt8] = []
+    
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
         datagroupType = .COM
     }
 
+    override func parse(_ data: [UInt8]) throws {
+        var tag = try getNextTag()
+        if tag != 0x5F01 {
+            throw TagError.InvalidResponse
+        }
+        version = try binToInt(getNextValue())
+        
+        tag = try getNextTag()
+        if tag != 0x5F36 {
+            throw TagError.InvalidResponse
+        }
+        unicodeVersion = try binToInt(getNextValue())
+
+        tag = try getNextTag()
+        if tag != 0x5C {
+            throw TagError.InvalidResponse
+        }
+        dataGroupsPresent = try getNextValue()
+    }
 }
 
 class SOD : DataGroup {
      required init( _ data : [UInt8] ) throws {
         try super.init(data)
         datagroupType = .SOD
+    }
+
+    override func parse(_ data: [UInt8]) throws {
+        let tag = try getNextTag()
+        if tag != 0x5F1F {
+            throw TagError.InvalidResponse
+        }
     }
 }
 
@@ -82,12 +141,12 @@ class DataGroup1 : DataGroup {
     }
 
     override func parse(_ data: [UInt8]) throws {
-        if data[0] != 0x5F && data[1] != 0xF1 {
+        let tag = try getNextTag()
+        if tag != 0x5F1F {
             throw TagError.InvalidResponse
         }
-        let (len, offset) = try asn1Length([UInt8](data[2...]))
-        let body = [UInt8](data[(offset+2)...])
-        let docType = getMRZType(length:Int(len))
+        let body = try getNextValue()
+        let docType = getMRZType(length:body.count)
         
         if docType == "ID1" {
             self.parseTd1(body)
@@ -184,6 +243,14 @@ class DataGroup2 : DataGroup {
     var quality : Int = 0
     var imageData : [UInt8] = []
     
+    func getImage() -> UIImage? {
+        if imageData.count == 0 {
+            return nil
+        }
+        
+        let image = UIImage(data:Data(imageData) )
+        return image
+    }
     
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
@@ -191,51 +258,41 @@ class DataGroup2 : DataGroup {
     }
     
     override func parse(_ data: [UInt8]) throws {
-        if data[0] != 0x7F && data[1] != 0x61 {
+        var tag = try getNextTag()
+        if tag != 0x7F61 {
             throw TagError.InvalidResponse
         }
-        var offset = 2
+        _ = try getNextLength()
         
-        var (len, lenOffset) = try asn1Length([UInt8](data[offset..<offset+4]))
-        offset += lenOffset
-        
-        // Next tag should be 0x02 with the number of images
-        if data[offset] != 0x02 {
+        // Tag should be 0x02
+        tag = try getNextTag()
+        if  tag != 0x02 {
             throw TagError.InvalidResponse
         }
-        offset += 1
-        (len, lenOffset) = try asn1Length([UInt8](data[offset..<offset+4]))
-        offset += lenOffset
-        
-        // Store number of images in this (probably only 1)
-        nrImages = Int(data[offset])
-        offset += len
-        
-        // Next tag is 7F60
-        if data[offset] != 0x7F && data[offset+1] != 0x60 {
-            throw TagError.InvalidResponse
-        }
-        offset += 2
-        (len, lenOffset) = try asn1Length([UInt8](data[offset..<offset+4]))
-        offset += lenOffset
-        
-        // Next tag is 0xA1 (Biometric Header Template) - don't care about this
-        if data[offset] != 0xA1 {
-            throw TagError.InvalidResponse
-        }
-        offset += 1
-        (len, lenOffset) = try asn1Length([UInt8](data[offset..<offset+4]))
-        offset += lenOffset + len
-        
-        // Now we get to the good stuff - next tag is either 5F2E or 7F2E
-        if (data[offset] != 0x5F || data[offset] != 0x7F) && data[offset+1] != 0x2E {
-            throw TagError.InvalidResponse
-        }
-        offset += 2
-        (len, lenOffset) = try asn1Length([UInt8](data[offset..<offset+4]))
-        offset += lenOffset
+        nrImages = try Int(getNextValue()[0])
 
-        try parseISO19794_5( data:[UInt8](data[offset..<offset+len]) )
+        // Next tag is 0x7F60
+        tag = try getNextTag()
+        if tag != 0x7F60 {
+            throw TagError.InvalidResponse
+        }
+        _ = try getNextLength()
+
+        // Next tag is 0xA1 (Biometric Header Template) - don't care about this
+        tag = try getNextTag()
+        if tag != 0xA1 {
+            throw TagError.InvalidResponse
+        }
+        _ = try getNextValue()
+
+        // Now we get to the good stuff - next tag is either 5F2E or 7F2E
+        tag = try getNextTag()
+        if tag != 0x5F2E && tag != 0x7F2E {
+            throw TagError.InvalidResponse
+        }
+        let value = try getNextValue()
+
+        try parseISO19794_5( data:value )
     }
     
     func parseISO19794_5( data : [UInt8] ) throws {
@@ -309,3 +366,37 @@ class DataGroup2 : DataGroup {
     }
 }
 
+class DataGroup7 : DataGroup {
+    
+    var imageData : [UInt8] = []
+
+    required init( _ data : [UInt8] ) throws {
+        try super.init(data)
+        datagroupType = .DG7
+    }
+    
+    func getImage() -> UIImage? {
+        if imageData.count == 0 {
+            return nil
+        }
+        
+        let image = UIImage(data:Data(imageData) )
+        return image
+    }
+
+    
+    override func parse(_ data: [UInt8]) throws {
+        var tag = try getNextTag()
+        if tag != 0x02 {
+            throw TagError.InvalidResponse
+        }
+        _ = try getNextValue()
+        
+        tag = try getNextTag()
+        if tag != 0x5F43 {
+            throw TagError.InvalidResponse
+        }
+        
+        imageData = try getNextValue()
+    }
+}

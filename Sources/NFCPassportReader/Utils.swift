@@ -69,7 +69,12 @@ public func hexToBin( _ val : UInt64 ) -> [UInt8] {
 }
 
 public func binToInt( _ val: ArraySlice<UInt8> ) -> Int {
-    let hexVal = Int(binToHexRep([UInt8](val)), radix:16)!
+    let hexVal = binToInt( [UInt8](val) )
+    return hexVal
+}
+
+public func binToInt( _ val: [UInt8] ) -> Int {
+    let hexVal = Int(binToHexRep(val), radix:16)!
     return hexVal
 }
 

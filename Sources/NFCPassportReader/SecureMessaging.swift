@@ -177,7 +177,7 @@ public class SecureMessaging {
             Log.debug("\tDecryptedData: " + binToHexRep(data))
         }
         
-        Log.info("Unprotected APDU: [\(binToHexRep(data))] \(binToHexRep(sw1)) \(binToHexRep(sw2))" )
+        Log.debug("Unprotected APDU: [\(binToHexRep(data))] \(binToHexRep(sw1)) \(binToHexRep(sw2))" )
         return ResponseAPDU(data: data, sw1: sw1, sw2: sw2)
     }
 

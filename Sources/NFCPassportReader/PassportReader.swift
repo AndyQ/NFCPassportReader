@@ -10,8 +10,26 @@ import UIKit
 import CoreNFC
 
 public class PassportReader : NSObject {
-    public var passportMRZ : String?
-    public var passportImage : UIImage?
+    var dataGroupsToRead : [DataGroupId] = []
+
+    var dataGroupsRead : [DataGroupId:DataGroup] = [:]
+    
+    public var passportMRZ : String {
+        guard let dg1 = dataGroupsRead[.DG1] as? DataGroup1 else { return "NOT READ" }
+        
+        return "\(dg1.elements)"
+    }
+    public var passportImage : UIImage? {
+        guard let dg2 = dataGroupsRead[.DG2] as? DataGroup2 else { return nil }
+        
+        return dg2.getImage()
+
+    }
+    public var signatureImage : UIImage? {
+        guard let dg7 = dataGroupsRead[.DG7] as? DataGroup7 else { return nil }
+        
+        return dg7.getImage()
+    }
 
     private var readerSession: NFCTagReaderSession?
 
@@ -21,14 +39,14 @@ public class PassportReader : NSObject {
     
     private var scanCompletedHandler: ((TagError?)->())!
 
-    public init( logLevel: LogLevel = .warning ) {
+    override public init( ) {
         super.init()
         
-        Log.logLevel = logLevel
     }
     
-    public func readPassport( mrzKey : String, completed: @escaping (TagError?)->() ) {
+    public func readPassport( mrzKey : String,  tags: [DataGroupId], completed: @escaping (TagError?)->() ) {
         self.mrzKey = mrzKey
+        self.dataGroupsToRead.append( contentsOf:tags)
         self.scanCompletedHandler = completed
         
         guard NFCNDEFReaderSession.readingAvailable else {
@@ -103,7 +121,9 @@ extension PassportReader {
             if error == nil {
                 // At this point, BAC Has been done and the TagReader has been set up with the SecureMessaging
                 // session keys
-                self?.readPassport() { [weak self] error in
+                self?.readerSession?.alertMessage = "Reading passport data....."
+                
+                self?.readNextDataGroup( ) { [weak self] error in
                     if error != nil {
                         self?.readerSession?.invalidate(errorMessage: "Sorry, there was a problem reading the passport. Please try again" )
                     } else {
@@ -131,79 +151,31 @@ extension PassportReader {
         }
     }
     
-    func readPassport( completed : @escaping (TagError?)->() ) {
-        readDG1( completed: completed )
-    }
-    
-    func readDG1( completed : @escaping (TagError?)->() ) {
+    func readNextDataGroup( completed : @escaping (TagError?)->() ) {
         guard let tagReader = self.tagReader else { completed(TagError.NoConnectedTag ); return }
+        if dataGroupsToRead.count == 0 {
+            completed(nil)
+            return
+        }
         
-        self.readerSession?.alertMessage = "Reading passport data....."
+        let dgId = dataGroupsToRead.removeFirst()
+        Log.info( "Reading tag - \(dgId)" )
         
-        tagReader.readDataGroup(dataGroup:.DG1) { [unowned self] (response, error) in
+        tagReader.readDataGroup(dataGroup:dgId) { [unowned self] (response, error) in
             if let response = response {
-                // Skip First 4 bytes for the moment (this will get properly parsed out soon)
-                // The first 4 bytes are the 5F1F tag which signifies the start of the MRZ data
-                self.passportMRZ = String( data:Data(response[4...]), encoding:.utf8)!
+                do {
+                    let dg = try DataGroupParser().parseDG(data: response)
+                    self.dataGroupsRead[dgId] = dg
+                } catch is TagError {
+                    completed( error )
+                } catch {
+                    completed( TagError.UnexpectedError )
+                }
                 
-                self.readDG2(completed: completed )
+                self.readNextDataGroup(completed: completed)
             } else {
                 completed( error )
             }
-        }
-    }
-    
-    func readDG2( completed : @escaping (TagError?)->() )  {
-        guard let tagReader = self.tagReader else { completed(TagError.NoConnectedTag ); return }
-        
-        self.readerSession?.alertMessage = "Reading passport image....."
-        
-        tagReader.readDataGroup(dataGroup:.DG2) { [unowned self] (response, error) in
-            if let response = response {
-                let startSeqJPEG : [UInt8] = [0xff,0xd8,0xff,0xe0,0x00,0x10,0x4a,0x46,0x49,0x46]
-                let startSeqJP2 : [UInt8] = [0x00,0x00,0x00,0x0c,0x6a,0x50,0x20,0x20,0x0d,0x0a]
-                var startSeq : [UInt8] = []
-                
-                // TODO: This REALY NEEDS to be moved out into a specific DG parser
-                // This is just to get it working for the moment
-                for i in 73 ..< 150 {
-                    var match = false
-                    if response[i] == startSeqJPEG[0] {
-                        match = true
-                        startSeq = startSeqJPEG
-                    } else if response[i] == startSeqJP2[0] {
-                        match = true
-                        startSeq = startSeqJP2
-                    }
-                    
-                    if match && i < response.count - startSeq.count {
-                        // see if we match
-                        
-                        var ok = true
-                        for j in 0..<startSeq.count {
-                            if response[i+j] != startSeq [j] {
-                                ok = false
-                                break
-                            }
-                        }
-                        if ok {
-                            let imageBytes = [UInt8](response[i...])
-                            let iData = Data(imageBytes)
-                            
-//                            let file = FileManager.documentDir.appendingPathComponent("lastImage.jp2")
-//                            try! iData.write(to: file )
-                            let jpg = UIImage(data: iData)
-                            
-                            self.passportImage = jpg
-                            Log.debug( "DONE" )
-                            break
-                        }
-                    }
-                }
-            } else if let err = error {
-                Log.debug( "error - \(err.localizedDescription)" )
-            }
-            completed( error )
         }
     }
 }

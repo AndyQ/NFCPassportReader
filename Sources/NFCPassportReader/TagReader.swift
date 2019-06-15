@@ -10,6 +10,7 @@ import Foundation
 import CoreNFC
 
 public enum TagError: Error {
+    case UnexpectedError
     case NFCNotSupported
     case NoConnectedTag
     case InvalidResponse
@@ -25,18 +26,47 @@ public enum TagError: Error {
     case NotImplemented
 }
 
-public enum DataGroupId {
-    case COM
-    case DG1
-    case DG2
-    case SOD
-    case Unknown
+public enum DataGroupId : Int {
+    case COM = 0x60
+    case DG1 = 0x61
+    case DG2 = 0x75
+    case DG3 = 0x63
+    case DG4 = 0x76
+    case DG5 = 0x65
+    case DG6 = 0x66
+    case DG7 = 0x67
+    case DG8 = 0x68
+    case DG9 = 0x69
+    case DG10 = 0x6A
+    case DG11 = 0x6B
+    case DG12 = 0x6C
+    case DG13 = 0x6D
+    case DG14 = 0x6E
+    case DG15 = 0x6F
+    case DG16 = 0x70
+    case SOD = 0x77
+    case Unknown = 0x00
 }
 
 private let DataGroupToFileIdMap : [DataGroupId: [UInt8]] = [
     .COM : [0x01,0x1E],
     .DG1 : [0x01,0x01],
-    .DG2 : [0x01,0x02]
+    .DG2 : [0x01,0x02],
+    .DG3 : [0x01,0x03],
+    .DG4 : [0x01,0x04],
+    .DG5 : [0x01,0x05],
+    .DG6 : [0x01,0x06],
+    .DG7 : [0x01,0x07],
+    .DG8 : [0x01,0x08],
+    .DG9 : [0x01,0x09],
+    .DG10 : [0x01,0x0A],
+    .DG11 : [0x01,0x0B],
+    .DG12 : [0x01,0x0C],
+    .DG13 : [0x01,0x0D],
+    .DG14 : [0x01,0x0E],
+    .DG15 : [0x01,0x0F],
+    .DG16 : [0x01,0x10],
+    .SOD : [0x01,0x1D],
 ]
 
 
@@ -116,7 +146,7 @@ public class TagReader {
                 self.header = [UInt8](response.data[..<offset])//response.data
 
                 
-                Log.info( "Amount of data to read - \(leftToRead)" )
+                Log.debug( "Amount of data to read - \(leftToRead)" )
                 self.readBinaryData(leftToRead: leftToRead, amountRead: offset, completed: completed)
 
             }
@@ -151,7 +181,7 @@ public class TagReader {
             self.header += response.data
             
             let remaining = leftToRead - response.data.count
-            Log.info( "Amount of data left read - \(remaining)" )
+            Log.debug( "Amount of data left read - \(remaining)" )
             if remaining > 0 {
                 self.readBinaryData(leftToRead: remaining, amountRead: amountRead + response.data.count, completed: completed )
             } else {

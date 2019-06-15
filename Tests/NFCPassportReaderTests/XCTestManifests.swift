@@ -4,6 +4,7 @@ import XCTest
 public func allTests() -> [XCTestCaseEntry] {
     return [
         testCase(NFCPassportReaderTests.allTests),
+        testCase(DataGroupParsingTests.allTests),
     ]
 }
 #endif

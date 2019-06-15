@@ -23,6 +23,8 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        Log.logLevel = .info
+
         let d = UserDefaults.standard
         
         self.passportNrText.text = d.string(forKey: "passportNumber") ?? ""
@@ -65,7 +67,7 @@ class ViewController: UIViewController {
 
         let mrzKey = "\(passportNr)\(passportNrChksum)\(dateOfBirth)\(dateOfBirthChksum)\(expiryDate)\(expiryDateChksum)"
         
-        passportReader.readPassport(mrzKey: mrzKey, completed: { (error) in
+        passportReader.readPassport(mrzKey: mrzKey, tags: [.COM, .DG1, .DG2], completed: { (error) in
             if let error = error {
                 var title : String
                 var message : String
