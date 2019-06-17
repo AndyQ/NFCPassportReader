@@ -9,13 +9,11 @@
 /* Begin PBXBuildFile section */
 		A16EB23122A9E9E10008F53F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB23022A9E9E10008F53F /* AppDelegate.swift */; };
 		A16EB23322A9E9E10008F53F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB23222A9E9E10008F53F /* SceneDelegate.swift */; };
-		A16EB23522A9E9E10008F53F /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB23422A9E9E10008F53F /* ViewController.swift */; };
-		A16EB23822A9E9E10008F53F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A16EB23622A9E9E10008F53F /* Main.storyboard */; };
 		A16EB23A22A9E9E20008F53F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A16EB23922A9E9E20008F53F /* Assets.xcassets */; };
 		A16EB23D22A9E9E20008F53F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */; };
-		A16EB25522AEC1460008F53F /* DetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB25422AEC1460008F53F /* DetailViewController.swift */; };
-		A16FC0BF22B0279D00144B5B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16FC0BE22B0279D00144B5B /* ContentView.swift */; };
 		A16FC0CA22B11E7200144B5B /* NFCPassportReader in Frameworks */ = {isa = PBXBuildFile; productRef = A16FC0C922B11E7200144B5B /* NFCPassportReader */; };
+		A1EA699E22B6C3AC00938BF7 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1EA699D22B6C3AC00938BF7 /* DetailView.swift */; };
+		A1EA69A322B7921800938BF7 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1EA69A222B7921800938BF7 /* MainView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,14 +21,12 @@
 		A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NFCPassportReaderApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A16EB23022A9E9E10008F53F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A16EB23222A9E9E10008F53F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		A16EB23422A9E9E10008F53F /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
-		A16EB23722A9E9E10008F53F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		A16EB23922A9E9E20008F53F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A16EB23C22A9E9E20008F53F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		A16EB23E22A9E9E20008F53F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A16EB24422A9EA000008F53F /* NFCPassportReader.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NFCPassportReader.entitlements; sourceTree = "<group>"; };
-		A16EB25422AEC1460008F53F /* DetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViewController.swift; sourceTree = "<group>"; };
-		A16FC0BE22B0279D00144B5B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1EA699D22B6C3AC00938BF7 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
+		A1EA69A222B7921800938BF7 /* MainView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,10 +65,8 @@
 				A16EB24422A9EA000008F53F /* NFCPassportReader.entitlements */,
 				A16EB23022A9E9E10008F53F /* AppDelegate.swift */,
 				A16EB23222A9E9E10008F53F /* SceneDelegate.swift */,
-				A16FC0BE22B0279D00144B5B /* ContentView.swift */,
-				A16EB23422A9E9E10008F53F /* ViewController.swift */,
-				A16EB25422AEC1460008F53F /* DetailViewController.swift */,
-				A16EB23622A9E9E10008F53F /* Main.storyboard */,
+				A1EA69A222B7921800938BF7 /* MainView.swift */,
+				A1EA699D22B6C3AC00938BF7 /* DetailView.swift */,
 				A16EB23922A9E9E20008F53F /* Assets.xcassets */,
 				A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */,
 				A16EB23E22A9E9E20008F53F /* Info.plist */,
@@ -154,7 +148,6 @@
 			files = (
 				A16EB23D22A9E9E20008F53F /* LaunchScreen.storyboard in Resources */,
 				A16EB23A22A9E9E20008F53F /* Assets.xcassets in Resources */,
-				A16EB23822A9E9E10008F53F /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -165,25 +158,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A16EB25522AEC1460008F53F /* DetailViewController.swift in Sources */,
-				A16EB23522A9E9E10008F53F /* ViewController.swift in Sources */,
+				A1EA699E22B6C3AC00938BF7 /* DetailView.swift in Sources */,
 				A16EB23122A9E9E10008F53F /* AppDelegate.swift in Sources */,
 				A16EB23322A9E9E10008F53F /* SceneDelegate.swift in Sources */,
-				A16FC0BF22B0279D00144B5B /* ContentView.swift in Sources */,
+				A1EA69A322B7921800938BF7 /* MainView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		A16EB23622A9E9E10008F53F /* Main.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				A16EB23722A9E9E10008F53F /* Base */,
-			);
-			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
 		A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (

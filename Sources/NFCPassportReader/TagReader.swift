@@ -9,11 +9,12 @@
 import Foundation
 import CoreNFC
 
-public enum TagError: Error {
+public enum TagError: LocalizedError {
+    case InvalidResponse
     case UnexpectedError
     case NFCNotSupported
     case NoConnectedTag
-    case InvalidResponse
+    case ResponseError
     case D087Malformed
     case InvalidResponseChecksum
     case MissingMandatoryFields
@@ -24,6 +25,8 @@ public enum TagError: Error {
     case UnsupportedDataGroup
     case UnknownTag
     case NotImplemented
+
+    var errorDescription: String { return "Invalid response" }
 }
 
 public enum DataGroupId : Int {
@@ -68,7 +71,6 @@ private let DataGroupToFileIdMap : [DataGroupId: [UInt8]] = [
     .DG16 : [0x01,0x10],
     .SOD : [0x01,0x1D],
 ]
-
 
 public struct ResponseAPDU {
     
@@ -211,7 +213,7 @@ public class TagReader {
                 if let sm = self.secureMessaging {
                     do {
                         rep = try sm.unprotect(rapdu:rep)
-                        Log.debug(String(format:"[SM] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
+//                        Log.debug(String(format:"[SM] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
                     } catch {
                         completed( nil, TagError.UnableToUnprotectAPDU )
                         return
@@ -221,10 +223,246 @@ public class TagReader {
                 if rep.sw1 == 0x90 && rep.sw2 == 0x00 {
                     completed( rep, nil )
                 } else {
-                    Log.error( "Error reading tag: sw1 - \(binToHexRep(sw1)), sw2 - \(binToHexRep(sw2))" )
-                    completed( nil, TagError.InvalidResponse )
+                    let errorMsg = self.decodeError(sw1: rep.sw1, sw2: rep.sw2)
+                    Log.error( "Error reading tag: sw1 - \(binToHexRep(sw1)), sw2 - \(binToHexRep(sw2)) - reason: \(errorMsg)" )
+                    completed( nil, TagError.ResponseError )
                 }
             }
         }
     }
+    
+    private func decodeError( sw1: UInt8, sw2:UInt8 ) -> String {
+
+        let errors : [UInt8 : [UInt8:String]] = [
+            0x62: [0x00:"No information given",
+                   0x81:"Part of returned data may be corrupted",
+                   0x82:"End of file/record reached before reading Le bytes",
+                   0x83:"Selected file invalidated",
+                   0x84:"FCI not formatted according to ISO7816-4 section 5.1.5"],
+            
+            0x63: [0x00:"No information given",
+                   0x81:"File filled up by the last write",
+                   0x82:"Card Key not supported",
+                   0x83:"Reader Key not supported",
+                   0x84:"Plain transmission not supported",
+                   0x85:"Secured Transmission not supported",
+                   0x86:"Volatile memory not available",
+                   0x87:"Non Volatile memory not available",
+                   0x88:"Key number not valid",
+                   0x89:"Key length is not correct",
+                   0xC:"Counter provided by X (valued from 0 to 15) (exact meaning depending on the command)"],
+            0x65: [0x00:"No information given",
+                   0x81:"Memory failure"],
+            0x67: [0x00:"Wrong length"],
+            0x68: [0x00:"No information given",
+                   0x81:"Logical channel not supported",
+                   0x82:"Secure messaging not supported"],
+            0x69: [0x00:"No information given",
+                   0x81:"Command incompatible with file structure",
+                   0x82:"Security status not satisfied",
+                   0x83:"Authentication method blocked",
+                   0x84:"Referenced data invalidated",
+                   0x85:"Conditions of use not satisfied",
+                   0x86:"Command not allowed (no current EF)",
+                   0x87:"Expected SM data objects missing",
+                   0x88:"SM data objects incorrect"],
+            0x6A: [0x00:"No information given",
+                   0x80:"Incorrect parameters in the data field",
+                   0x81:"Function not supported",
+                   0x82:"File not found",
+                   0x83:"Record not found",
+                   0x84:"Not enough memory space in the file",
+                   0x85:"Lc inconsistent with TLV structure",
+                   0x86:"Incorrect parameters P1-P2",
+                   0x87:"Lc inconsistent with P1-P2",
+                   0x88:"Referenced data not found"],
+            0x6B: [0x00:"Wrong parameter(s) P1-P2]"],
+            0x6D: [0x00:"Instruction code not supported or invalid"],
+            0x6E: [0x00:"Class not supported"],
+            0x6F: [0x00:"No precise diagnosis"],
+            0x90: [0x00:"Success"] //No further qualification
+        ]
+        
+        // Special cases - where sw2 isn't an error but contains a value
+        if sw1 == 0x61 {
+            return "SW2 indicates the number of response bytes still available - (\(sw2) bytes still available)"
+        } else if sw1 == 0x64 {
+            return "State of non-volatile memory unchanged (SW2=00, other values are RFU)"
+        } else if sw1 == 0x6C {
+            return "Wrong length Le: SW2 indicates the exact length - (exact length :\(sw2))"
+        }
+
+        if let dict = errors[sw1], let errorMsg = dict[sw2] {
+            return errorMsg
+        }
+        
+        return "Unknown error - sw1: \(sw1), sw2: \(sw2)"
+    }
+    /*
+    private func decodeError( sw1: UInt8, sw2:UInt8 ) -> String {
+        switch sw1 {
+        case 0x61:
+            return "SW2 indicates the number of response bytes still available"
+        case 0x62:
+            switch sw2 {
+            case 0x00:
+                return "No information given"
+            case 0x81:
+                return "Part of returned data may be corrupted"
+            case 0x82:
+                return "End of file/record reached before reading Le bytes"
+            case 0x83:
+                return "Selected file invalidated"
+            case 0x84:
+                return "FCI not formatted according to ISO7816-4 section 5.1.5"
+            default:
+                return "Unknown error"
+            }
+        case 0x63:
+            switch sw2 {
+            case 0x00:
+                return "No information given"
+            case 0x81:
+                return "File filled up by the last write"
+            case 0x82:
+                return "Card Key not supported"
+            case 0x83:
+                return "Reader Key not supported"
+            case 0x84:
+                return "Plain transmission not supported"
+            case 0x85:
+                return "Secured Transmission not supported"
+            case 0x86:
+                return "Volatile memory not available"
+            case 0x87:
+                return "Non Volatile memory not available"
+            case 0x88:
+                return "Key number not valid"
+            case 0x89:
+                return "Key length is not correct"
+            case 0x0C:
+                return "Counter provided by X (valued from 0 to 15) (exact meaning depending on the command)"
+            default:
+                return "Unknown error"
+            }
+        case 0x64:
+            return "State of non-volatile memory unchanged (SW2=00, other values are RFU)"
+        case 0x65:
+            switch sw2 {
+            case 0x00:
+                return "No information given"
+            case 0x81:
+                return "Memory failure"
+            default:
+                return "Unknown error"
+            }
+        case 0x66:
+            return "Reserved for security-related issues (not defined in this part of ISO/IEC 7816)"
+        case 0x67:
+            switch sw2 {
+            default:
+                return "Wrong length"
+            }
+        case 0x68:
+            switch sw2 {
+                case 0x00:
+                    return "No information given"
+            case 0x81:
+                return "Logical channel not supported"
+            case 0x82:
+                return "Secure messaging not supported"
+            default:
+                return "Unknown error"
+            }
+        case 0x69:
+            switch sw2 {
+            case 0x00:
+                return "No information given"
+            case 0x81:
+                return "Command incompatible with file structure"
+            case 0x82:
+                return "Security status not satisfied"
+            case 0x83:
+                return "Authentication method blocked"
+            case 0x84:
+                return "Referenced data invalidated"
+            case 0x85:
+                return "Conditions of use not satisfied"
+            case 0x86:
+                return "Command not allowed (no current EF)"
+            case 0x87:
+                return "Expected SM data objects missing"
+            case 0x88:
+                return "SM data objects incorrect"
+            default:
+                return "Unknown error"
+            }
+        case 0x6A:
+            switch sw2 {
+            case 0x00:
+                return "No information given"
+            case 0x80:
+                return "Incorrect parameters in the data field"
+            case 0x81:
+                return "Function not supported"
+            case 0x82:
+                return "File not found"
+            case 0x83:
+                return "Record not found"
+            case 0x84:
+                return "Not enough memory space in the file"
+            case 0x85:
+                return "Lc inconsistent with TLV structure"
+            case 0x86:
+                return "Incorrect parameters P1-P2"
+            case 0x87:
+                return "Lc inconsistent with P1-P2"
+            case 0x88:
+                return "Referenced data not found"
+            default:
+                return "Unknown error"
+            }
+        case 0x6B:
+            switch sw2 {
+            case 0x00:
+                return "Wrong parameter(s) P1-P2"
+            default:
+                return "Unknown error"
+            }
+        case 0x6C:
+            return "Wrong length Le: SW2 indicates the exact length"
+        case 0x6D:
+            switch sw2 {
+            case 0x00:
+                return "Instruction code not supported or invalid"
+            default:
+                return "Unknown error"
+            }
+        case 0x6E:
+            switch sw2 {
+            case 0x00:
+                return "Class not supported"
+            default:
+                return "Unknown error"
+            }
+        case 0x6F:
+            switch sw2 {
+            case 0x00:
+                return "No precise diagnosis"
+            default:
+                return "Unknown error"
+            }
+        case 0x90:
+            switch sw2 {
+            case 0x00:
+                return "Success"
+            default:
+                return "Unknown error"
+            }
+        default:
+            return "Unknown error"
+        }
+    }
+     */
 }
+
