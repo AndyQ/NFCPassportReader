@@ -33,14 +33,16 @@ Expiry date checksum - 5
 mrzKey = "12345678898012772508315"
 ```
 
-Then on an instance of PassportReader, call the readPassport method passing in the mrzKey, and a completion block.  
+Then on an instance of PassportReader, call the readPassport method passing in the mrzKey, the datagroups to read and a completion block.  
 e.g.
 
 ```
-passportReader.readPassport(mrzKey: mrzKey, completed: { (error) in
+passportReader.readPassport(mrzKey: mrzKey, tags: [.COM, .DG1, .DG2], completed: { (error) in
    ...
 }
 ```
+
+Currently the datagroups supported are: COM, DG1, DG2
 
 This will then handle the reading of the passport, and image and will call the completion block either with an TagError error if there was an error of some kind, or nil if successful.
 
@@ -61,8 +63,6 @@ There is a sample app included in the repo which demonstrates the functionality.
 
 ## To do
 There are a number of things I'd like to implement in no particular order:
- * Proper parsing of DG1 datagroup (MRZ data)
- * Ability to select which datagroups are read - currently both DG1 and DG2 are read
  * Ability to dump passport stream and read it back in
  
 
