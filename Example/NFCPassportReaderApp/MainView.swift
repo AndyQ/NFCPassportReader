@@ -119,8 +119,9 @@ struct MainView : View {
     
     
     func scanPassport( mrzKey: String ) {
-        
-        passportReader.readPassport(mrzKey: mrzKey, tags: [.COM, .DG1, .DG2], completed: { (error) in
+        let dataGroups : [DataGroupId] = [.COM, .DG1, .DG2, .SOD]
+
+        passportReader.readPassport(mrzKey: mrzKey, tags: dataGroups, completed: { (error) in
             if let error = error {
                 switch error {
                 case .NFCNotSupported:

@@ -10,9 +10,6 @@ import UIKit
 import CoreNFC
 
 public class PassportReader : NSObject {
-    var dataGroupsToRead : [DataGroupId] = []
-
-    var dataGroupsRead : [DataGroupId:DataGroup] = [:]
     
     public var passportMRZ : String {
         guard let dg1 = dataGroupsRead[.DG1] as? DataGroup1 else { return "NOT READ" }
@@ -30,8 +27,11 @@ public class PassportReader : NSObject {
         
         return dg7.getImage()
     }
-
+    
     private var readerSession: NFCTagReaderSession?
+
+    private var dataGroupsToRead : [DataGroupId] = []
+    private var dataGroupsRead : [DataGroupId:DataGroup] = [:]
 
     private var tagReader : TagReader?
     private var bacHandler : BACHandler?
@@ -151,7 +151,7 @@ extension PassportReader {
         }
     }
     
-    func readNextDataGroup( completed : @escaping (TagError?)->() ) {
+    func readNextDataGroup( completedReadingGroups completed : @escaping (TagError?)->() ) {
         guard let tagReader = self.tagReader else { completed(TagError.NoConnectedTag ); return }
         if dataGroupsToRead.count == 0 {
             completed(nil)
@@ -161,20 +161,22 @@ extension PassportReader {
         let dgId = dataGroupsToRead.removeFirst()
         Log.info( "Reading tag - \(dgId)" )
         
-        tagReader.readDataGroup(dataGroup:dgId) { [unowned self] (response, error) in
+        tagReader.readDataGroup(dataGroup:dgId) { [unowned self] (response, err) in
             if let response = response {
                 do {
                     let dg = try DataGroupParser().parseDG(data: response)
                     self.dataGroupsRead[dgId] = dg
-                } catch is TagError {
+                } catch let error as TagError {
+                    Log.error( "TagError reading tag - \(error)" )
                     completed( error )
-                } catch {
+                } catch let error {
+                    Log.error( "Unexpected error reading tag - \(error)" )
                     completed( TagError.UnexpectedError )
                 }
                 
-                self.readNextDataGroup(completed: completed)
+                self.readNextDataGroup(completedReadingGroups: completed)
             } else {
-                completed( error )
+                completed( err )
             }
         }
     }

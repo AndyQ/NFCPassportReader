@@ -126,19 +126,14 @@ public class TagReader {
         send( cmd: cmd, completed: completed )
     }
     
-
-    func readCOM( completed: @escaping ([UInt8]?, TagError?)->() ) {
-        selectFileAndRead(tag: [0x01,0x1E], completed:completed )
-    }
-    
-    func readDG1( completed: @escaping ([UInt8]?, TagError?)->() ) {
-        selectFileAndRead(tag: [0x01,0x02], completed:completed )
-    }
-    
     
     var header = [UInt8]()
     func selectFileAndRead( tag: [UInt8], completed: @escaping ([UInt8]?, TagError?)->() ) {
         selectFile(tag: tag ) { [unowned self] (resp,err) in
+            if let error = err {
+                completed( nil, error)
+                return
+            }
             
             // Read first 4 bytes of header to see how big the data structure is
             let data : [UInt8] = [0x00, 0xB0, 0x00, 0x00, 0x00, 0x00,0x04]
@@ -219,7 +214,10 @@ public class TagReader {
         }
 
         tag.sendCommand(apdu: toSend) { [unowned self] (data, sw1, sw2, error) in
-            if error == nil {
+            if let error = error {
+                Log.error( "Error reading tag - \(error.localizedDescription)" )
+                completed( nil, TagError.ResponseError( error.localizedDescription ) )
+            } else {
                 var rep = ResponseAPDU(data: [UInt8](data), sw1: sw1, sw2: sw2)
                 
                 if let sm = self.secureMessaging {
