@@ -22,12 +22,10 @@ class DataGroupParser {
     func parseDG( data : [UInt8] ) throws -> DataGroup {
         
         let header = data[0..<4]
-        let (_, offset) = try asn1Length( header[1...] )
         
         let dg = try tagToDG(header[0])
-        let body = [UInt8](data[(offset+1)...])
-        
-        return try dg.init(body)
+
+        return try dg.init(data)
     }
     
     
@@ -37,13 +35,25 @@ class DataGroupParser {
     }
 }
 
-class DataGroup {
-    var datagroupType : DataGroupId = .Unknown
-    var data : [UInt8]
+public class DataGroup {
+    public var datagroupType : DataGroupId = .Unknown
+
+    /// Body contains the actual data
+    public var body : [UInt8] = []
+
+    /// Data contains the whole DataGroup data (as that is what the has is calculated from
+    private var data : [UInt8] = []
+
     var pos = 0
     
     required init( _ data : [UInt8] ) throws {
         self.data = data
+        
+        // Skip the first byte which is the header byte
+        _ = try getNextTag()
+        _ = try getNextLength()
+        self.body = [UInt8](data[pos...])
+        
         try parse(data)
     }
     
@@ -76,6 +86,18 @@ class DataGroup {
         pos += length
         return value
     }
+    
+    public func hash( _ hashAlgorythm: String ) -> [UInt8]  {
+        var ret : [UInt8] = []
+        if hashAlgorythm == "SHA256" {
+            ret = calcSHA256Hash(self.data)
+        } else if hashAlgorythm == "SHA1" {
+            ret = calcSHA1Hash(self.data)
+        }
+        
+        return ret
+    }
+
 }
 
 
@@ -118,16 +140,15 @@ class COM : DataGroup {
 }
 
 class SOD : DataGroup {
+    public var pkck7CertificateData : [UInt8] = []
+    
      required init( _ data : [UInt8] ) throws {
         try super.init(data)
         datagroupType = .SOD
     }
 
     override func parse(_ data: [UInt8]) throws {
-        let tag = try getNextTag()
-        if tag != 0x5F1F {
-            throw TagError.InvalidResponse
-        }
+        self.pkck7CertificateData = try getNextValue()
     }
 }
 

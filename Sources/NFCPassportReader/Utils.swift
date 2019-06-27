@@ -8,6 +8,7 @@
 
 import UIKit
 import CommonCrypto
+import CryptoKit
 
 extension FileManager {
     static var documentDir : URL {
@@ -234,3 +235,31 @@ public func toAsn1Length(_ data : Int) throws -> [UInt8] {
     throw TagError.InvalidASN1Value
 }
         
+
+/// This function is used during the Derivation of Document Basic Acces Keys.
+/// @param Kseed: A 16 bytes random value
+/// @type Kseed: Binary
+/// @return: A set of two 8 bytes encryption keys
+
+func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
+    var sha1 = Insecure.SHA1()
+    sha1.update(data: data)
+    let hash = sha1.finalize()
+    
+    return Array(hash)
+}
+
+/// This function is used during the Derivation of Document Basic Acces Keys.
+/// @param Kseed: A 16 bytes random value
+/// @type Kseed: Binary
+/// @return: A set of two 8 bytes encryption keys
+
+func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
+    var sha1 = SHA256()
+    sha1.update(data: data)
+    let hash = sha1.finalize()
+    
+    return Array(hash)
+}
+
+

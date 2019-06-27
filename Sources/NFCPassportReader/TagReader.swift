@@ -35,6 +35,7 @@ public enum TagError: Error {
     case UnableToProtectAPDU
     case UnableToUnprotectAPDU
     case UnsupportedDataGroup
+    case DataGroupNotRead
     case UnknownTag
     case NotImplemented
 

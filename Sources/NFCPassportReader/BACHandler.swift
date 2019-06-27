@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import CryptoKit
 import CoreNFC
 
 public class BACHandler {
@@ -102,7 +101,7 @@ public class BACHandler {
     func generateInitialKseed(kmrz : String ) -> [UInt8] {
         
         Log.debug("Calculate the SHA-1 hash of MRZ_information")
-        let hash = calcSHA1Hash( kmrz.data(using:.utf8)! )
+        let hash = calcSHA1Hash( [UInt8](kmrz.data(using:.utf8)!) )
         
         Log.debug("\tHsha1(MRZ_information): \(binToHexRep(hash))")
         
@@ -113,24 +112,7 @@ public class BACHandler {
         return Array(subHash)
     }
     
-    /// This function is used during the Derivation of Document Basic Acces Keys.
-    /// @param Kseed: A 16 bytes random value
-    /// @type Kseed: Binary
-    /// @return: A set of two 8 bytes encryption keys
-    
-    func calcSHA1Hash( _ data: Data ) -> [UInt8] {
-        var sha1 = Insecure.SHA1()
-        sha1.update(data: data)
-        let hash = sha1.finalize()
-        
-        return Array(hash)
-        //        var hashStr = ""
-        //        for v in hash {
-        //            hashStr += String(format:"%02X", v )
-        //        }
-        //
-    }
-    
+
     func computeKeysFromKseed(Kseed : [UInt8] ) -> ([UInt8], [UInt8]) {
         Log.debug("Compute Encryption key (c: \(binToHexRep(KENC))")
         let kenc = self.keyDerivation(kseed: Kseed, c: KENC)
@@ -160,8 +142,7 @@ public class BACHandler {
         Log.debug("\tConcatenate Kseed and c")
         Log.debug("\t\tD: \(binToHexRep(d))" )
         
-        let data = Data(d)
-        let h = calcSHA1Hash(data)
+        let h = calcSHA1Hash(d)
         
         //        h = sha1(str(d)).digest()
         Log.debug("\tCalculate the SHA-1 hash of D")
@@ -253,9 +234,6 @@ public class BACHandler {
 
         return cmd_data
     }
-
-    
-
     
     /// Calculate the session keys (KSenc, KSmac) and the SSC from the data
     /// received by the mutual authenticate command.

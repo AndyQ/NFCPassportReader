@@ -9,8 +9,7 @@
 import UIKit
 import CoreNFC
 
-public class PassportReader : NSObject {
-    
+public struct  Passport {
     public var passportMRZ : String {
         guard let dg1 = dataGroupsRead[.DG1] as? DataGroup1 else { return "NOT READ" }
         
@@ -20,7 +19,7 @@ public class PassportReader : NSObject {
         guard let dg2 = dataGroupsRead[.DG2] as? DataGroup2 else { return nil }
         
         return dg2.getImage()
-
+        
     }
     public var signatureImage : UIImage? {
         guard let dg7 = dataGroupsRead[.DG7] as? DataGroup7 else { return nil }
@@ -28,29 +27,56 @@ public class PassportReader : NSObject {
         return dg7.getImage()
     }
     
+    public var dataGroupsRead : [DataGroupId:DataGroup] = [:]
+    
+    public func getDataGroup( _ id : DataGroupId ) -> DataGroup? {
+        return dataGroupsRead[id]
+    }
+
+    public func getHashesForDatagroups( hashAlgorythm: String ) -> [DataGroupId:[UInt8]]  {
+        var ret = [DataGroupId:[UInt8]]()
+        
+        for (key, value) in dataGroupsRead {
+            if hashAlgorythm == "SHA256" {
+                ret[key] = calcSHA256Hash(value.body)
+            } else if hashAlgorythm == "SHA1" {
+                ret[key] = calcSHA1Hash(value.body)
+            }
+        }
+        
+        return ret
+    }
+
+    public init() {
+        
+    }
+}
+
+public class PassportReader : NSObject {
+    
+    private var passport : Passport = Passport()
     private var readerSession: NFCTagReaderSession?
 
     private var dataGroupsToRead : [DataGroupId] = []
-    private var dataGroupsRead : [DataGroupId:DataGroup] = [:]
 
     private var tagReader : TagReader?
     private var bacHandler : BACHandler?
     private var mrzKey : String = ""
     
-    private var scanCompletedHandler: ((TagError?)->())!
+    private var scanCompletedHandler: ((Passport?, TagError?)->())!
 
     override public init( ) {
         super.init()
-        
     }
     
-    public func readPassport( mrzKey : String,  tags: [DataGroupId], completed: @escaping (TagError?)->() ) {
+    public func readPassport( mrzKey : String,  tags: [DataGroupId], completed: @escaping (Passport?, TagError?)->() ) {
         self.mrzKey = mrzKey
+        self.dataGroupsToRead.removeAll()
         self.dataGroupsToRead.append( contentsOf:tags)
         self.scanCompletedHandler = completed
         
         guard NFCNDEFReaderSession.readingAvailable else {
-            scanCompletedHandler( TagError.NFCNotSupported)
+            scanCompletedHandler( nil, TagError.NFCNotSupported)
             return
         }
         
@@ -60,7 +86,6 @@ public class PassportReader : NSObject {
             readerSession?.begin()
         }
     }
-    
 }
 
 
@@ -128,12 +153,12 @@ extension PassportReader {
                         self?.readerSession?.invalidate(errorMessage: "Sorry, there was a problem reading the passport. Please try again" )
                     } else {
                         self?.readerSession?.invalidate()
+                        self?.scanCompletedHandler( self?.passport, nil )
                     }
-                    self?.scanCompletedHandler( error )
                 }
             } else {
                 self?.readerSession?.invalidate(errorMessage: "Sorry, there was a problem reading the passport. Please try again" )
-                self?.scanCompletedHandler(error)
+                self?.scanCompletedHandler(nil, error)
             }
         })
     }
@@ -165,7 +190,8 @@ extension PassportReader {
             if let response = response {
                 do {
                     let dg = try DataGroupParser().parseDG(data: response)
-                    self.dataGroupsRead[dgId] = dg
+                    self.passport.dataGroupsRead[dgId] = dg
+                    self.readNextDataGroup(completedReadingGroups: completed)
                 } catch let error as TagError {
                     Log.error( "TagError reading tag - \(error)" )
                     completed( error )
@@ -174,7 +200,6 @@ extension PassportReader {
                     completed( TagError.UnexpectedError )
                 }
                 
-                self.readNextDataGroup(completedReadingGroups: completed)
             } else {
                 completed( err )
             }
