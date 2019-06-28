@@ -70,7 +70,7 @@ I'd like to move this over to its own Swift Package BUT currently SPM doesn't su
 
 It requires a set of CSCA certificates in PEM format from a master list (either from a country that publishes their master list, or the ICAO PKD repository). See the scripts folder for details on how to get and create this file.
 
-**The masterList.pem file included in the Sample app is purely there to ensure no compiler warnings and contains only a single PEM file that was self-gengerated and won't be able to veryify anything!**
+**The masterList.pem file included in the Sample app is purely there to ensure no compiler warnings and contains only a single PEM file that was self-generated and won't be able to veryify anything!**
 
 
 ## To do
