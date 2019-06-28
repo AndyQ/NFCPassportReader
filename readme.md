@@ -9,9 +9,9 @@ Supported features:
 * Reads DG1 (MRZ data) and DG2 (Image) in both JPEG and JPEG2000 formats
 * Passive Authentication (in Sample app only at the moment)
 
-This is still very early days - the code is by no means perfect and there are still some rough edges  - there ARE most definately bugs and I'm sure I'm not doing things perfectly. 
+This is still very early days - the code is by no means perfect and there are still some rough edges  - there ARE most definitely bugs and I'm sure I'm not doing things perfectly. 
 
-It reads and verifies y passport (and others I've been able to test) fine, however your milage may vary.
+It reads and verifies my passport (and others I've been able to test) fine, however your mileage may vary.
 
 ## Usage 
 To use, you first need to create the Passport MRZ Key which consists of the passport number, date of birth and expiry date (including the checksums).
@@ -66,7 +66,7 @@ It now includes a sample of how to do Passive Authentication to ensure that an E
 
 This however requires the use of the OpenSSL library (which is included as a Pod file from Marcin Krzyżanowski's OpenSSL-Universal Pod (https://github.com/krzyzanowskim/OpenSSL). 
 
-I'd like to move this over to its own Swift Package BUT currently SPM doesn't support mixed langages so sadly I can't yet. Also, didn't want to get into the whole create a new CocoaPod thing yet so if anyone fancies doing something clever.....
+I'd like to move this over to its own Swift Package BUT currently SPM doesn't support mixed languages so sadly I can't yet. Also, didn't want to get into the whole create a new CocoaPod thing yet so if anyone fancies doing something clever.....
 
 It requires a set of CSCA certificates in PEM format from a master list (either from a country that publishes their master list, or the ICAO PKD repository). See the scripts folder for details on how to get and create this file.
 
@@ -81,6 +81,6 @@ There are a number of things I'd like to implement in no particular order:
 ## Thanks
 I'd like to thank the writers of pypassport (Jean-Francois Houzard and Olivier Roger - can't find their website but referenced from https://github.com/andrew867/epassportviewer) who's work this is based on.
 
-The EPassport section on YobiWiki (http://wiki.yobi.be/wiki/EPassport)  This has been an invaluable resource expecially around Passive Authentication.
+The EPassport section on YobiWiki (http://wiki.yobi.be/wiki/EPassport)  This has been an invaluable resource especially around Passive Authentication.
 
 Marcin Krzyżanowski for his OpenSSL-Universal repo.
