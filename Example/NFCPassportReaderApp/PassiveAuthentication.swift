@@ -10,6 +10,27 @@ import Foundation
 import NFCPassportReader
 
 
+public enum PassiveAuthenticationError: Error {
+    case UnableToGetPKCS7CertificateForSOD
+    case UnableToVerifyX509CertificateForSOD
+    case UnableToParseSODHashes
+    case InvalidDataGroupHash(String)
+}
+
+extension PassiveAuthenticationError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .UnableToGetPKCS7CertificateForSOD:
+            return NSLocalizedString("Unable to read the SOD PKCS7 Certificate.", comment: "UnableToGetPKCS7CertificateForSOD")
+        case .UnableToVerifyX509CertificateForSOD:
+            return NSLocalizedString("Unable to verify the SOD X509 certificate.", comment: "UnableToVerifyX509CertificateForSOD")
+        case .UnableToParseSODHashes:
+            return NSLocalizedString("Unable to parse the SOD Datagroup hashes.", comment: "UnableToParseSODHashes")
+        case .InvalidDataGroupHash:
+            return NSLocalizedString("DataGroup hash not present or didn't match (see message for details)!", comment: "InvalidDataGroupHash")
+        }
+    }
+}
 
 /// This class handles the ePassport PassiveAuthentication
 /// It verifies that the SOD Document Signing Certificate (DCS) is valid (ias within a specified masterList)
@@ -21,11 +42,11 @@ import NFCPassportReader
 /// modified it to allow calling. BUT because of this, all communications between us and OpenSSL is currently through files (which I know is crap!).
 /// I'd like a proper swift wrapper around the OpenSSL library at some point (any volunteers?)
 ///
-class PassiveAuthentication {
+public class PassiveAuthentication {
     var sodHashAlgo = ""
     var sodHashes : [DataGroupId : String] = [:]
     
-    func validatePassport( sodBody : [UInt8], dataGroupsToCheck : [DataGroupId : DataGroup] ) -> Bool {
+    func validatePassport( sodBody : [UInt8], dataGroupsToCheck : [DataGroupId : DataGroup] ) throws  {
         let tmpSODFile = getTempFile()
         // Write SOD to temp file
         let d = Data(sodBody)
@@ -34,43 +55,32 @@ class PassiveAuthentication {
             cleanupTempFile( tmpSODFile )
         }
 
+        try verifySOD(tmpSODFile)
+        Log.debug( "Passport passed SOD Verification" )
         
-        if !verifySOD(tmpSODFile) {
-            Log.error( "Passport failed SOD Verification" )
-            return false
-        }
-        
-        Log.info( "Passport passed SOD Verification" )
-        
-        if !verifyDataGroups(tmpSODFile, dataGroupsToCheck: dataGroupsToCheck ) {
-            Log.error( "Passport failed DataGroup Verification" )
-            return false
-        }
-        Log.info( "Passport passed SOD Verification" )
-
-        return true
+        try verifyDataGroups(tmpSODFile, dataGroupsToCheck: dataGroupsToCheck )
+        Log.debug( "Passport passed SOD Verification" )
     }
     
-    private func verifySOD(_ SODFileName : URL) -> Bool {
+    private func verifySOD(_ SODFileName : URL) throws {
         let tmpOutFile = getTempFile()
         defer {
             cleanupTempFile( tmpOutFile )
         }
 
         let rc1 = retrievePKCS7Certificate(SODFileName.path, tmpOutFile.path, 1, 1, 1)
-        Log.debug( "retrievePKCS7Certificate rc = \(rc1)" )
         if rc1 != 0 {
-            return false
+            throw PassiveAuthenticationError.UnableToGetPKCS7CertificateForSOD
         }
 
         let masterList = Bundle.main.path(forResource: "masterList", ofType: "pem")!
         let rc2 = verifyX509Certificate(tmpOutFile.path, masterList)
-        Log.debug( "verifyX509Certificate rc = \(rc2)" )
-        
-        return rc2 == 0
+        if rc2 != 0 {
+            throw PassiveAuthenticationError.UnableToVerifyX509CertificateForSOD
+        }
     }
     
-    private func verifyDataGroups(_ SODFileName : URL, dataGroupsToCheck : [DataGroupId : DataGroup]) -> Bool {
+    private func verifyDataGroups(_ SODFileName : URL, dataGroupsToCheck : [DataGroupId : DataGroup]) throws {
         // Get SOD Content
         
         let tmpOutFile = getTempFile()
@@ -83,32 +93,35 @@ class PassiveAuthentication {
         // Note this doesn't do any verification at all - just dumps the signature content to the output file
         let rc1 = getPkcs7SignatureContent(1, SODFileName.path, tmpOutFile.path, 1, 1)
         if rc1 != 0 {
-            Log.error( "Failed to get PCKS7 Signature for SOD Object!" )
-            return false
+            throw PassiveAuthenticationError.UnableToVerifyX509CertificateForSOD
         }
         
         let rc2 = asn1parse(tmpOutFile.path, tmpHashesFile.path, 1, 1)
         if rc2 != 0 {
-            Log.error( "Failed to get parse out SOD Hashes!" )
-            return false
+            throw PassiveAuthenticationError.UnableToParseSODHashes
         }
 
         let certData = try! String(contentsOf: tmpHashesFile)
         parseSignatureContent( certData )
         
         // Now compare Hashes
+        var errors : String = ""
         for (id,val) in sodHashes {
-            guard let dg = dataGroupsToCheck[id] else { Log.error( "DG missing! \(id)" ); return false }
-            let hash = binToHexRep(dg.hash(self.sodHashAlgo))
+            guard let dg = dataGroupsToCheck[id] else {
+                errors += "DataGroup \(id) is missing!\n"
+                continue
+            }
             
+            let hash = binToHexRep(dg.hash(self.sodHashAlgo))
+
             if hash != val {
-                Log.info( "\(id) invalid hash - SOD:\(val),  DG:\(hash)" )
-                return false
-            } else {
-                Log.info( "\(id) hash matches SOD - SOD:\(val),  DG:\(hash)" )
+                errors += "\(id) invalid hash:\n  SOD:\(val)\n   DG:\(hash)\n"
             }
         }
-        return true
+        
+        if errors != "" {
+            throw PassiveAuthenticationError.InvalidDataGroupHash(errors)
+        }
     }
     
     private func getTempFile() -> URL {
