@@ -7,10 +7,11 @@ Supported features:
 * Basic Access Control (BAC)
 * Secure Messaging
 * Reads DG1 (MRZ data) and DG2 (Image) in both JPEG and JPEG2000 formats
+* Passive Authentication (in Sample app only at the moment)
 
 This is still very early days - the code is by no means perfect and there are still some rough edges  - there ARE most definately bugs and I'm sure I'm not doing things perfectly. 
 
-It reads my passport (and others I've been able to test) fine, however your milage may vary.
+It reads and verifies y passport (and others I've been able to test) fine, however your milage may vary.
 
 ## Usage 
 To use, you first need to create the Passport MRZ Key which consists of the passport number, date of birth and expiry date (including the checksums).
@@ -58,8 +59,15 @@ let reader = PassportReader(logLevel: .debug)
 
 NOTE - currently this is just printing out to the console - I'd like to implement better logging later - probably using SwiftyBeaver 
 
-## Sample
+## Sample app
 There is a sample app included in the repo which demonstrates the functionality.
+
+It now includes a sample of how to do Passive Authentication to ensure that an E-Passport is valid and hasn't been tampered with.
+
+It requires a set of CSCA certificates in PEM format from a master list (either from a country that publishes their master list, or the ICAO PKD repository). See the scripts folder for details on how to get and create this file.
+
+**The masterList.pem file included in the Sample app is purely there to ensure no compiler warnings and contains only a single PEM file that was self-gengerated and won't be able to veryify anything!**
+
 
 ## To do
 There are a number of things I'd like to implement in no particular order:
@@ -68,3 +76,5 @@ There are a number of things I'd like to implement in no particular order:
 
 ## Thanks
 I'd like to thank the writers of pypassport (Jean-Francois Houzard and Olivier Roger - can't find their website but referenced from https://github.com/andrew867/epassportviewer) who's work this is based on.
+
+The EPassport section on YobiWiki (http://wiki.yobi.be/wiki/EPassport)  This has been an invaluable resource expecially around Passive Authentication.
