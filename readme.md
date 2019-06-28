@@ -43,7 +43,7 @@ passportReader.readPassport(mrzKey: mrzKey, tags: [.COM, .DG1, .DG2], completed:
 }
 ```
 
-Currently the datagroups supported are: COM, DG1, DG2
+Currently the datagroups supported are: COM, DG1, DG2, SOD
 
 This will then handle the reading of the passport, and image and will call the completion block either with an TagError error if there was an error of some kind, or nil if successful.
 
@@ -64,6 +64,10 @@ There is a sample app included in the repo which demonstrates the functionality.
 
 It now includes a sample of how to do Passive Authentication to ensure that an E-Passport is valid and hasn't been tampered with.
 
+This however requires the use of the OpenSSL library (which is included as a Pod file from Marcin Krzyżanowski's OpenSSL-Universal Pod (https://github.com/krzyzanowskim/OpenSSL). 
+
+I'd like to move this over to its own Swift Package BUT currently SPM doesn't support mixed langages so sadly I can't yet. Also, didn't want to get into the whole create a new CocoaPod thing yet so if anyone fancies doing something clever.....
+
 It requires a set of CSCA certificates in PEM format from a master list (either from a country that publishes their master list, or the ICAO PKD repository). See the scripts folder for details on how to get and create this file.
 
 **The masterList.pem file included in the Sample app is purely there to ensure no compiler warnings and contains only a single PEM file that was self-gengerated and won't be able to veryify anything!**
@@ -78,3 +82,5 @@ There are a number of things I'd like to implement in no particular order:
 I'd like to thank the writers of pypassport (Jean-Francois Houzard and Olivier Roger - can't find their website but referenced from https://github.com/andrew867/epassportviewer) who's work this is based on.
 
 The EPassport section on YobiWiki (http://wiki.yobi.be/wiki/EPassport)  This has been an invaluable resource expecially around Passive Authentication.
+
+Marcin Krzyżanowski for his OpenSSL-Universal repo.
