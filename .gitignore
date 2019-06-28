@@ -2,6 +2,7 @@ tmp
 old
 working
 .vscode
+scripts/*.pem
 
 # Xcode
 #
