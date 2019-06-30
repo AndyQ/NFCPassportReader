@@ -9,11 +9,18 @@
 import UIKit
 import CoreNFC
 
-public struct  Passport {
+public struct NFCPassportModel {
+    
     public var passportMRZ : String {
         guard let dg1 = dataGroupsRead[.DG1] as? DataGroup1 else { return "NOT READ" }
         
-        return "\(dg1.elements)"
+        return dg1.elements["5F1F"] ?? "NOT FOUND"
+    }
+    
+    public var passportDataElements : [String:String]? {
+        guard let dg1 = dataGroupsRead[.DG1] as? DataGroup1 else { return nil }
+        
+        return dg1.elements
     }
     public var passportImage : UIImage? {
         guard let dg2 = dataGroupsRead[.DG2] as? DataGroup2 else { return nil }
@@ -54,7 +61,7 @@ public struct  Passport {
 
 public class PassportReader : NSObject {
     
-    private var passport : Passport = Passport()
+    private var passport : NFCPassportModel = NFCPassportModel()
     private var readerSession: NFCTagReaderSession?
 
     private var dataGroupsToRead : [DataGroupId] = []
@@ -63,13 +70,13 @@ public class PassportReader : NSObject {
     private var bacHandler : BACHandler?
     private var mrzKey : String = ""
     
-    private var scanCompletedHandler: ((Passport?, TagError?)->())!
+    private var scanCompletedHandler: ((NFCPassportModel?, TagError?)->())!
 
     override public init( ) {
         super.init()
     }
     
-    public func readPassport( mrzKey : String,  tags: [DataGroupId], completed: @escaping (Passport?, TagError?)->() ) {
+    public func readPassport( mrzKey : String,  tags: [DataGroupId], completed: @escaping (NFCPassportModel?, TagError?)->() ) {
         self.mrzKey = mrzKey
         self.dataGroupsToRead.removeAll()
         self.dataGroupsToRead.append( contentsOf:tags)

@@ -214,7 +214,7 @@ class DataGroup1 : DataGroup {
     func parseOther(_ data : [UInt8]) {
         elements["5F03"] = String( bytes:data[0..<2], encoding:.utf8)
         elements["5F28"] = String( bytes:data[2..<5], encoding:.utf8)
-        elements["5F5B"] = String( bytes:data[5..<44], encoding:.utf8)
+        elements["5B"]   = String( bytes:data[5..<44], encoding:.utf8)
         elements["5A"]   = String( bytes:data[44..<53], encoding:.utf8)
         elements["5F04"] = String( bytes:[data[53]], encoding:.utf8)
         elements["5F2C"] = String( bytes:data[54..<57], encoding:.utf8)
