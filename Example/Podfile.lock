@@ -1,22 +1,24 @@
 PODS:
-  - OpenSSL-Universal (1.0.2.17)
+  - OpenSSL-Universal (1.0.2.18):
+    - OpenSSL-Universal/Static (= 1.0.2.18)
+  - OpenSSL-Universal/Static (1.0.2.18)
 
 DEPENDENCIES:
-  - OpenSSL-Universal (from `https://github.com/krzyzanowskim/OpenSSL.git`, branch `1.0.2.17`)
+  - OpenSSL-Universal (from `https://github.com/krzyzanowskim/OpenSSL.git`, branch `master`)
 
 EXTERNAL SOURCES:
   OpenSSL-Universal:
-    :branch: 1.0.2.17
+    :branch: :master
     :git: https://github.com/krzyzanowskim/OpenSSL.git
 
 CHECKOUT OPTIONS:
   OpenSSL-Universal:
-    :commit: 990bd88219da80d7a77289aeae245b3eb400d834
+    :commit: 273a1f5097a9b7b8101c5678e2dd68ec015e22d5
     :git: https://github.com/krzyzanowskim/OpenSSL.git
 
 SPEC CHECKSUMS:
-  OpenSSL-Universal: ff04c2e6befc3f1247ae039e60c93f76345b3b5a
+  OpenSSL-Universal: d10ab08e0b258023e5184f77660b1b9f4ec93926
 
-PODFILE CHECKSUM: 14c7ad87cd08b23ebd555b2fc5834ba9bf12a362
+PODFILE CHECKSUM: 512858f8807b261c4d8ae14bf3e31c2591121b52
 
 COCOAPODS: 1.7.2

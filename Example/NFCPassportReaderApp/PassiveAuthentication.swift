@@ -46,7 +46,20 @@ public class PassiveAuthentication {
     var sodHashAlgo = ""
     var sodHashes : [DataGroupId : String] = [:]
     
-    func validatePassport( sodBody : [UInt8], dataGroupsToCheck : [DataGroupId : DataGroup] ) throws  {
+    func checkPassportCorrectlySigned( sodBody : [UInt8] ) throws {
+        let tmpSODFile = getTempFile()
+        // Write SOD to temp file
+        let d = Data(sodBody)
+        try! d.write(to: tmpSODFile)
+        defer {
+        cleanupTempFile( tmpSODFile )
+        }
+        
+        try verifySOD(tmpSODFile)
+        Log.debug( "Passport passed SOD Verification" )
+    }
+
+    func checkDataNotBeenTamperedWith( sodBody : [UInt8], dataGroupsToCheck : [DataGroupId : DataGroup] ) throws  {
         let tmpSODFile = getTempFile()
         // Write SOD to temp file
         let d = Data(sodBody)
@@ -55,12 +68,10 @@ public class PassiveAuthentication {
             cleanupTempFile( tmpSODFile )
         }
 
-        try verifySOD(tmpSODFile)
-        Log.debug( "Passport passed SOD Verification" )
-        
         try verifyDataGroups(tmpSODFile, dataGroupsToCheck: dataGroupsToCheck )
         Log.debug( "Passport passed SOD Verification" )
     }
+
     
     private func verifySOD(_ SODFileName : URL) throws {
         let tmpOutFile = getTempFile()
