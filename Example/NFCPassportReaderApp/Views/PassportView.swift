@@ -116,7 +116,7 @@ struct PassportView_Previews : PreviewProvider {
         return Group {
             PassportView()
                 .environment( \.colorScheme, .light)
-a 
+ 
         }.frame(width: UIScreen.main.bounds.width-10, height: 220)
         .environmentObject(pd)
     }
