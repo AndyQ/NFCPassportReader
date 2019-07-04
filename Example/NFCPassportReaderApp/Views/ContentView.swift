@@ -46,18 +46,21 @@ struct ContentView : View {
                     .font(.title)
                     .padding(0.0)
                 
-                TextField($passportDetails.passportNumber, placeholder: Text("Passport number"))
+                TextField("Passport number",
+                          text: $passportDetails.passportNumber)
                     .textContentType(.name)
                     .foregroundColor(Color.secondary)
                     .textFieldStyle(.roundedBorder)
                     .padding([.leading, .trailing])
                 
-                TextField($passportDetails.dateOfBirth, placeholder: Text("Date of birth"))
+                TextField("Date of birth",
+                          text: $passportDetails.dateOfBirth)
                     .foregroundColor(Color.secondary)
                     .textFieldStyle(.roundedBorder)
                     .padding([.leading, .trailing])
                 
-                TextField($passportDetails.expiryDate, placeholder: Text("Passport expiry date"))
+                TextField("Passport expiry date",
+                          text: $passportDetails.expiryDate)
                     .foregroundColor(Color.secondary)
                     .textFieldStyle(.roundedBorder)
                     .padding([.leading, .trailing])
