@@ -72,10 +72,14 @@ It requires a set of CSCA certificates in PEM format from a master list (either 
 
 **The masterList.pem file included in the Sample app is purely there to ensure no compiler warnings and contains only a single PEM file that was self-generated and won't be able to veryify anything!**
 
+## Troubleshooting
+* If when doing the initial Mutual Authenticate challenge, you get an error with and SW1 code 0x63, SW2 code 0x00, reason: No information given, then this is usualy because your MRZ key is incorrect, and possibly because your passport number is not quite right.  If your passport number in the MRZ contains a '<' then you need to include this in the MRZKey - the checksum should work out correct too.  For more details, check out App-D2 in the ICAO 9303 Part 11 document (https://www.icao.int/publications/Documents/9303_p11_cons_en.pdf)
+
 
 ## To do
 There are a number of things I'd like to implement in no particular order:
  * Ability to dump passport stream and read it back in
+ * Implement PACE authentication
  
 
 ## Thanks
