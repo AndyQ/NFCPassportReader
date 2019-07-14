@@ -3,6 +3,7 @@ old
 working
 .vscode
 scripts/*.pem
+test_sod.der
 
 # Xcode
 #
