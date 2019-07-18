@@ -169,11 +169,12 @@ class DataGroup1 : DataGroup {
         let body = try getNextValue()
         let docType = getMRZType(length:body.count)
         
-        if docType == "ID1" {
+        switch docType {
+        case .TD1:
             self.parseTd1(body)
-        } else if docType == "TD2" {
+        case .TD2:
             self.parseTd2(body)
-        } else {
+        default:
             self.parseOther(body)
         }
     }
@@ -228,14 +229,14 @@ class DataGroup1 : DataGroup {
         elements["5F07"] = String( bytes:[data[87]], encoding:.utf8)
     }
     
-    private func getMRZType(length: Int) -> String {
+    private func getMRZType(length: Int) -> DocTypeEnum {
         if length == 0x5A {
-            return "TD1"
+            return .TD1
         }
         if length == 0x48 {
-            return "TD2"
+            return .TD2
         }
-        return "OTHER"
+        return .OTHER
     }
 
 }
@@ -419,5 +420,17 @@ class DataGroup7 : DataGroup {
         }
         
         imageData = try getNextValue()
+    }
+}
+
+public enum DocTypeEnum: String {
+    case TD1
+    case TD2
+    case OTHER
+    
+    var desc: String {
+        get {
+            return self.rawValue
+        }
     }
 }
