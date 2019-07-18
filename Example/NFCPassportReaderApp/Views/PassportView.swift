@@ -28,7 +28,7 @@ struct PassportView : View {
                                 
                                 Text( "Tampered")
                                     .font(.caption)
-                                    .color(.red)
+                                    .foregroundColor(.red)
                             }
                             
                         }
@@ -39,7 +39,7 @@ struct PassportView : View {
                                     .padding(.bottom, 5)
                                 Text( "Genuine")
                                     .font(.caption)
-                                    .color(.green)
+                                    .foregroundColor(.green)
                             } else {
                                 Image( systemName:"xmark.seal").foregroundColor(.red)
                                     .font(.system(size: 50))
@@ -47,7 +47,7 @@ struct PassportView : View {
                                     .padding(.bottom, 5)
                                 Text( "Not Genuine")
                                     .font(.caption)
-                                    .color(.red)
+                                    .foregroundColor(.red)
                                     .frame(minWidth: 0, maxWidth: 100, minHeight: 0, maxHeight: 22)
                             }
                         }

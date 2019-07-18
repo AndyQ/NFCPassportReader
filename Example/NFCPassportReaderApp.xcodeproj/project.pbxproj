@@ -17,6 +17,7 @@
 		A17134C022C8F0A600C457C3 /* PassportDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17134BF22C8F0A600C457C3 /* PassportDetails.swift */; };
 		A1816E9C22C9059F00F546A0 /* PassportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1816E9B22C9059F00F546A0 /* PassportView.swift */; };
 		A1823C0022C4C93000350316 /* PassiveAuthentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1823BFF22C4C93000350316 /* PassiveAuthentication.swift */; };
+		A19BE02A22DBD28A008AA778 /* test_sod.der in Resources */ = {isa = PBXBuildFile; fileRef = A19BE02922DBD28A008AA778 /* test_sod.der */; };
 		A1CE83AC22C91D1300E3EACF /* StringExt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CE83AB22C91D1300E3EACF /* StringExt.swift */; };
 		A1CE83AE22C91DB000E3EACF /* Passport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CE83AD22C91DB000E3EACF /* Passport.swift */; };
 		A1DD3F3F22C535F10067255C /* masterList.pem in Resources */ = {isa = PBXBuildFile; fileRef = A1DD3F3E22C535F00067255C /* masterList.pem */; };
@@ -25,7 +26,7 @@
 /* Begin PBXFileReference section */
 		4E9ED63D52D6E64D310DD161 /* Pods-NFCPassportReaderApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NFCPassportReaderApp.debug.xcconfig"; path = "Target Support Files/Pods-NFCPassportReaderApp/Pods-NFCPassportReaderApp.debug.xcconfig"; sourceTree = "<group>"; };
 		74E63D6775398EE2ACD6BDF5 /* Pods_NFCPassportReaderApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_NFCPassportReaderApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		A1216E5822C77BEB008B1FC9 /* NFCPassportReader */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NFCPassportReader; path = ..; sourceTree = "<group>"; };
+		A101001722E0FE50005AAD42 /* NFCPassportReader */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NFCPassportReader; path = ..; sourceTree = "<group>"; };
 		A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NFCPassportReaderApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A16EB23022A9E9E10008F53F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A16EB23222A9E9E10008F53F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -38,6 +39,7 @@
 		A1816E9B22C9059F00F546A0 /* PassportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassportView.swift; sourceTree = "<group>"; };
 		A1823BFD22C4C2A400350316 /* NFCPassportReaderApp-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NFCPassportReaderApp-Bridging-Header.h"; sourceTree = "<group>"; };
 		A1823BFF22C4C93000350316 /* PassiveAuthentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassiveAuthentication.swift; sourceTree = "<group>"; };
+		A19BE02922DBD28A008AA778 /* test_sod.der */ = {isa = PBXFileReference; lastKnownFileType = file; path = test_sod.der; sourceTree = "<group>"; };
 		A1CE83AB22C91D1300E3EACF /* StringExt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringExt.swift; sourceTree = "<group>"; };
 		A1CE83AD22C91DB000E3EACF /* Passport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Passport.swift; sourceTree = "<group>"; };
 		A1DD3F3E22C535F00067255C /* masterList.pem */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = masterList.pem; sourceTree = "<group>"; };
@@ -60,7 +62,7 @@
 		A16EB22422A9E9E10008F53F = {
 			isa = PBXGroup;
 			children = (
-				A1216E5822C77BEB008B1FC9 /* NFCPassportReader */,
+				A101001722E0FE50005AAD42 /* NFCPassportReader */,
 				A16EB22F22A9E9E10008F53F /* NFCPassportReaderApp */,
 				A16EB22E22A9E9E10008F53F /* Products */,
 				A16FC0C222B0F22C00144B5B /* Frameworks */,
@@ -91,6 +93,7 @@
 				A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */,
 				A16EB23E22A9E9E20008F53F /* Info.plist */,
 				A1DD3F3E22C535F00067255C /* masterList.pem */,
+				A19BE02922DBD28A008AA778 /* test_sod.der */,
 			);
 			path = NFCPassportReaderApp;
 			sourceTree = "<group>";
@@ -198,6 +201,7 @@
 			files = (
 				A16EB23D22A9E9E20008F53F /* LaunchScreen.storyboard in Resources */,
 				A1DD3F3F22C535F10067255C /* masterList.pem in Resources */,
+				A19BE02A22DBD28A008AA778 /* test_sod.der in Resources */,
 				A16EB23A22A9E9E20008F53F /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

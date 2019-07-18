@@ -74,7 +74,7 @@ struct ContentView : View {
                 }) {
                     Text("Scan Passport")
                         .font(.largeTitle)
-                        .color(passportDetails.isValid ? .secondary : Color.secondary.opacity(0.25))
+                        .foregroundColor(passportDetails.isValid ? .secondary : Color.secondary.opacity(0.25))
                     }
                     .disabled( !passportDetails.isValid )
                 Spacer()
@@ -83,12 +83,12 @@ struct ContentView : View {
             PassportView()
                 .frame(width: UIScreen.main.bounds.width-20, height: 220)
                 .offset(y: showDetails ? 0 : UIScreen.main.bounds.height + 100)
-                .animation(.basic(duration: 0.3, curve: .easeInOut))
+                .animation(.easeInOut(duration: 0.3))
                 .tapAction {
                     self.showDetails.toggle()
             }
 
-        }.presentation($showingAlert) {
+        }.alert(isPresented: $showingAlert) {
                 Alert(title: Text(alertTitle), message:
                     Text(alertMessage), dismissButton: .default(Text("Got it!")))
     }

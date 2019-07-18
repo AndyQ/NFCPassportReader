@@ -12,14 +12,14 @@ import Combine
 
 
 class PassportDetails : BindableObject {
-    var didChange = PassthroughSubject<Void, Never>()
+    var willChange = PassthroughSubject<Void, Never>()
     
     var passportNumber : String = UserDefaults.standard.string(forKey:"passportNumber" ) ?? "" { didSet { update() } }
     var dateOfBirth: String = UserDefaults.standard.string(forKey:"dateOfBirth" ) ?? "" { didSet { update() } }
     var expiryDate: String = UserDefaults.standard.string(forKey:"expiryDate" ) ?? "" { didSet { update() } }
     
     var passport : Passport? {
-        didSet { update() }
+        willSet { update() }
     }
     
     var isValid : Bool {
@@ -27,7 +27,7 @@ class PassportDetails : BindableObject {
     }
     
     func update() {
-        didChange.send(())
+        willChange.send(())
     }
     
     func getMRZKey() -> String {
