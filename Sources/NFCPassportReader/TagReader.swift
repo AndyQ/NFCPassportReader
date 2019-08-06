@@ -8,10 +8,11 @@
 
 import Foundation
 import CoreNFC
-
+@available(iOS 13, *)
 public enum PassportTagError : Error {
     case responseError( UInt8, UInt8 )
 }
+@available(iOS 13, *)
 extension PassportTagError: LocalizedError {
     public var errorDescription: String? {
         switch self {
@@ -21,6 +22,7 @@ extension PassportTagError: LocalizedError {
     }
 }
 
+@available(iOS 13, *)
 public enum TagError: Error {
     case ResponseError(String)
     case InvalidResponse
@@ -43,6 +45,7 @@ public enum TagError: Error {
     var errorDescription: String { return "Invalid response" }
 }
 
+@available(iOS 13, *)
 public enum DataGroupId : Int {
     case COM = 0x60
     case DG1 = 0x61
@@ -65,6 +68,7 @@ public enum DataGroupId : Int {
     case Unknown = 0x00
 }
 
+@available(iOS 13, *)
 private let DataGroupToFileIdMap : [DataGroupId: [UInt8]] = [
     .COM : [0x01,0x1E],
     .DG1 : [0x01,0x01],
@@ -86,6 +90,7 @@ private let DataGroupToFileIdMap : [DataGroupId: [UInt8]] = [
     .SOD : [0x01,0x1D],
 ]
 
+@available(iOS 13, *)
 public struct ResponseAPDU {
     
     public var data : [UInt8]
@@ -99,6 +104,7 @@ public struct ResponseAPDU {
     }
 }
 
+@available(iOS 13, *)
 public class TagReader {
     var tag : NFCISO7816Tag
     var secureMessaging : SecureMessaging?

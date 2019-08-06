@@ -14,6 +14,7 @@ import CommonCrypto
 /// - Parameter key: Key use to encrypt
 /// - Parameter message: Message to encrypt
 /// - Parameter iv: Initialisation vector
+@available(iOS 13, *)
 public func tripleDESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
     // Fix key data - if length is 16 then take the first 98 bytes and append them to the end to make 24 bytes
     var fixedKey = key
@@ -68,6 +69,7 @@ public func tripleDESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8
 /// - Parameter key: Key use to decrypt
 /// - Parameter message: Message to decrypt
 /// - Parameter iv: Initialisation vector
+@available(iOS 13, *)
 public func tripleDESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
     var fixedKey = key
     if key.count == 16 {
@@ -122,6 +124,7 @@ public func tripleDESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8
 /// - Parameter message: Message to encrypt
 /// - Parameter iv: Initialisation vector
 /// - Parameter options: Encryption options to use
+@available(iOS 13, *)
 public func DESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8], options:UInt32 = 0) -> [UInt8] {
     
     let dataLength = message.count
@@ -172,6 +175,7 @@ public func DESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8], options:UInt32 
 /// - Parameter message: Message to decrypt
 /// - Parameter iv: Initialisation vector
 /// - Parameter options: Decryption options to use
+@available(iOS 13, *)
 public func DESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8], options:UInt32 = 0) -> [UInt8] {
     
     let dataLength = message.count

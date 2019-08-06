@@ -7,11 +7,28 @@ Supported features:
 * Basic Access Control (BAC)
 * Secure Messaging
 * Reads DG1 (MRZ data) and DG2 (Image) in both JPEG and JPEG2000 formats
-* Passive Authentication (in Sample app only at the moment)
+* Passive Authentication (Uses OpenSSL library)
 
 This is still very early days - the code is by no means perfect and there are still some rough edges  - there ARE most definitely bugs and I'm sure I'm not doing things perfectly. 
 
 It reads and verifies my passport (and others I've been able to test) fine, however your mileage may vary.
+
+## Installation
+### CocoaPods
+
+Install using [CocoaPods](http://cocoapods.org) by adding this line to your Podfile:
+
+```ruby
+use_frameworks!
+pod 'NFCPassportReader', git:'https://github.com/AndyQ/NFCPassportReader.git'  
+```
+
+Then, run the following command:
+
+```bash
+$ pod install
+```
+
 
 ## Usage 
 To use, you first need to create the Passport MRZ Key which consists of the passport number, date of birth and expiry date (including the checksums).
@@ -59,18 +76,16 @@ let reader = PassportReader(logLevel: .debug)
 
 NOTE - currently this is just printing out to the console - I'd like to implement better logging later - probably using SwiftyBeaver 
 
-## Sample app
-There is a sample app included in the repo which demonstrates the functionality.
-
-It now includes a sample of how to do Passive Authentication to ensure that an E-Passport is valid and hasn't been tampered with.
-
-This however requires the use of the OpenSSL library (which is included as a Pod file from Marcin Krzyżanowski's OpenSSL-Universal Pod (https://github.com/krzyzanowskim/OpenSSL). 
-
-I'd like to move this over to its own Swift Package BUT currently SPM doesn't support mixed languages so sadly I can't yet. Also, didn't want to get into the whole create a new CocoaPod thing yet so if anyone fancies doing something clever.....
+### PassiveAuthentication
+Passive Authentication is now part of the main library and can be used to ensure that an E-Passport is valid and hasn't been tampered with.
 
 It requires a set of CSCA certificates in PEM format from a master list (either from a country that publishes their master list, or the ICAO PKD repository). See the scripts folder for details on how to get and create this file.
 
 **The masterList.pem file included in the Sample app is purely there to ensure no compiler warnings and contains only a single PEM file that was self-generated and won't be able to veryify anything!**
+
+## Sample app
+There is a sample app included in the repo which demonstrates the functionality.
+
 
 ## Troubleshooting
 * If when doing the initial Mutual Authenticate challenge, you get an error with and SW1 code 0x63, SW2 code 0x00, reason: No information given, then this is usualy because your MRZ key is incorrect, and possibly because your passport number is not quite right.  If your passport number in the MRZ contains a '<' then you need to include this in the MRZKey - the checksum should work out correct too.  For more details, check out App-D2 in the ICAO 9303 Part 11 document (https://www.icao.int/publications/Documents/9303_p11_cons_en.pdf)
