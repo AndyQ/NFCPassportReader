@@ -7,6 +7,7 @@
 
 import UIKit
 
+@available(iOS 13, *)
 class DataGroupParser {
     
     let dataGroupNames = ["Common", "DG1", "DG2", "DG3", "DG4", "DG5", "DG6", "DG7", "DG8", "DG9", "DG10", "DG11", "DG12", "DG13", "DG14", "DG15", "DG16", "SecurityData"]
@@ -35,6 +36,7 @@ class DataGroupParser {
     }
 }
 
+@available(iOS 13, *)
 public class DataGroup {
     public var datagroupType : DataGroupId = .Unknown
 
@@ -100,7 +102,7 @@ public class DataGroup {
 
 }
 
-
+@available(iOS 13, *)
 class NotImplementedDG : DataGroup {
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
@@ -108,6 +110,7 @@ class NotImplementedDG : DataGroup {
     }
 }
 
+@available(iOS 13, *)
 class COM : DataGroup {
     public var version : Int = 0
     public var unicodeVersion : Int = 0
@@ -139,6 +142,7 @@ class COM : DataGroup {
     }
 }
 
+@available(iOS 13, *)
 class SOD : DataGroup {
     public var pkck7CertificateData : [UInt8] = []
     
@@ -152,6 +156,7 @@ class SOD : DataGroup {
     }
 }
 
+@available(iOS 13, *)
 class DataGroup1 : DataGroup {
     
     var elements : [String:String] = [:]
@@ -241,6 +246,7 @@ class DataGroup1 : DataGroup {
 
 }
 
+@available(iOS 13, *)
 class DataGroup2 : DataGroup {
     var nrImages : Int = 0
     var versionNumber : Int = 0
@@ -388,6 +394,7 @@ class DataGroup2 : DataGroup {
     }
 }
 
+@available(iOS 13, *)
 class DataGroup7 : DataGroup {
     
     var imageData : [UInt8] = []
@@ -423,6 +430,7 @@ class DataGroup7 : DataGroup {
     }
 }
 
+@available(iOS 13, *)
 public enum DocTypeEnum: String {
     case TD1
     case TD2

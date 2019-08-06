@@ -9,6 +9,7 @@
 import UIKit
 import CoreNFC
 
+@available(iOS 13, *)
 public struct NFCPassportModel {
     
     public var passportMRZ : String {
@@ -59,6 +60,7 @@ public struct NFCPassportModel {
     }
 }
 
+@available(iOS 13, *)
 public class PassportReader : NSObject {
     
     private var passport : NFCPassportModel = NFCPassportModel()
@@ -95,7 +97,7 @@ public class PassportReader : NSObject {
     }
 }
 
-
+@available(iOS 13, *)
 extension PassportReader : NFCTagReaderSessionDelegate {
     // MARK: - NFCTagReaderSessionDelegate
     public func tagReaderSessionDidBecomeActive(_ session: NFCTagReaderSession) {
@@ -146,7 +148,7 @@ extension PassportReader : NFCTagReaderSessionDelegate {
     }
 }
 
-
+@available(iOS 13, *)
 extension PassportReader {
     func startReading() {
         self.handleBAC(completed: { [weak self] error in

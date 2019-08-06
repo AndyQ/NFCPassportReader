@@ -144,6 +144,7 @@ public func unpad( _ tounpad : [UInt8]) -> [UInt8] {
     }
 }
 
+@available(iOS 13, *)
 public func mac(key : [UInt8], msg : [UInt8]) -> [UInt8]{
     
     let size = msg.count / 8
@@ -185,11 +186,12 @@ public func mac(key : [UInt8], msg : [UInt8]) -> [UInt8]{
 /// @return: A tuple with the decoded hexa length and the length of the asn.1 encoded value.
 /// @raise asn1Exception: If the parameter does not follow the asn.1 notation.
 
-
+@available(iOS 13, *)
 public func asn1Length( _ data: ArraySlice<UInt8> ) throws -> (Int, Int) {
     return try asn1Length( Array(data) )
 }
 
+@available(iOS 13, *)
 public func asn1Length(_ data : [UInt8]) throws -> (Int, Int)  {
     if data[0] <= 0x7F {
         return (Int(binToHex(data[0])), 1)
@@ -220,7 +222,7 @@ public func asn1Length(_ data : [UInt8]) throws -> (Int, Int)  {
 /// @return: The asn.1 encoded value
 /// @rtype: A binary string
 /// @raise asn1Exception: If the parameter is too big, must be >= 0 and <= FFFF
-
+@available(iOS 13, *)
 public func toAsn1Length(_ data : Int) throws -> [UInt8] {
     if data <= 0x7F {
         return hexRepToBin(String(format:"%02x", data))
@@ -240,7 +242,7 @@ public func toAsn1Length(_ data : Int) throws -> [UInt8] {
 /// @param Kseed: A 16 bytes random value
 /// @type Kseed: Binary
 /// @return: A set of two 8 bytes encryption keys
-
+@available(iOS 13, *)
 func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
     var sha1 = Insecure.SHA1()
     sha1.update(data: data)
@@ -253,7 +255,7 @@ func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
 /// @param Kseed: A 16 bytes random value
 /// @type Kseed: Binary
 /// @return: A set of two 8 bytes encryption keys
-
+@available(iOS 13, *)
 func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
     var sha1 = SHA256()
     sha1.update(data: data)
