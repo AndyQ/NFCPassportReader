@@ -14,8 +14,7 @@ Pod::Spec.new do |spec|
 
   spec.source_files  = "Sources/**/*.{swift}"
 
-  spec.static_framework = true
   spec.swift_version = "5.0"
-  spec.dependency "OpenSSL-Universal"
 
+  spec.dependency "OpenSSL-Universal/Framework"
 end
