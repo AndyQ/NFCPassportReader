@@ -48,8 +48,10 @@ extension PassiveAuthenticationError: LocalizedError {
 ///
 @available(iOS 13, *)
 public class PassiveAuthentication {
+    let masterList: URL
     
-    init() {
+    public init(_ masterList: URL) {
+        self.masterList = masterList
         initOpenSSL()
     }
     
@@ -75,21 +77,20 @@ public class PassiveAuthentication {
     /// Checks whether the SOD Object in an EPassport is correctly signed - i.e. a trust chain can be built up and verified
     /// from a masterList.pem file (a text fie containing a list of certificates in PEM format use to try try to build a trust chain)
     /// - Parameter sodBody: The SOD Object body
-    func checkPassportCorrectlySigned( sodBody : [UInt8] ) throws {
+    public func checkPassportCorrectlySigned( sodBody : [UInt8] ) throws {
         let data = Data(sodBody)
         let cert = try getX509CertificateFromPKCS7( pkcs7Der: data )
-        
-        let masterList = Bundle.main.url(forResource: "masterList", withExtension: "pem")!
+
         try verifyX509Certificate( x509Cert:cert, CAFile: masterList)
 
         Log.debug( "Passport passed SOD Verification" )
     }
     
-    /// Extracts the signed data section from the SOD Object.  THis contains a set of hashes of datagroups contained within the E-Passport
+    /// Extracts the signed data section from the SOD Object.  This contains a set of hashes of datagroups contained within the E-Passport
     /// These hashes are then compared against the hashes of the acual datagroups we've read to make sure that the data we have read hasn't been tampered with
     /// - Parameter sodBody: The SOD Object body
     /// - Parameter dataGroupsToCheck: The set of datagroups to check
-    func checkDataNotBeenTamperedWith( sodBody : [UInt8], dataGroupsToCheck : [DataGroupId : DataGroup] ) throws  {
+    public func checkDataNotBeenTamperedWith( sodBody : [UInt8], dataGroupsToCheck : [DataGroupId : DataGroup] ) throws  {
         
         // Get SOD Content
         let data = Data(sodBody)
