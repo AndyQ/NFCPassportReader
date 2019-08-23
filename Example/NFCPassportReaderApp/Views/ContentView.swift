@@ -40,32 +40,32 @@ struct ContentView : View {
     var body: some View {
         ZStack {
             VStack {
-                
                 Text( "Enter passport details" )
                     .foregroundColor(Color.secondary)
                     .font(.title)
-                    .padding(0.0)
-                
+                    .padding(0)
+
                 TextField("Passport number",
                           text: $passportDetails.passportNumber)
                     .textContentType(.name)
                     .foregroundColor(Color.secondary)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
                 
                 TextField("Date of birth",
                           text: $passportDetails.dateOfBirth)
                     .foregroundColor(Color.secondary)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
                 
                 TextField("Passport expiry date",
                           text: $passportDetails.expiryDate)
                     .foregroundColor(Color.secondary)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
+
                 Spacer()
-                }.padding( .top )
+            }.padding( .top )
             VStack {
                 Spacer()
                 
@@ -74,20 +74,19 @@ struct ContentView : View {
                 }) {
                     Text("Scan Passport")
                         .font(.largeTitle)
-                        .foregroundColor(passportDetails.isValid ? .secondary : Color.secondary.opacity(0.25))
+                    .foregroundColor(passportDetails.isValid ? .secondary : Color.secondary.opacity(0.25))
                     }
                     .disabled( !passportDetails.isValid )
                 Spacer()
             }
             
-            PassportView()
+            PassportView( passport: self.passportDetails.passport )
                 .frame(width: UIScreen.main.bounds.width-20, height: 220)
                 .offset(y: showDetails ? 0 : UIScreen.main.bounds.height + 100)
                 .animation(.easeInOut(duration: 0.3))
-                .tapAction {
+                .onTapGesture {
                     self.showDetails.toggle()
-            }
-
+                }
         }.alert(isPresented: $showingAlert) {
                 Alert(title: Text(alertTitle), message:
                     Text(alertMessage), dismissButton: .default(Text("Got it!")))

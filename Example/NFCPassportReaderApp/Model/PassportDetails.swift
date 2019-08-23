@@ -11,7 +11,7 @@ import Combine
 
 
 
-class PassportDetails : BindableObject {
+class PassportDetails : ObservableObject {
     var willChange = PassthroughSubject<Void, Never>()
     
     var passportNumber : String = UserDefaults.standard.string(forKey:"passportNumber" ) ?? "" { didSet { update() } }

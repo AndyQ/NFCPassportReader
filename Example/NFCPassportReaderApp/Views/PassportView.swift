@@ -11,16 +11,21 @@ import SwiftUI
 
 // Outline view of passport
 struct PassportView : View {
-    @EnvironmentObject var passportDetails: PassportDetails
+    var passport : Passport?
+    
+    init( passport: Passport? ) {
+        self.passport = passport
+    }
+    
     var body: some View {
-        HStack {
-            if (self.passportDetails.passport) != nil {
+        return HStack {
+            if (self.passport) != nil {
                 
                 ZStack(alignment: .bottomTrailing) {
-                    PassportDetailsView(passport: passportDetails.passport!)
+                    PassportDetailsView(passport: self.passport!)
                     
                     HStack {
-                        if !passportDetails.passport!.passportDataValid {
+                        if !self.passport!.passportDataValid {
                             VStack {
                                 Image( systemName:"exclamationmark").foregroundColor(.red)
                                     .font(.system(size: 50))
@@ -33,7 +38,7 @@ struct PassportView : View {
                             
                         }
                         VStack(alignment: .center) {
-                            if passportDetails.passport!.passportSigned {
+                            if self.passport!.passportSigned {
                                 Image( systemName:"checkmark.seal").foregroundColor(.green)
                                     .font(.system(size: 50))
                                     .padding(.bottom, 5)
@@ -114,7 +119,7 @@ struct PassportView_Previews : PreviewProvider {
         pd.passport = passport
         
         return Group {
-            PassportView()
+            PassportView( passport:passport)
                 .environment( \.colorScheme, .light)
  
         }.frame(width: UIScreen.main.bounds.width-10, height: 220)
