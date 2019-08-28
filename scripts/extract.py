@@ -12,6 +12,16 @@ certNr = 1
 def main( filename ):
     global certNr
 
+    # First, make sure that the version of openssl we are using supports the cms command
+    # the version supplied with OS X doesn't - you would need to get a different one in this case
+    # e.g. through Homebrew
+    out, err = execute( "openssl cms" )
+    if err.decode().find( "'cms' is an invalid command" ) != -1:
+       print( "The version of OpenSSL you are using doesn't support the CMS command" )
+       print( "You need to get a version that does (e.g. from Homebrew)" )
+       exit( 1 )
+
+
     # remove old master list
     if os.path.exists( "masterList.pem" ):
         os.remove( "masterList.pem" )
@@ -161,7 +171,6 @@ def execute(cmd, data = None, empty=False):
     return (out, err)
 
 if __name__ == "__main__":
-
     if len(sys.argv) != 2:
         print( "Invalid number of parameters: ")
         print( "" )
