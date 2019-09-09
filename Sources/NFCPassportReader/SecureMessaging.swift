@@ -14,6 +14,7 @@ import CoreNFC
 /// It gives a new transmit method that takes an APDU object formed by the iso7816 layer,
 /// ciphers it following the doc9303 specification, sends the ciphered APDU to the reader
 /// layer and returns the unciphered APDU.
+@available(iOS 13, *)
 public class SecureMessaging {
     private var ksenc : [UInt8]
     private var ksmac : [UInt8]
