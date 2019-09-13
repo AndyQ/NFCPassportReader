@@ -8,7 +8,9 @@
 
 import UIKit
 import CommonCrypto
-import CryptoKit
+#if canImport(CryptoKit)
+    import CryptoKit
+#endif
 
 extension FileManager {
     static var documentDir : URL {
