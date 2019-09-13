@@ -244,12 +244,14 @@ public func toAsn1Length(_ data : Int) throws -> [UInt8] {
 /// @type Kseed: Binary
 /// @return: A set of two 8 bytes encryption keys
 @available(iOS 13, *)
-func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
-    var sha1 = Insecure.SHA1()
-    sha1.update(data: data)
-    let hash = sha1.finalize()
-    
-    return Array(hash)
+func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8]? {
+    #if canImport(CryptoKit)
+        var sha1 = Insecure.SHA1()
+        sha1.update(data: data)
+        let hash = sha1.finalize()
+
+        return Array(hash)
+    #endif
 }
 
 /// This function is used during the Derivation of Document Basic Acces Keys.
@@ -257,12 +259,14 @@ func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
 /// @type Kseed: Binary
 /// @return: A set of two 8 bytes encryption keys
 @available(iOS 13, *)
-func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
-    var sha1 = SHA256()
-    sha1.update(data: data)
-    let hash = sha1.finalize()
-    
-    return Array(hash)
+func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8]? {
+    #if canImport(CryptoKit)
+        var sha1 = SHA256()
+        sha1.update(data: data)
+        let hash = sha1.finalize()
+        
+        return Array(hash)
+    #endif
 }
 
 
