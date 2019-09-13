@@ -41,18 +41,20 @@ public struct NFCPassportModel {
         return dataGroupsRead[id]
     }
 
-    public func getHashesForDatagroups( hashAlgorythm: String ) -> [DataGroupId:[UInt8]]  {
-        var ret = [DataGroupId:[UInt8]]()
-        
-        for (key, value) in dataGroupsRead {
-            if hashAlgorythm == "SHA256" {
-                ret[key] = calcSHA256Hash(value.body)
-            } else if hashAlgorythm == "SHA1" {
-                ret[key] = calcSHA1Hash(value.body)
+    public func getHashesForDatagroups( hashAlgorythm: String ) -> [DataGroupId:[UInt8]]?  {
+        #if canImport(CryptoKit)
+            var ret = [DataGroupId:[UInt8]]()
+
+            for (key, value) in dataGroupsRead {
+                if hashAlgorythm == "SHA256" {
+                    ret[key] = calcSHA256Hash(value.body)
+                } else if hashAlgorythm == "SHA1" {
+                    ret[key] = calcSHA1Hash(value.body)
+                }
             }
-        }
-        
-        return ret
+            return ret
+        #endif
+        return nil
     }
 
     public init() {
