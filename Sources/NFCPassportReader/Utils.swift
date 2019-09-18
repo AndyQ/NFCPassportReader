@@ -8,7 +8,9 @@
 
 import UIKit
 import CommonCrypto
-import CryptoKit
+#if canImport(CryptoKit)
+    import CryptoKit
+#endif
 
 extension FileManager {
     static var documentDir : URL {
@@ -244,11 +246,14 @@ public func toAsn1Length(_ data : Int) throws -> [UInt8] {
 /// @return: A set of two 8 bytes encryption keys
 @available(iOS 13, *)
 func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
+    #if canImport(CryptoKit)
     var sha1 = Insecure.SHA1()
     sha1.update(data: data)
     let hash = sha1.finalize()
     
     return Array(hash)
+    #endif
+    fatalError("Couldn't import CryptoKit")
 }
 
 /// This function is used during the Derivation of Document Basic Acces Keys.
@@ -257,11 +262,14 @@ func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
 /// @return: A set of two 8 bytes encryption keys
 @available(iOS 13, *)
 func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
+    #if canImport(CryptoKit)
     var sha1 = SHA256()
     sha1.update(data: data)
     let hash = sha1.finalize()
     
     return Array(hash)
+    #endif
+    fatalError("Couldn't import CryptoKit")
 }
 
 
