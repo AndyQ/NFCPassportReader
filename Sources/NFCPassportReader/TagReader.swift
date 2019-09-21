@@ -37,6 +37,7 @@ public enum TagError: Error {
     case UnsupportedDataGroup
     case DataGroupNotRead
     case UnknownTag
+    case UnknownImageFormat
     case NotImplemented
 
     var errorDescription: String { return "Invalid response" }
