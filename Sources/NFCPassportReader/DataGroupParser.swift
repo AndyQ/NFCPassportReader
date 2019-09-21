@@ -377,11 +377,13 @@ class DataGroup2 : DataGroup {
         // Either JPG or JPEG2000
 
         let jpegHeader : [UInt8] = [0xff,0xd8,0xff,0xe0,0x00,0x10,0x4a,0x46,0x49,0x46]
-        let jpeg2000Header : [UInt8] = [0x00,0x00,0x00,0x0c,0x6a,0x50,0x20,0x20,0x0d,0x0a]
-        
+        let jpeg2000BitmapHeader : [UInt8] = [0x00,0x00,0x00,0x0c,0x6a,0x50,0x20,0x20,0x0d,0x0a]
+        let jpeg2000CodestreamBitmapHeader : [UInt8] = [0xff,0x4f,0xff,0x51]
+
         if [UInt8](data[offset..<offset+jpegHeader.count]) != jpegHeader &&
-            [UInt8](data[offset..<offset+jpeg2000Header.count]) != jpeg2000Header {
-            throw TagError.InvalidResponse
+            [UInt8](data[offset..<offset+jpeg2000BitmapHeader.count]) != jpeg2000BitmapHeader &&
+            [UInt8](data[offset..<offset+jpeg2000CodestreamBitmapHeader.count]) != jpeg2000CodestreamBitmapHeader {
+            throw TagError.UnknownImageFormat
         }
 
         imageData = [UInt8](data[offset...])
