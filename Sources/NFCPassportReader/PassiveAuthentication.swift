@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import NFCPassportReader
 import OpenSSL
 
 @available(iOS 13, *)

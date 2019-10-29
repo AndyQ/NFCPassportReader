@@ -1,24 +1,23 @@
 PODS:
-  - OpenSSL-Universal (1.0.2.18):
-    - OpenSSL-Universal/Static (= 1.0.2.18)
-  - OpenSSL-Universal/Static (1.0.2.18)
+  - NFCPassportReader (0.0.10):
+    - OpenSSL-Universal/Framework
+  - OpenSSL-Universal/Framework (1.0.2.19)
 
 DEPENDENCIES:
-  - OpenSSL-Universal (from `https://github.com/krzyzanowskim/OpenSSL.git`, branch `master`)
+  - NFCPassportReader (from `../`)
+
+SPEC REPOS:
+  https://github.com/cocoapods/specs.git:
+    - OpenSSL-Universal
 
 EXTERNAL SOURCES:
-  OpenSSL-Universal:
-    :branch: :master
-    :git: https://github.com/krzyzanowskim/OpenSSL.git
-
-CHECKOUT OPTIONS:
-  OpenSSL-Universal:
-    :commit: 273a1f5097a9b7b8101c5678e2dd68ec015e22d5
-    :git: https://github.com/krzyzanowskim/OpenSSL.git
+  NFCPassportReader:
+    :path: "../"
 
 SPEC CHECKSUMS:
-  OpenSSL-Universal: d10ab08e0b258023e5184f77660b1b9f4ec93926
+  NFCPassportReader: b2321b7eab81643bcb8c8a710c27a8f4f90fe80a
+  OpenSSL-Universal: 8b48cc0d10c1b2923617dfe5c178aa9ed2689355
 
-PODFILE CHECKSUM: 73be3d5c893cea54ad8a9d763c98edf42c3c432c
+PODFILE CHECKSUM: 1ee0b648c7b22a71c430733b916163ffe965d661
 
 COCOAPODS: 1.7.2

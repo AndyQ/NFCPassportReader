@@ -6,6 +6,6 @@ target 'NFCPassportReaderApp' do
   use_frameworks!
 
   # Pods for NFCPassportReaderApp
-  pod 'OpenSSL-Universal', :git => 'https://github.com/krzyzanowskim/OpenSSL.git', :branch => :master
+  pod 'NFCPassportReader', :path => '../'
 
 end

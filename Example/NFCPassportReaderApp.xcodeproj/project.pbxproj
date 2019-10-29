@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 50;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -12,7 +12,6 @@
 		A16EB23322A9E9E10008F53F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB23222A9E9E10008F53F /* SceneDelegate.swift */; };
 		A16EB23A22A9E9E20008F53F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A16EB23922A9E9E20008F53F /* Assets.xcassets */; };
 		A16EB23D22A9E9E20008F53F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */; };
-		A16FC0CA22B11E7200144B5B /* NFCPassportReader in Frameworks */ = {isa = PBXBuildFile; productRef = A16FC0C922B11E7200144B5B /* NFCPassportReader */; };
 		A17134BE22C8EF7200C457C3 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17134BD22C8EF7100C457C3 /* ContentView.swift */; };
 		A17134C022C8F0A600C457C3 /* PassportDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17134BF22C8F0A600C457C3 /* PassportDetails.swift */; };
 		A1816E9C22C9059F00F546A0 /* PassportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1816E9B22C9059F00F546A0 /* PassportView.swift */; };
@@ -48,7 +47,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A16FC0CA22B11E7200144B5B /* NFCPassportReader in Frameworks */,
 				56FAFD3E3F729FC7B86FA7AB /* Pods_NFCPassportReaderApp.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -139,15 +137,13 @@
 				A16EB22922A9E9E10008F53F /* Sources */,
 				A16EB22A22A9E9E10008F53F /* Frameworks */,
 				A16EB22B22A9E9E10008F53F /* Resources */,
+				D3E1AD8DB175E2BC6924602C /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = NFCPassportReaderApp;
-			packageProductDependencies = (
-				A16FC0C922B11E7200144B5B /* NFCPassportReader */,
-			);
 			productName = NFCTest;
 			productReference = A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */;
 			productType = "com.apple.product-type.application";
@@ -177,9 +173,6 @@
 				Base,
 			);
 			mainGroup = A16EB22422A9E9E10008F53F;
-			packageReferences = (
-				A16FC0C822B11E7200144B5B /* XCRemoteSwiftPackageReference "NFCPassportReader" */,
-			);
 			productRefGroup = A16EB22E22A9E9E10008F53F /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -223,6 +216,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D3E1AD8DB175E2BC6924602C /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-NFCPassportReaderApp/Pods-NFCPassportReaderApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-NFCPassportReaderApp/Pods-NFCPassportReaderApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-NFCPassportReaderApp/Pods-NFCPassportReaderApp-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -438,25 +448,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		A16FC0C822B11E7200144B5B /* XCRemoteSwiftPackageReference "NFCPassportReader" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/AndyQ/NFCPassportReader.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.0.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		A16FC0C922B11E7200144B5B /* NFCPassportReader */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = A16FC0C822B11E7200144B5B /* XCRemoteSwiftPackageReference "NFCPassportReader" */;
-			productName = NFCPassportReader;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A16EB22522A9E9E10008F53F /* Project object */;
 }

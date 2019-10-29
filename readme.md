@@ -29,6 +29,7 @@ Then, run the following command:
 $ pod install
 ```
 
+Note - Current Bitcode is disabled as OpenSSL is not correctly found.  Hopefully this will be fixed in a future release.
 
 ## Usage 
 To use, you first need to create the Passport MRZ Key which consists of the passport number, date of birth and expiry date (including the checksums).
