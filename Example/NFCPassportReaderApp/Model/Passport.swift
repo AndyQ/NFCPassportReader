@@ -69,7 +69,8 @@ public struct Passport {
         
         
         // Validate passport
-        let pa =  PassiveAuthentication()
+        let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem")!
+        let pa =  PassiveAuthentication(masterListURL)
         
         do {
             try pa.checkPassportCorrectlySigned( sodBody : sod.body )
