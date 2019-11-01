@@ -8,24 +8,22 @@
 //
 
 import SwiftUI
+import NFCPassportReader
 
 // Outline view of passport
 struct PassportView : View {
-    var passport : Passport?
-    
-    init( passport: Passport? ) {
-        self.passport = passport
-    }
+    @Binding var passportDetails: PassportDetails
     
     var body: some View {
+        let passport = passportDetails.passport
         return HStack {
-            if (self.passport) != nil {
+            if (passport) != nil {
                 
                 ZStack(alignment: .bottomTrailing) {
-                    PassportDetailsView(passport: self.passport!)
+                    PassportDetailsView(passportDetails: $passportDetails)
                     
                     HStack {
-                        if !self.passport!.passportDataValid {
+                        if passport!.passportDataValid {
                             VStack {
                                 Image( systemName:"exclamationmark").foregroundColor(.red)
                                     .font(.system(size: 50))
@@ -38,7 +36,7 @@ struct PassportView : View {
                             
                         }
                         VStack(alignment: .center) {
-                            if self.passport!.passportSigned {
+                            if passport!.passportCorrectlySigned {
                                 Image( systemName:"checkmark.seal").foregroundColor(.green)
                                     .font(.system(size: 50))
                                     .padding(.bottom, 5)
@@ -60,26 +58,31 @@ struct PassportView : View {
                     }.padding( [.trailing, .bottom], 10)
                 }
             } else {
-                Text( "No Passport set")
+                Text( "No Passport set").padding()
             }
         }
-        .background(Image( "background" ).blur(radius:10))
+        .background( Color.primary.colorInvert() )
         .cornerRadius(10)
         .shadow(radius: 20)
-        
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.primary, lineWidth: 2)
+        )
+
     }
 }
 
 
 // Shows the Pzssport details
 struct PassportDetailsView : View {
-    var passport: Passport
+    @Binding var passportDetails: PassportDetails
     
     var body: some View {
-        HStack(alignment: .top) {
+        let passport = passportDetails.passport
+        return HStack(alignment: .top) {
             VStack(alignment: .leading) {
                 Spacer()
-                Image(uiImage:passport.image)
+                Image(uiImage:passport!.passportImage ?? UIImage(named:"head")!)
                     .resizable()
                     .renderingMode(.original)
                     .aspectRatio(contentMode: .fit)
@@ -90,38 +93,45 @@ struct PassportDetailsView : View {
             VStack(alignment: .leading) {
                 Spacer()
                 HStack {
-                    Text( passport.documentType)
+                    Text( passport!.documentType)
                     Spacer()
-                    Text( passport.issuingAuthority)
+                    Text( passport!.issuingAuthority)
                     Spacer()
-                    Text( passport.documentNumber)
+                    Text( passport!.documentNumber)
                 }
-                Text( passport.lastName)
-                Text( passport.firstName)
-                Text( passport.nationality)
-                Text( passport.dateOfBirth)
-                Text( passport.gender)
-                Text( passport.documentExpiryDate )
+                Text( passport!.lastName)
+                Text( passport!.firstName)
+                Text( passport!.nationality)
+                Text( passport!.dateOfBirth)
+                Text( passport!.gender)
+                Text( passport!.documentExpiryDate )
                 
                 Spacer()
             }.padding([.trailing], 10.0)
         }.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: Alignment.topLeading)
+            
     }
 }
 
  
 #if DEBUG
 struct PassportView_Previews : PreviewProvider {
+    @State static var pd = PassportDetails()
     static var previews: some View {
         let pptData = "P<GBRTEST<<TEST<TEST<<<<<<<<<<<<<<<<<<<<<<<<1234567891GBR8001019M2106308<<<<<<<<<<<<<<04"
-        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: false, dataValid: false )
-        let pd = PassportDetails()
-        pd.passport = passport
+//        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: false, dataValid: false )
+
+        //pd.passport = passport
+        
         
         return Group {
-            PassportView( passport:passport)
+            PassportView(passportDetails: $pd)
+//            PassportView(passportDetails: $pd)
                 .environment( \.colorScheme, .light)
- 
+            PassportView(passportDetails: $pd)
+//            PassportView(passportDetails: $pd)
+                .environment( \.colorScheme, .dark)
+
         }.frame(width: UIScreen.main.bounds.width-10, height: 220)
         .environmentObject(pd)
     }

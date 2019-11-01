@@ -26,67 +26,28 @@ public struct Passport {
     
     public var passportSigned : Bool = false
     public var passportDataValid : Bool = false
-    public var errors : [Error] = []
     
     init( fromNFCPassportModel model : NFCPassportModel ) {
         self.image = model.passportImage ?? UIImage(named:"head")!
+
+        documentType = model.documentType
+        documentSubType = model.documentSubType
         
-        let elements = model.passportDataElements ?? [:]
-        
-        print( elements )
-        let type = elements["5F03"]
-        documentType = type?[0] ?? "?"
-        documentSubType = type?[1] ?? "?"
-        
-        issuingAuthority = elements["5F28"] ?? "?"
-        documentNumber = (elements["5A"] ?? "?").replacingOccurrences(of: "<", with: "" )
-        nationality = elements["5F2C"] ?? "?"
-        dateOfBirth = elements["5F57"]  ?? "?"
-        gender = elements["5F35"] ?? "?"
-        documentExpiryDate = elements["59"] ?? "?"
-        personalNumber = (elements["53"] ?? "?").replacingOccurrences(of: "<", with: "" )
-        
-        let names = (elements["5B"] ?? "?").components(separatedBy: "<<")
-        lastName = names[0].replacingOccurrences(of: "<", with: " " )
-        
-        var name = ""
-        if names.count > 1 {
-            let fn = names[1].replacingOccurrences(of: "<", with: " " ).strip()
-            name += fn + " "
-        }
-        firstName = name.strip()
-        
+        issuingAuthority = model.issuingAuthority
+        documentNumber = model.documentNumber
+        nationality = model.nationality
+        dateOfBirth = model.dateOfBirth
+        gender = model.gender
+        documentExpiryDate = model.documentExpiryDate
+        personalNumber = model.personalNumber
+        lastName = model.lastName
+        firstName = model.firstName
         
         // Check whether a genuine passport or not
-        
-        // Two Parts:
-        // Part 1 - Has the SOD (Security Object Document) been signed by a valid country signing certificate authority (CSCA)?
-        // Part 2 - has it been tampered with (e.g. hashes of Datagroups match those in the SOD?
-        guard let sod = model.getDataGroup(.SOD) else { return }
-        
-        guard let dg1 = model.getDataGroup(.DG1),
-            let dg2 = model.getDataGroup(.DG2) else { return }
-        
-        
-        // Validate passport
         let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem")!
-        let pa =  PassiveAuthentication(masterListURL)
-        
-        do {
-            try pa.checkPassportCorrectlySigned( sodBody : sod.body )
-            self.passportSigned = true
-        } catch let error {
-            self.passportSigned = false
-            errors.append( error )
-        }
-        
-        do {
-            try pa.checkDataNotBeenTamperedWith( sodBody : sod.body, dataGroupsToCheck: [.DG1:dg1, .DG2:dg2] )
-            self.passportDataValid = true
-        } catch let error {
-            self.passportDataValid = false
-            errors.append( error )
-        }
+        _ = model.verifyPassport( masterListURL: masterListURL )
+        self.passportSigned = model.passportCorrectlySigned
+        self.passportDataValid = model.passportDataValid
     }
     
     init( passportMRZData: String, image : UIImage, signed:Bool, dataValid:Bool ) {

@@ -46,7 +46,7 @@ public enum TagError: Error {
 }
 
 @available(iOS 13, *)
-public enum DataGroupId : Int {
+public enum DataGroupId : Int, CaseIterable {
     case COM = 0x60
     case DG1 = 0x61
     case DG2 = 0x75
@@ -66,6 +66,30 @@ public enum DataGroupId : Int {
     case DG16 = 0x70
     case SOD = 0x77
     case Unknown = 0x00
+    
+    func getName() -> String {
+        switch( self ) {
+        case .COM: return "COM"
+        case .DG1: return "DG1"
+        case .DG2: return "DG2"
+        case .DG3: return "DG3"
+        case .DG4: return "DG4"
+        case .DG5: return "DG5"
+        case .DG6: return "DG6"
+        case .DG7: return "DG7"
+        case .DG8: return "DG8"
+        case .DG9: return "DG9"
+        case .DG10: return "DG10"
+        case .DG11: return "DG11"
+        case .DG12: return "DG12"
+        case .DG13: return "DG13"
+        case .DG14: return "DG14"
+        case .DG15: return "DG15"
+        case .DG16: return "DG16"
+        case .SOD: return "SOD"
+        case .Unknown: return "Unknown"
+        }
+    }
 }
 
 @available(iOS 13, *)

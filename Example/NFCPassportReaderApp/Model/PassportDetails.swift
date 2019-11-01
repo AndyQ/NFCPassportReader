@@ -8,12 +8,13 @@
 
 import SwiftUI
 import Combine
+import NFCPassportReader
 
 class PassportDetails : ObservableObject {
     @Published var passportNumber : String = UserDefaults.standard.string(forKey:"passportNumber" ) ?? ""
     @Published var dateOfBirth: String = UserDefaults.standard.string(forKey:"dateOfBirth" ) ?? ""
     @Published var expiryDate: String = UserDefaults.standard.string(forKey:"expiryDate" ) ?? ""
-    @Published var passport : Passport?
+    @Published var passport : NFCPassportModel?
     
     var isValid : Bool {
         return passportNumber.count >= 8 && dateOfBirth.count == 6 && expiryDate.count == 6

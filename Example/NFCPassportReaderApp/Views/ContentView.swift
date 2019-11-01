@@ -28,15 +28,16 @@ struct BackgroundView : UIViewRepresentable {
 
 
 struct ContentView : View {
-    @EnvironmentObject var passportDetails: PassportDetails
+    @State var passportDetails = PassportDetails()
 
     @State private var showingAlert = false
     @State private var showDetails = false
     @State private var alertTitle : String = ""
     @State private var alertMessage : String = ""
-    
+    @State var page = 0
+
     private let passportReader = PassportReader()
-    
+
     var body: some View {
         ZStack {
             VStack {
@@ -48,26 +49,22 @@ struct ContentView : View {
                 TextField("Passport number",
                           text: $passportDetails.passportNumber)
                     .textContentType(.name)
-                    .foregroundColor(Color.secondary)
+                    .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
                 
                 TextField("Date of birth",
                           text: $passportDetails.dateOfBirth)
-                    .foregroundColor(Color.secondary)
+                    .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
                 
                 TextField("Passport expiry date",
                           text: $passportDetails.expiryDate)
-                    .foregroundColor(Color.secondary)
+                    .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
 
-                Spacer()
-            }.padding( .top )
-            VStack {
-                Spacer()
                 
                 Button(action: {
                     self.scanPassport()
@@ -77,16 +74,22 @@ struct ContentView : View {
                     .foregroundColor(passportDetails.isValid ? .secondary : Color.secondary.opacity(0.25))
                     }
                     .disabled( !passportDetails.isValid )
+                Picker(selection: $page, label: Text("View?")) {
+                    Text("Passport").tag(0)
+                    Text("Details").tag(1)
+                }.pickerStyle(SegmentedPickerStyle())
+                    .padding(.bottom,20)
+                
+                if page == 0 && showDetails {
+                    PassportView(passportDetails:$passportDetails)
+                        .frame(width: UIScreen.main.bounds.width-20, height: 220)
+                } else if page == 1 && showDetails {
+                    DetailsView(passportDetails:$passportDetails)
+                }
                 Spacer()
             }
             
-            PassportView( passport: self.passportDetails.passport )
-                .frame(width: UIScreen.main.bounds.width-20, height: 220)
-                .offset(y: showDetails ? 0 : UIScreen.main.bounds.height + 100)
-                .animation(.easeInOut(duration: 0.3))
-                .onTapGesture {
-                    self.showDetails.toggle()
-                }
+
         }.alert(isPresented: $showingAlert) {
                 Alert(title: Text(alertTitle), message:
                     Text(alertMessage), dismissButton: .default(Text("Got it!")))
@@ -97,25 +100,28 @@ struct ContentView : View {
 
 extension ContentView {
     func scanPassport( ) {
+        self.showDetails = false
         let mrzKey = self.passportDetails.getMRZKey()
 
-        
-        let dataGroups : [DataGroupId] = [.COM, .DG1, .DG2, .SOD]
+        // Set the masterListURL on the Passport Reader to allow auto passport verification
+        let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem")!
+        passportReader.setMasterListURL( masterListURL )
+
+//        let dataGroups : [DataGroupId] = [.COM, .DG1, .DG2, .SOD]
+        let dataGroups : [DataGroupId] = [.COM, .DG1, .SOD]
         passportReader.readPassport(mrzKey: mrzKey, tags: dataGroups, completed: { (passport, error) in
             if let passport = passport {
                 // All good, we got a passport
-                let passportModel = Passport( fromNFCPassportModel: passport)
 
                 DispatchQueue.main.async {
-                    self.passportDetails.passport = passportModel
-                    self.showDetails.toggle()
+                    self.passportDetails.passport = passport
+                    self.showDetails = true
                 }
 
             } else {
                 self.alertTitle = "Oops"
                 self.alertTitle = "\(error?.localizedDescription ?? "Unknown error")"
                 self.showingAlert = true
-
             }
         })
 
@@ -127,13 +133,15 @@ struct ContentView_Previews : PreviewProvider {
 
     static var previews: some View {
         let pptData = "P<GBRTEST<<TEST<TEST<<<<<<<<<<<<<<<<<<<<<<<<1234567891GBR8001019M2106308<<<<<<<<<<<<<<04"
-        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: true, dataValid: true )
+//        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: true, dataValid: true )
+        let passport = NFCPassportModel()
         let pd = PassportDetails()
         pd.passport = passport
         
+        
         return Group {
-            ContentView().environment( \.colorScheme, .light).environmentObject(pd)
-            ContentView().environment( \.colorScheme, .dark).environmentObject(pd)
+            ContentView(passportDetails: pd).environment( \.colorScheme, .light).environmentObject(pd)
+            ContentView(passportDetails: pd).environment( \.colorScheme, .dark).environmentObject(pd)
         }
     }
 }

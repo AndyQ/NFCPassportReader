@@ -1,5 +1,5 @@
 PODS:
-  - NFCPassportReader (0.0.10):
+  - NFCPassportReader (0.0.11):
     - OpenSSL-Universal/Framework
   - OpenSSL-Universal/Framework (1.0.2.19)
 
@@ -7,7 +7,7 @@ DEPENDENCIES:
   - NFCPassportReader (from `../`)
 
 SPEC REPOS:
-  https://github.com/cocoapods/specs.git:
+  trunk:
     - OpenSSL-Universal
 
 EXTERNAL SOURCES:
@@ -15,9 +15,9 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  NFCPassportReader: b2321b7eab81643bcb8c8a710c27a8f4f90fe80a
+  NFCPassportReader: 04e2f5802f44fd51e065997999fe9ffb401dd245
   OpenSSL-Universal: 8b48cc0d10c1b2923617dfe5c178aa9ed2689355
 
-PODFILE CHECKSUM: 1ee0b648c7b22a71c430733b916163ffe965d661
+PODFILE CHECKSUM: 1cff724a2df3ef67785538cd981e91abceb69439
 
-COCOAPODS: 1.7.2
+COCOAPODS: 1.8.4

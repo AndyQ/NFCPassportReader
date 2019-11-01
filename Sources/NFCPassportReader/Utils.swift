@@ -252,8 +252,9 @@ func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
     let hash = sha1.finalize()
     
     return Array(hash)
-    #endif
+    #else
     fatalError("Couldn't import CryptoKit")
+    #endif
 }
 
 /// This function is used during the Derivation of Document Basic Acces Keys.
@@ -268,8 +269,9 @@ func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
     let hash = sha1.finalize()
     
     return Array(hash)
-    #endif
+    #else
     fatalError("Couldn't import CryptoKit")
+    #endif
 }
 
 

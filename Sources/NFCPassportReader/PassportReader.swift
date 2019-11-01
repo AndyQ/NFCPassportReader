@@ -9,56 +9,6 @@
 import UIKit
 import CoreNFC
 
-@available(iOS 13, *)
-public struct NFCPassportModel {
-    
-    public var passportMRZ : String {
-        guard let dg1 = dataGroupsRead[.DG1] as? DataGroup1 else { return "NOT READ" }
-        
-        return dg1.elements["5F1F"] ?? "NOT FOUND"
-    }
-    
-    public var passportDataElements : [String:String]? {
-        guard let dg1 = dataGroupsRead[.DG1] as? DataGroup1 else { return nil }
-        
-        return dg1.elements
-    }
-    public var passportImage : UIImage? {
-        guard let dg2 = dataGroupsRead[.DG2] as? DataGroup2 else { return nil }
-        
-        return dg2.getImage()
-        
-    }
-    public var signatureImage : UIImage? {
-        guard let dg7 = dataGroupsRead[.DG7] as? DataGroup7 else { return nil }
-        
-        return dg7.getImage()
-    }
-    
-    public var dataGroupsRead : [DataGroupId:DataGroup] = [:]
-    
-    public func getDataGroup( _ id : DataGroupId ) -> DataGroup? {
-        return dataGroupsRead[id]
-    }
-
-    public func getHashesForDatagroups( hashAlgorythm: String ) -> [DataGroupId:[UInt8]]  {
-        var ret = [DataGroupId:[UInt8]]()
-        
-        for (key, value) in dataGroupsRead {
-            if hashAlgorythm == "SHA256" {
-                ret[key] = calcSHA256Hash(value.body)
-            } else if hashAlgorythm == "SHA1" {
-                ret[key] = calcSHA1Hash(value.body)
-            }
-        }
-        
-        return ret
-    }
-
-    public init() {
-        
-    }
-}
 
 @available(iOS 13, *)
 public class PassportReader : NSObject {
@@ -73,12 +23,20 @@ public class PassportReader : NSObject {
     private var mrzKey : String = ""
     
     private var scanCompletedHandler: ((NFCPassportModel?, TagError?)->())!
+    private var masterListURL : URL?
 
-    override public init( ) {
+    public init( masterListURL: URL? = nil ) {
         super.init()
+        
+        self.masterListURL = masterListURL
+    }
+    
+    public func setMasterListURL( _ masterListURL : URL ) {
+        self.masterListURL = masterListURL
     }
     
     public func readPassport( mrzKey : String,  tags: [DataGroupId], completed: @escaping (NFCPassportModel?, TagError?)->() ) {
+        self.passport = NFCPassportModel()
         self.mrzKey = mrzKey
         self.dataGroupsToRead.removeAll()
         self.dataGroupsToRead.append( contentsOf:tags)
@@ -162,6 +120,12 @@ extension PassportReader {
                         self?.readerSession?.invalidate(errorMessage: "Sorry, there was a problem reading the passport. Please try again" )
                     } else {
                         self?.readerSession?.invalidate()
+                        
+                        // If we have a masterlist url set then use that and verify the passport now
+                        if let masterListURL = self?.masterListURL {
+                            _ = self?.passport.verifyPassport(masterListURL: masterListURL)
+                            
+                        }
                         self?.scanCompletedHandler( self?.passport, nil )
                     }
                 }
@@ -199,7 +163,7 @@ extension PassportReader {
             if let response = response {
                 do {
                     let dg = try DataGroupParser().parseDG(data: response)
-                    self.passport.dataGroupsRead[dgId] = dg
+                    self.passport.addDataGroup( dgId, dataGroup:dg )
                     self.readNextDataGroup(completedReadingGroups: completed)
                 } catch let error as TagError {
                     Log.error( "TagError reading tag - \(error)" )
@@ -208,7 +172,6 @@ extension PassportReader {
                     Log.error( "Unexpected error reading tag - \(error)" )
                     completed( TagError.UnexpectedError )
                 }
-                
             } else {
                 completed( err )
             }
