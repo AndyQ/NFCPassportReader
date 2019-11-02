@@ -5,7 +5,7 @@
 //  Created by Andy Qua on 29/10/2019.
 //
 
-import Foundation
+import UIKit
 
 @available(iOS 13, *)
 public struct DataGroupHash {
@@ -184,7 +184,7 @@ public class NFCPassportModel {
         let signedData = try OpenSSLUtils.getSignedDataFromPKCS7(pkcs7Der: data)
         let asn1Data = try OpenSSLUtils.ASN1Parse( data: signedData )
         
-        let (sodHashAlgorythm, sodHashes) = try parseSignatureContent( asn1Data )
+        let (sodHashAlgorythm, sodHashes) = try parseSODSignatureContent( asn1Data )
         
         // Now compare Hashes
         var errors : String = ""
