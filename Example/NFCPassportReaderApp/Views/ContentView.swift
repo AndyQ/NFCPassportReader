@@ -107,8 +107,8 @@ extension ContentView {
         let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem")!
         passportReader.setMasterListURL( masterListURL )
 
-//        let dataGroups : [DataGroupId] = [.COM, .DG1, .DG2, .SOD]
-        let dataGroups : [DataGroupId] = [.COM, .DG1, .SOD]
+        let dataGroups : [DataGroupId] = [.COM, .DG1, .DG2, .SOD]
+//        let dataGroups : [DataGroupId] = [.COM, .DG1, .SOD]
         passportReader.readPassport(mrzKey: mrzKey, tags: dataGroups, completed: { (passport, error) in
             if let passport = passport {
                 // All good, we got a passport

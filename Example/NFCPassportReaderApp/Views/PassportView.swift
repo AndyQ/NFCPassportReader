@@ -23,7 +23,7 @@ struct PassportView : View {
                     PassportDetailsView(passportDetails: $passportDetails)
                     
                     HStack {
-                        if passport!.passportDataValid {
+                        if !passport!.passportDataValid {
                             VStack {
                                 Image( systemName:"exclamationmark").foregroundColor(.red)
                                     .font(.system(size: 50))

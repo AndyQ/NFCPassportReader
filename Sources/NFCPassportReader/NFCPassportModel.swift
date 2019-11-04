@@ -178,10 +178,7 @@ public class NFCPassportModel {
         // Get SOD Content
         let data = Data(sod.body)
         
-        // TODO:
-        // At the moment, I'm not verifying that the signed data is correctly signed (this is failing with padding errors and I'm currently not
-        // sure why
-        let signedData = try OpenSSLUtils.getSignedDataFromPKCS7(pkcs7Der: data)
+        let signedData = try OpenSSLUtils.verifyAndGetSignedDataFromPKCS7(pkcs7Der: data)
         let asn1Data = try OpenSSLUtils.ASN1Parse( data: signedData )
         
         let (sodHashAlgorythm, sodHashes) = try parseSODSignatureContent( asn1Data )

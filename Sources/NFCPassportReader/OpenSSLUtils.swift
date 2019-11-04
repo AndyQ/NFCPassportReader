@@ -177,11 +177,44 @@ class OpenSSLUtils {
 
     }
     
+    /// Verifies the signed data section against the stored certificate and extracts the signed data section from a PKCS7 container (if present and valid)
+    /// - Parameter pkcs7Der: The PKCS7 container in DER format
+    /// - Returns: The signed data from a PKCS7 container if we could read it
+    static func verifyAndGetSignedDataFromPKCS7( pkcs7Der : Data ) throws -> Data {
 
+        guard let inf = BIO_new(BIO_s_mem()) else { throw PassiveAuthenticationError.UnableToGetSignedDataFromPKCS7("Unable to allocate input buffer") }
+        defer { BIO_free(inf) }
+
+        guard let out = BIO_new(BIO_s_mem()) else { throw PassiveAuthenticationError.UnableToGetSignedDataFromPKCS7("Unable to allocate output buffer") }
+        defer { BIO_free(out) }
+
+        let _ = pkcs7Der.withUnsafeBytes { (ptr) in
+            BIO_write(inf, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self), Int32(pkcs7Der.count))
+        }
+        guard let cms = d2i_CMS_bio(inf, nil) else {
+            throw PassiveAuthenticationError.UnableToGetSignedDataFromPKCS7("Verification of P7 failed - unable to create CMS")
+        }
+        defer { CMS_ContentInfo_free(cms) }
+
+        let flags : UInt32 = UInt32(CMS_NO_SIGNER_CERT_VERIFY)
+
+        if CMS_verify(cms, nil, nil, nil, out, flags) == 0 {
+            throw PassiveAuthenticationError.UnableToGetSignedDataFromPKCS7("Verification of P7 failed - unable to verify signature")
+        }
+
+        // print("Verification successful\n");
+        let len = BIO_ctrl(out, BIO_CTRL_PENDING, 0, nil)
+        var buffer = [UInt8](repeating: 0, count: len)
+        BIO_read(out, &buffer, Int32(len))
+        let sigData = Data(buffer)
+
+        return sigData
+    }
+    
     /// Extracts the signed data section from a PKCS7 container (if present)
     /// - Parameter pkcs7Der: The PKCS7 container in DER format
     /// - Returns: The signed data from a PKCS7 container if we could read it
-    static func getSignedDataFromPKCS7( pkcs7Der : Data ) throws -> Data {
+    static func getSignedDataFromPKCS72( pkcs7Der : Data ) throws -> Data {
         // NOTE we're not verifying here - we just want to dump the signed content out
         
         // I need to figure out how/why to verify the signed data against the Document signing certificate (I think?)
