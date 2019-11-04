@@ -210,41 +210,7 @@ class OpenSSLUtils {
 
         return sigData
     }
-    
-    /// Extracts the signed data section from a PKCS7 container (if present)
-    /// - Parameter pkcs7Der: The PKCS7 container in DER format
-    /// - Returns: The signed data from a PKCS7 container if we could read it
-    static func getSignedDataFromPKCS72( pkcs7Der : Data ) throws -> Data {
-        // NOTE we're not verifying here - we just want to dump the signed content out
-        
-        // I need to figure out how/why to verify the signed data against the Document signing certificate (I think?)
 
-        guard let inf = BIO_new(BIO_s_mem()) else { throw PassiveAuthenticationError.UnableToGetSignedDataFromPKCS7("Unable to allocate input buffer") }
-        defer { BIO_free(inf) }
-
-        guard let out = BIO_new(BIO_s_mem()) else { throw PassiveAuthenticationError.UnableToGetSignedDataFromPKCS7("Unable to allocate output buffer") }
-        defer { BIO_free(out) }
-
-        let _ = pkcs7Der.withUnsafeBytes { (ptr) in
-            BIO_write(inf, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self), Int32(pkcs7Der.count))
-        }
-        let p7 = d2i_PKCS7_bio(inf, nil);
-
-        let flags = PKCS7_NOVERIFY | PKCS7_NOSIGS
-
-        if PKCS7_verify(p7, nil, nil, nil, out, flags) == 0 {
-            throw PassiveAuthenticationError.UnableToGetSignedDataFromPKCS7("Verification of P7 failed - unable to get signature")
-        }
-
-        // print("Verification successful\n");
-        let len = BIO_ctrl(out, BIO_CTRL_PENDING, 0, nil)
-        var buffer = [UInt8](repeating: 0, count: len)
-        BIO_read(out, &buffer, Int32(len))
-        let sigData = Data(buffer)
-
-        return sigData
-    }
-    
 
     /// Parses a signed data structures encoded in ASN1 format and returns the structure in text format
     /// - Parameter data: The data to be parsed in ASN1 format
