@@ -8,6 +8,7 @@ Supported features:
 * Secure Messaging
 * Reads DG1 (MRZ data) and DG2 (Image) in both JPEG and JPEG2000 formats
 * Passive Authentication (Uses OpenSSL library)
+* Active Authentication (For ECDSA signatures currently)
 
 This is still very early days - the code is by no means perfect and there are still some rough edges  - there ARE most definitely bugs and I'm sure I'm not doing things perfectly. 
 
@@ -61,7 +62,7 @@ passportReader.readPassport(mrzKey: mrzKey, tags: [.COM, .DG1, .DG2], completed:
 }
 ```
 
-Currently the datagroups supported are: COM, DG1, DG2, SOD
+Currently the datagroups supported are: COM, DG1, DG2, DG7, DG11, DG12, DG154, and SOD
 
 This will then handle the reading of the passport, and image and will call the completion block either with an TagError error if there was an error of some kind, or nil if successful.
 
