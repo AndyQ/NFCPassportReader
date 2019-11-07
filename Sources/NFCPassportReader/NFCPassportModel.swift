@@ -60,17 +60,20 @@ public class NFCPassportModel {
         return com.version
     }()
     
+    
     public lazy var dataGroupsPresent : [String] = {
         guard let com = dataGroupsRead[.COM] as? COM else { return [] }
         return com.dataGroupsPresent
     }()
     
     // Parsed datagroup hashes
+    public var readDataGroups = [String]()
     public var dataGroupHashes = [DataGroupId: DataGroupHash]()
     
-
     public var passportCorrectlySigned : Bool = false
-    public var passportDataValid : Bool = false
+    public var documentSigningCertificateVerified : Bool = false
+    public var passportDataNotTampered : Bool = false
+    public var activeAuthenticationPassed : Bool = false
     public var verificationErrors : [Error] = []
 
     
@@ -85,6 +88,14 @@ public class NFCPassportModel {
         
         return dg7.getImage()
     }
+    
+    public var activeAuthenticationSupported : Bool {
+        guard let dg15 = dataGroupsRead[.DG15] as? DataGroup15 else { return false }
+        if dg15.ecdsaPublicKey != nil || dg15.rsaPublicKey != nil {
+            return true
+        }
+        return false
+    }
 
     private var dataGroupsRead : [DataGroupId:DataGroup] = [:]
     private var certificateSigningGroups : [CertificateType:X509Wrapper] = [:]
@@ -95,12 +106,16 @@ public class NFCPassportModel {
         return dg1.elements
     }
         
+    
     public init() {
         
     }
     
     public func addDataGroup(_ id : DataGroupId, dataGroup: DataGroup ) {
         self.dataGroupsRead[id] = dataGroup
+        if id != .COM && id != .SOD {
+            self.readDataGroups.append( id.getName() )
+        }
     }
 
     public func getDataGroup( _ id : DataGroupId ) -> DataGroup? {
@@ -128,29 +143,37 @@ public class NFCPassportModel {
     //        guard let sod = model.getDataGroup(.SOD) else { return }
 
 
-    public func verifyPassport( masterListURL: URL ) -> Bool {
-        OpenSSLUtils.loadOpenSSL()
-        defer { OpenSSLUtils.cleanupOpenSSL() }
+    public func verifyPassport( masterListURL: URL ) {
         do {
             try validateAndExtractSigningCertificates( masterListURL: masterListURL )
-            self.passportCorrectlySigned = true
         } catch let error {
-            self.passportCorrectlySigned = false
             verificationErrors.append( error )
         }
         
         do {
             try ensureReadDataNotBeenTamperedWith( )
-            self.passportDataValid = true
         } catch let error {
-            self.passportDataValid = false
             verificationErrors.append( error )
         }
+    }
+    
+    public func verifyActiveAuthentication( challenge: [UInt8], signature: [UInt8] ) {
         
-        return self.passportCorrectlySigned && self.passportDataValid
+        // Get AA Public key
+        self.activeAuthenticationPassed = false
+        guard  let dg15 = self.dataGroupsRead[.DG15] as? DataGroup15 else { return }
+        if let _ = dg15.rsaPublicKey {
+            // TODO
+        } else if let ecdsaPublicKey = dg15.ecdsaPublicKey {
+            if OpenSSLUtils.verifyECDSASignature( publicKey:ecdsaPublicKey, signature: signature, data: challenge ) {
+                self.activeAuthenticationPassed = true
+            }
+        }
     }
     
     private func validateAndExtractSigningCertificates( masterListURL: URL ) throws {
+        self.passportCorrectlySigned = false
+        
         guard let sod = getDataGroup(.SOD) else {
             throw PassiveAuthenticationError.SODMissing("No SOD found" )
         }
@@ -168,6 +191,8 @@ public class NFCPassportModel {
         }
                 
         Log.debug( "Passport passed SOD Verification" )
+        self.passportCorrectlySigned = true
+
     }
 
     private func ensureReadDataNotBeenTamperedWith( ) throws  {
@@ -175,15 +200,23 @@ public class NFCPassportModel {
             throw PassiveAuthenticationError.SODMissing("No SOD found" )
         }
 
-        // Get SOD Content
+        // Get SOD Content and verify that its correctly signed by the Document Signing Certificate
         let data = Data(sod.body)
-        
-        let signedData = try OpenSSLUtils.verifyAndGetSignedDataFromPKCS7(pkcs7Der: data)
+        var signedData : Data
+        documentSigningCertificateVerified = false
+        do {
+            signedData = try OpenSSLUtils.verifyAndGetSignedDataFromPKCS7(pkcs7Der: data)
+            documentSigningCertificateVerified = true
+        } catch {
+            signedData = try OpenSSLUtils.extractSignedDataNoVerificationFromPKCS7( pkcs7Der : data)
+        }
+                
+        // Now Verify passport data by comparing compare Hashes in SOD against
+        // computed hashes to ensure data not been tampered with
+        passportDataNotTampered = false
         let asn1Data = try OpenSSLUtils.ASN1Parse( data: signedData )
-        
         let (sodHashAlgorythm, sodHashes) = try parseSODSignatureContent( asn1Data )
         
-        // Now compare Hashes
         var errors : String = ""
         for (id,dgVal) in dataGroupsRead {
             guard let sodHashVal = sodHashes[id] else {
@@ -206,10 +239,12 @@ public class NFCPassportModel {
         }
         
         if errors != "" {
+            print( "HASH ERRORS - \(errors)" )
             throw PassiveAuthenticationError.InvalidDataGroupHash(errors)
         }
         
         Log.debug( "Passport passed Datagroup Tampering check" )
+        passportDataNotTampered = true
     }
     
     
@@ -222,6 +257,9 @@ public class NFCPassportModel {
         var sodHashes :  [DataGroupId : String] = [:]
         
         let lines = content.components(separatedBy: "\n")
+        
+        let dgList : [DataGroupId] = [.COM,.DG1,.DG2,.DG3,.DG4,.DG5,.DG6,.DG7,.DG8,.DG9,.DG10,.DG11,.DG12,.DG13,.DG14,.DG15,.DG16,.SOD]
+
         for line in lines {
             if line.contains( "d=2" ) && line.contains( "OBJECT" ) {
                 if line.contains( "sha1" ) {
@@ -240,12 +278,8 @@ public class NFCPassportModel {
             } else if line.contains("d=3" ) && line.contains( "OCTET STRING" ) {
                 if let range = line.range(of: "[HEX DUMP]:") {
                     let val = line[range.upperBound..<line.endIndex]
-                    if currentDG != "" {
-                        if currentDG == "01" {
-                            sodHashes[.DG1] = String(val)
-                        } else if currentDG == "02" {
-                            sodHashes[.DG2] = String(val)
-                        }
+                    if currentDG != "", let id = Int(currentDG, radix:16) {
+                        sodHashes[dgList[id]] = String(val)
                         currentDG = ""
                     }
                 }

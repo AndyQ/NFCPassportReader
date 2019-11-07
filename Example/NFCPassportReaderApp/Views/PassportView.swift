@@ -23,7 +23,7 @@ struct PassportView : View {
                     PassportDetailsView(passportDetails: $passportDetails)
                     
                     HStack {
-                        if !passport!.passportDataValid {
+                        if !passport!.passportDataNotTampered {
                             VStack {
                                 Image( systemName:"exclamationmark").foregroundColor(.red)
                                     .font(.system(size: 50))
@@ -36,7 +36,7 @@ struct PassportView : View {
                             
                         }
                         VStack(alignment: .center) {
-                            if passport!.passportCorrectlySigned {
+                            if passport!.passportCorrectlySigned && passport!.documentSigningCertificateVerified {
                                 Image( systemName:"checkmark.seal").foregroundColor(.green)
                                     .font(.system(size: 50))
                                     .padding(.bottom, 5)
@@ -118,11 +118,8 @@ struct PassportDetailsView : View {
 struct PassportView_Previews : PreviewProvider {
     @State static var pd = PassportDetails()
     static var previews: some View {
-        let pptData = "P<GBRTEST<<TEST<TEST<<<<<<<<<<<<<<<<<<<<<<<<1234567891GBR8001019M2106308<<<<<<<<<<<<<<04"
-//        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: false, dataValid: false )
-
-        //pd.passport = passport
-        
+//        let pptData = "P<GBRTEST<<TEST<TEST<<<<<<<<<<<<<<<<<<<<<<<<1234567891GBR8001019M2106308<<<<<<<<<<<<<<04"
+//        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: false, dataValid: false )        
         
         return Group {
             PassportView(passportDetails: $pd)

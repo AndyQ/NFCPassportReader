@@ -12,4 +12,8 @@ target 'NFCPassportReaderApp' do
   # Pods for NFCPassportReaderApp
   pod 'NFCPassportReader', :path => '../'
 
+  target 'NFCPassportReaderAppTests' do
+    inherit! :search_paths
+    # Pods for testing
+  end
 end

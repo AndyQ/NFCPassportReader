@@ -12,6 +12,14 @@ import CommonCrypto
     import CryptoKit
 #endif
 
+private extension UInt8 {
+    var hexString: String {
+        let string = String(self, radix: 16)
+        return (self < 16 ? "0" + string : string)
+    }
+}
+
+
 extension FileManager {
     static var documentDir : URL {
         return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!

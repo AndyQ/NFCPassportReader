@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OpenSSL
 
 @available(iOS 13, *)
 class DataGroupParser {
@@ -15,9 +16,9 @@ class DataGroupParser {
     static let classes : [DataGroup.Type] = [COM.self, DataGroup1.self, DataGroup2.self,
                                       NotImplementedDG.self, NotImplementedDG.self, NotImplementedDG.self,
                                       NotImplementedDG.self, DataGroup7.self, NotImplementedDG.self,
-                                      NotImplementedDG.self, NotImplementedDG.self, NotImplementedDG.self,
-                                      NotImplementedDG.self, NotImplementedDG.self, NotImplementedDG.self,
-                                      NotImplementedDG.self, NotImplementedDG.self, SOD.self]
+                                      NotImplementedDG.self, NotImplementedDG.self, DataGroup11.self,
+                                      DataGroup12.self, NotImplementedDG.self, DataGroup14.self,
+                                      DataGroup15.self, NotImplementedDG.self, SOD.self]
     
     
     func parseDG( data : [UInt8] ) throws -> DataGroup {
@@ -52,8 +53,8 @@ public class DataGroup {
         self.data = data
         
         // Skip the first byte which is the header byte
-        _ = try getNextTag()
-        _ = try getNextLength()
+        pos = 1
+        let _ = try getNextLength()
         self.body = [UInt8](data[pos...])
         
         try parse(data)
@@ -460,6 +461,164 @@ class DataGroup7 : DataGroup {
         imageData = try getNextValue()
     }
 }
+
+
+
+@available(iOS 13, *)
+class DataGroup11 : DataGroup {
+    
+    var fullName : String?
+    var personalNumber : String?
+    var dateOfBirth : String?
+    var placeOfBirth : String?
+    var address : String?
+    var telephone : String?
+    var profession : String?
+    var title : String?
+    var personalSummary : String?
+    var proofOfCitizenship : String?
+    var tdNumbers : String?
+    var custodyInfo : String?
+
+    required init( _ data : [UInt8] ) throws {
+        try super.init(data)
+        datagroupType = .DG11
+    }
+        
+    override func parse(_ data: [UInt8]) throws {
+        var tag = try getNextTag()
+        if tag != 0x5C {
+            throw TagError.InvalidResponse
+        }
+        _ = try getNextValue()
+        
+        repeat {
+            tag = try getNextTag()
+            let val = try String( bytes:getNextValue(), encoding:.utf8)
+            if tag == 0x5F0E {
+                fullName = val
+            } else if tag == 0x5F10 {
+                personalNumber = val
+            } else if tag == 0x5F11 {
+                placeOfBirth = val
+            } else if tag == 0x5F2B {
+                dateOfBirth = val
+            } else if tag == 0x5F42 {
+                address = val
+            } else if tag == 0x5F12 {
+                telephone = val
+            } else if tag == 0x5F13 {
+                profession = val
+            } else if tag == 0x5F14 {
+                title = val
+            } else if tag == 0x5F15 {
+                personalSummary = val
+            } else if tag == 0x5F16 {
+                proofOfCitizenship = val
+            } else if tag == 0x5F18 {
+                tdNumbers = val
+            } else if tag == 0x5F18 {
+                custodyInfo = val
+            }
+        } while pos < data.count
+    }
+}
+
+@available(iOS 13, *)
+class DataGroup12 : DataGroup {
+    
+    var issuingAuthority : String?
+    var dateOfIssue : String?
+    var otherPersonsDetails : String?
+    var endorsementsOrObservations : String?
+    var taxOrExitRequirements : String?
+    var frontImage : [UInt8]?
+    var rearImage : [UInt8]?
+    var personalizationTime : String?
+    var personalizationDeviceSerialNr : String?
+
+    required init( _ data : [UInt8] ) throws {
+        try super.init(data)
+        datagroupType = .DG11
+    }
+        
+    override func parse(_ data: [UInt8]) throws {
+        var tag = try getNextTag()
+        if tag != 0x5C {
+            throw TagError.InvalidResponse
+        }
+        
+        // Skip the taglist - ideally we would check this but...
+        _ = try getNextValue()
+
+        repeat {
+            tag = try getNextTag()
+            let val = try getNextValue()
+            
+            if tag == 0x5F19 {
+                issuingAuthority = String( bytes:val, encoding:.utf8)
+            } else if tag == 0x5F26 {
+                dateOfIssue = String( bytes:val, encoding:.utf8)
+            } else if tag == 0xA0 {
+                // Not yet handled
+            } else if tag == 0x5F1B {
+                endorsementsOrObservations = String( bytes:val, encoding:.utf8)
+            } else if tag == 0x5F1C {
+                taxOrExitRequirements = String( bytes:val, encoding:.utf8)
+            } else if tag == 0x5F1D {
+                frontImage = val
+            } else if tag == 0x5F1E {
+                rearImage = val
+            } else if tag == 0x5F55 {
+                personalizationTime = String( bytes:val, encoding:.utf8)
+            } else if tag == 0x5F56 {
+                personalizationDeviceSerialNr = String( bytes:val, encoding:.utf8)
+            }
+        } while pos < data.count
+    }
+}
+
+@available(iOS 13, *)
+class DataGroup14 : DataGroup {
+    
+    required init( _ data : [UInt8] ) throws {
+        try super.init(data)
+        datagroupType = .DG14
+    }
+    
+    override func parse(_ data: [UInt8]) throws {
+    }
+}
+
+
+@available(iOS 13, *)
+class DataGroup15 : DataGroup {
+    
+    var rsaPublicKey : OpaquePointer?
+    var ecdsaPublicKey : UnsafeMutablePointer<EVP_PKEY>?
+    
+    deinit {
+        EVP_PKEY_free(ecdsaPublicKey);
+    }
+
+    required init( _ data : [UInt8] ) throws {
+        try super.init(data)
+        datagroupType = .DG15
+    }
+    
+    
+    override func parse(_ data: [UInt8]) throws {
+        
+        // the public key can either be in EC (elliptic curve) or RSA format
+        // Try ec
+        if let key = try OpenSSLUtils.readECPublicKey( data:body ) {
+            // NOTE We are responsible for freeing the key!
+            ecdsaPublicKey = key
+        }
+    }
+}
+
+
 
 @available(iOS 13, *)
 public enum DocTypeEnum: String {

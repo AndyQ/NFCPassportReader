@@ -7,6 +7,7 @@
 
 import Foundation
 import XCTest
+import OpenSSL
 
 @testable import NFCPassportReader
 
@@ -67,7 +68,62 @@ final class DataGroupParsingTests: XCTestCase {
             XCTAssertTrue( dg is DataGroup7 )
         }
     }
-    
+
+    func testDatagroup11Parsing() {
+        
+        // This is a cut down version of the DG7 record. It contains everything up to the end of the image header - no actuall image data as its way too big to include here
+        // I've also adjusted the record lengths accordingly
+        
+        let dg11Val = hexRepToBin("6B305C065F0E5F2B5F115F0E0C546573743C3C5465737465725F2B0831393730313230315F110B4E6F727468616D70746F6E")
+        let dgp = DataGroupParser()
+        
+        XCTAssertNoThrow(try dgp.parseDG(data: dg11Val)) { dg in
+            XCTAssertNotNil(dg)
+            XCTAssertTrue( dg is DataGroup11 )
+
+            let dg11 = dg as! DataGroup11
+            XCTAssertEqual(dg11.fullName, "Test<<Tester")
+            XCTAssertEqual(dg11.dateOfBirth, "19701201")
+            XCTAssertEqual(dg11.placeOfBirth, "Northampton")
+        }
+    }
+
+    func testDatagroup12Parsing() {
+        
+        // This is a cut down version of the DG7 record. It contains everything up to the end of the image header - no actuall image data as its way too big to include here
+        // I've also adjusted the record lengths accordingly
+        
+        let dg12Val = hexRepToBin("6C1A5C045F265F195F260832303138303332365F1906544553544552")
+        let dgp = DataGroupParser()
+        
+        XCTAssertNoThrow(try dgp.parseDG(data: dg12Val)) { dg in
+            XCTAssertNotNil(dg)
+            XCTAssertTrue( dg is DataGroup12 )
+
+            let dg12 = dg as! DataGroup12
+            XCTAssertEqual(dg12.issuingAuthority, "TESTER")
+            XCTAssertEqual(dg12.dateOfIssue, "20180326")
+        }
+    }
+
+    func testDatagroup15Parsing() {
+        
+        // This is a cut down version of the DG7 record. It contains everything up to the end of the image header - no actuall image data as its way too big to include here
+        // I've also adjusted the record lengths accordingly
+        
+        let dg15Val = hexRepToBin("6F820137308201333081EC06072A8648CE3D02013081E0020101302C06072A8648CE3D0101022100A9FB57DBA1EEA9BC3E660A909D838D726E3BF623D52620282013481D1F6E5377304404207D5A0975FC2C3057EEF67530417AFFE7FB8055C126DC5C6CE94A4B44F330B5D9042026DC5C6CE94A4B44F330B5D9BBD77CBF958416295CF7E1CE6BCCDC18FF8C07B60441048BD2AEB9CB7E57CB2C4B482FFC81B7AFB9DE27E1E3BD23C23A4453BD9ACE3262547EF835C3DAC4FD97F8461A14611DC9C27745132DED8E545C1D54C72F046997022100A9FB57DBA1EEA9BC3E660A909D838D718C397AA3B561A6F7901E0E82974856A7020101034200049BD24313046EB43CC4652B6FC1AA00E76B5405F4E7016521E95BE53B9C5BAE5A1410F12CF3AE23F886EFCEDE89F7C63AD9CA9E5C6C05DE902DB70F2EB2341F9D")
+        let dgp = DataGroupParser()
+        
+        XCTAssertNoThrow(try dgp.parseDG(data: dg15Val)) { dg in
+            XCTAssertNotNil(dg)
+            XCTAssertTrue( dg is DataGroup15 )
+
+            let dg15 = dg as? DataGroup15
+            XCTAssertTrue( dg15?.ecdsaPublicKey != nil || dg15?.rsaPublicKey != nil )
+        }
+    }
+
+
     func testCOMDatagroupParsing() {
         let com = hexRepToBin("601A5F0104303130375F36063034303030305C08617563676B6C6E6F")
         let dgp = DataGroupParser()

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		711882025AC5758684FD03D3 /* Pods_NFCPassportReaderAppTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 388788F527905BEB9506642C /* Pods_NFCPassportReaderAppTests.framework */; };
 		A16EB23122A9E9E10008F53F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB23022A9E9E10008F53F /* AppDelegate.swift */; };
 		A16EB23322A9E9E10008F53F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16EB23222A9E9E10008F53F /* SceneDelegate.swift */; };
 		A16EB23A22A9E9E20008F53F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A16EB23922A9E9E20008F53F /* Assets.xcassets */; };
@@ -16,13 +17,26 @@
 		A1816E9C22C9059F00F546A0 /* PassportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1816E9B22C9059F00F546A0 /* PassportView.swift */; };
 		A18248C22369D17300581384 /* DetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18248C12369D17300581384 /* DetailsView.swift */; };
 		A1CE83AC22C91D1300E3EACF /* StringExt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CE83AB22C91D1300E3EACF /* StringExt.swift */; };
-		A1CE83AE22C91DB000E3EACF /* Passport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CE83AD22C91DB000E3EACF /* Passport.swift */; };
 		A1DD3F3F22C535F10067255C /* masterList.pem in Resources */ = {isa = PBXBuildFile; fileRef = A1DD3F3E22C535F00067255C /* masterList.pem */; };
+		A1EBC5242370BAB2004DD19E /* DataGroupParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1EBC5212370BAB2004DD19E /* DataGroupParsingTests.swift */; };
+		A1EBC5252370BAB2004DD19E /* NFCPassportReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1EBC5222370BAB2004DD19E /* NFCPassportReaderTests.swift */; };
 		D7F9FA67468C393B9E21EE26 /* Pods_NFCPassportReaderApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C4AFF471DE0DC9A709E7F1AA /* Pods_NFCPassportReaderApp.framework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A1EBC5122370B88D004DD19E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A16EB22522A9E9E10008F53F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A16EB22C22A9E9E10008F53F;
+			remoteInfo = NFCPassportReaderApp;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		0E13B507954E1D53F42BD498 /* Pods-NFCPassportReaderAppTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NFCPassportReaderAppTests.release.xcconfig"; path = "Target Support Files/Pods-NFCPassportReaderAppTests/Pods-NFCPassportReaderAppTests.release.xcconfig"; sourceTree = "<group>"; };
 		32FECA885A76030E1893F05A /* Pods-NFCPassportReaderApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NFCPassportReaderApp.debug.xcconfig"; path = "Target Support Files/Pods-NFCPassportReaderApp/Pods-NFCPassportReaderApp.debug.xcconfig"; sourceTree = "<group>"; };
+		388788F527905BEB9506642C /* Pods_NFCPassportReaderAppTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_NFCPassportReaderAppTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NFCPassportReaderApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A16EB23022A9E9E10008F53F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A16EB23222A9E9E10008F53F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -36,9 +50,13 @@
 		A1823BFD22C4C2A400350316 /* NFCPassportReaderApp-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NFCPassportReaderApp-Bridging-Header.h"; sourceTree = "<group>"; };
 		A18248C12369D17300581384 /* DetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailsView.swift; sourceTree = "<group>"; };
 		A1CE83AB22C91D1300E3EACF /* StringExt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringExt.swift; sourceTree = "<group>"; };
-		A1CE83AD22C91DB000E3EACF /* Passport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Passport.swift; sourceTree = "<group>"; };
 		A1DD3F3E22C535F00067255C /* masterList.pem */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = masterList.pem; sourceTree = "<group>"; };
+		A1EBC50D2370B88D004DD19E /* NFCPassportReaderAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NFCPassportReaderAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1EBC5112370B88D004DD19E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A1EBC5212370BAB2004DD19E /* DataGroupParsingTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataGroupParsingTests.swift; sourceTree = "<group>"; };
+		A1EBC5222370BAB2004DD19E /* NFCPassportReaderTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NFCPassportReaderTests.swift; sourceTree = "<group>"; };
 		AB9C55CD92512B62BCFE8959 /* Pods-NFCPassportReaderApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NFCPassportReaderApp.release.xcconfig"; path = "Target Support Files/Pods-NFCPassportReaderApp/Pods-NFCPassportReaderApp.release.xcconfig"; sourceTree = "<group>"; };
+		BC830EB2D705D99E8A81BEBB /* Pods-NFCPassportReaderAppTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NFCPassportReaderAppTests.debug.xcconfig"; path = "Target Support Files/Pods-NFCPassportReaderAppTests/Pods-NFCPassportReaderAppTests.debug.xcconfig"; sourceTree = "<group>"; };
 		C4AFF471DE0DC9A709E7F1AA /* Pods_NFCPassportReaderApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_NFCPassportReaderApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -51,6 +69,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1EBC50A2370B88D004DD19E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				711882025AC5758684FD03D3 /* Pods_NFCPassportReaderAppTests.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -58,6 +84,7 @@
 			isa = PBXGroup;
 			children = (
 				C4AFF471DE0DC9A709E7F1AA /* Pods_NFCPassportReaderApp.framework */,
+				388788F527905BEB9506642C /* Pods_NFCPassportReaderAppTests.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -66,6 +93,7 @@
 			isa = PBXGroup;
 			children = (
 				A16EB22F22A9E9E10008F53F /* NFCPassportReaderApp */,
+				A1EBC50E2370B88D004DD19E /* NFCPassportReaderAppTests */,
 				A16EB22E22A9E9E10008F53F /* Products */,
 				EE354654AF07CDA5F9366735 /* Pods */,
 				0F8870390878EAF7ACAEE3A2 /* Frameworks */,
@@ -76,6 +104,7 @@
 			isa = PBXGroup;
 			children = (
 				A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */,
+				A1EBC50D2370B88D004DD19E /* NFCPassportReaderAppTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,7 +131,6 @@
 			isa = PBXGroup;
 			children = (
 				A17134BF22C8F0A600C457C3 /* PassportDetails.swift */,
-				A1CE83AD22C91DB000E3EACF /* Passport.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -117,11 +145,23 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		A1EBC50E2370B88D004DD19E /* NFCPassportReaderAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				A1EBC5212370BAB2004DD19E /* DataGroupParsingTests.swift */,
+				A1EBC5222370BAB2004DD19E /* NFCPassportReaderTests.swift */,
+				A1EBC5112370B88D004DD19E /* Info.plist */,
+			);
+			path = NFCPassportReaderAppTests;
+			sourceTree = "<group>";
+		};
 		EE354654AF07CDA5F9366735 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
 				32FECA885A76030E1893F05A /* Pods-NFCPassportReaderApp.debug.xcconfig */,
 				AB9C55CD92512B62BCFE8959 /* Pods-NFCPassportReaderApp.release.xcconfig */,
+				BC830EB2D705D99E8A81BEBB /* Pods-NFCPassportReaderAppTests.debug.xcconfig */,
+				0E13B507954E1D53F42BD498 /* Pods-NFCPassportReaderAppTests.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -148,19 +188,42 @@
 			productReference = A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A1EBC50C2370B88D004DD19E /* NFCPassportReaderAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1EBC5162370B88D004DD19E /* Build configuration list for PBXNativeTarget "NFCPassportReaderAppTests" */;
+			buildPhases = (
+				BA84CE0D4D6FE6C9E1C6D268 /* [CP] Check Pods Manifest.lock */,
+				A1EBC5092370B88D004DD19E /* Sources */,
+				A1EBC50A2370B88D004DD19E /* Frameworks */,
+				A1EBC50B2370B88D004DD19E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1EBC5132370B88D004DD19E /* PBXTargetDependency */,
+			);
+			name = NFCPassportReaderAppTests;
+			productName = NFCPassportReaderAppTests;
+			productReference = A1EBC50D2370B88D004DD19E /* NFCPassportReaderAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		A16EB22522A9E9E10008F53F /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 1100;
+				LastSwiftUpdateCheck = 1120;
 				LastUpgradeCheck = 1100;
 				ORGANIZATIONNAME = "Andy Qua";
 				TargetAttributes = {
 					A16EB22C22A9E9E10008F53F = {
 						CreatedOnToolsVersion = 11.0;
 						LastSwiftMigration = 1100;
+					};
+					A1EBC50C2370B88D004DD19E = {
+						CreatedOnToolsVersion = 11.2;
+						TestTargetID = A16EB22C22A9E9E10008F53F;
 					};
 				};
 			};
@@ -178,6 +241,7 @@
 			projectRoot = "";
 			targets = (
 				A16EB22C22A9E9E10008F53F /* NFCPassportReaderApp */,
+				A1EBC50C2370B88D004DD19E /* NFCPassportReaderAppTests */,
 			);
 		};
 /* End PBXProject section */
@@ -190,6 +254,13 @@
 				A16EB23D22A9E9E20008F53F /* LaunchScreen.storyboard in Resources */,
 				A1DD3F3F22C535F10067255C /* masterList.pem in Resources */,
 				A16EB23A22A9E9E20008F53F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1EBC50B2370B88D004DD19E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -233,6 +304,28 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		BA84CE0D4D6FE6C9E1C6D268 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-NFCPassportReaderAppTests-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -242,7 +335,6 @@
 			files = (
 				A1CE83AC22C91D1300E3EACF /* StringExt.swift in Sources */,
 				A17134BE22C8EF7200C457C3 /* ContentView.swift in Sources */,
-				A1CE83AE22C91DB000E3EACF /* Passport.swift in Sources */,
 				A16EB23122A9E9E10008F53F /* AppDelegate.swift in Sources */,
 				A1816E9C22C9059F00F546A0 /* PassportView.swift in Sources */,
 				A18248C22369D17300581384 /* DetailsView.swift in Sources */,
@@ -251,7 +343,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1EBC5092370B88D004DD19E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1EBC5252370BAB2004DD19E /* NFCPassportReaderTests.swift in Sources */,
+				A1EBC5242370BAB2004DD19E /* DataGroupParsingTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A1EBC5132370B88D004DD19E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A16EB22C22A9E9E10008F53F /* NFCPassportReaderApp */;
+			targetProxy = A1EBC5122370B88D004DD19E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */ = {
@@ -424,6 +533,50 @@
 			};
 			name = Release;
 		};
+		A1EBC5142370B88D004DD19E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = BC830EB2D705D99E8A81BEBB /* Pods-NFCPassportReaderAppTests.debug.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = A4ZM73UFF5;
+				INFOPLIST_FILE = NFCPassportReaderAppTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.andyqua.NFCPassportReaderAppTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NFCPassportReaderApp.app/NFCPassportReaderApp";
+			};
+			name = Debug;
+		};
+		A1EBC5152370B88D004DD19E /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0E13B507954E1D53F42BD498 /* Pods-NFCPassportReaderAppTests.release.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = A4ZM73UFF5;
+				INFOPLIST_FILE = NFCPassportReaderAppTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.andyqua.NFCPassportReaderAppTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NFCPassportReaderApp.app/NFCPassportReaderApp";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -441,6 +594,15 @@
 			buildConfigurations = (
 				A16EB24222A9E9E20008F53F /* Debug */,
 				A16EB24322A9E9E20008F53F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1EBC5162370B88D004DD19E /* Build configuration list for PBXNativeTarget "NFCPassportReaderAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1EBC5142370B88D004DD19E /* Debug */,
+				A1EBC5152370B88D004DD19E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

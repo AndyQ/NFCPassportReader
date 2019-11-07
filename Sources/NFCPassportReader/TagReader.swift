@@ -42,7 +42,27 @@ public enum TagError: Error {
     case UnknownImageFormat
     case NotImplemented
 
-    var errorDescription: String { return "Invalid response" }
+    var value: String {
+        switch self {
+        case .ResponseError(let errMsg): return errMsg
+        case .InvalidResponse: return "InvalidResponse"
+        case .UnexpectedError: return "UnexpectedError"
+        case .NFCNotSupported: return "NFCNotSupported"
+        case .NoConnectedTag: return "NoConnectedTag"
+        case .D087Malformed: return "D087Malformed"
+        case .InvalidResponseChecksum: return "InvalidResponseChecksum"
+        case .MissingMandatoryFields: return "MissingMandatoryFields"
+        case .CannotDecodeASN1Length: return "CannotDecodeASN1Length"
+        case .InvalidASN1Value: return "InvalidASN1Value"
+        case .UnableToProtectAPDU: return "UnableToProtectAPDU"
+        case .UnableToUnprotectAPDU: return "UnableToUnprotectAPDU"
+        case .UnsupportedDataGroup: return "UnsupportedDataGroup"
+        case .DataGroupNotRead: return "DataGroupNotRead"
+        case .UnknownTag: return "UnknownTag"
+        case .UnknownImageFormat: return "UnknownImageFormat"
+        case .NotImplemented: return "NotImplemented"
+        }
+    }
 }
 
 @available(iOS 13, *)
@@ -90,6 +110,31 @@ public enum DataGroupId : Int, CaseIterable {
         case .Unknown: return "Unknown"
         }
     }
+    
+    static func getIDFromName( name: String ) -> DataGroupId {
+        switch( name ) {
+        case "COM": return .COM
+        case "DG1": return .DG1
+        case "DG2": return .DG2
+        case "DG3": return .DG3
+        case "DG4": return .DG4
+        case "DG5": return .DG5
+        case "DG6": return .DG6
+        case "DG7": return .DG7
+        case "DG8": return .DG8
+        case "DG9": return .DG9
+        case "DG10": return .DG10
+        case "DG11": return .DG11
+        case "DG12": return .DG12
+        case "DG13": return .DG13
+        case "DG14": return .DG14
+        case "DG15": return .DG15
+        case "DG16": return .DG16
+        case "SOD": return .SOD
+        default: return .Unknown
+        }
+    }
+
 }
 
 @available(iOS 13, *)
@@ -132,6 +177,8 @@ public struct ResponseAPDU {
 public class TagReader {
     var tag : NFCISO7816Tag
     var secureMessaging : SecureMessaging?
+    
+    var progress : ((Int)->())?
 
     init( tag: NFCISO7816Tag) {
         self.tag = tag
@@ -149,6 +196,14 @@ public class TagReader {
     func getChallenge( completed: @escaping (ResponseAPDU?, TagError?)->() ) {
         let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x84, p1Parameter: 0, p2Parameter: 0, data: Data(), expectedResponseLength: 8)
         
+        send( cmd: cmd, completed: completed )
+    }
+    
+    func doInternalAuthentication( challenge: [UInt8], completed: @escaping (ResponseAPDU?, TagError?)->() ) {
+        let randNonce = Data(challenge)
+        
+        let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 50)
+
         send( cmd: cmd, completed: completed )
     }
 
@@ -169,6 +224,7 @@ public class TagReader {
             
             // Read first 4 bytes of header to see how big the data structure is
             let data : [UInt8] = [0x00, 0xB0, 0x00, 0x00, 0x00, 0x00,0x04]
+            //print( "--------------------------------------\nSending \(binToHexRep(data))" )
             let cmd = NFCISO7816APDU(data:Data(data))!
             self.send( cmd: cmd ) { [unowned self] (resp,err) in
                 guard let response = resp else {
@@ -184,6 +240,7 @@ public class TagReader {
                 leftToRead = Int(len)
                 let offset = o + 1
                 
+                //print( "Got \(binToHexRep(response.data)) which is \(leftToRead) bytes with offset \(o)" )
                 self.header = [UInt8](response.data[..<offset])//response.data
 
                 
@@ -203,15 +260,17 @@ public class TagReader {
     }
 
     func readBinaryData( leftToRead: Int, amountRead : Int, completed: @escaping ([UInt8]?, TagError?)->() ) {
-        let maxSize : UInt8 = 0xDF
+        let maxSize : UInt8 = 0xFF
         var readAmount : UInt8 = maxSize
         if leftToRead < maxSize {
             readAmount = UInt8(leftToRead)
         }
         
+        self.progress?( Int(Float(amountRead) / Float(leftToRead+amountRead ) * 100))
         let offset = intToBin(amountRead, pad:4)
 
         let data : [UInt8] = [0x00, 0xB0, offset[0], offset[1], 0x00, 0x00, readAmount]
+        //print( "Sending \(binToHexRep(data))" )
         let cmd = NFCISO7816APDU(data:Data(data))!
         self.send( cmd: cmd ) { (resp,err) in
             guard let response = resp else {
@@ -222,6 +281,7 @@ public class TagReader {
             self.header += response.data
             
             let remaining = leftToRead - response.data.count
+        //print( "      read \(response.data.count) bytes" )
             Log.debug( "Amount of data left read - \(remaining)" )
             if remaining > 0 {
                 self.readBinaryData(leftToRead: remaining, amountRead: amountRead + response.data.count, completed: completed )

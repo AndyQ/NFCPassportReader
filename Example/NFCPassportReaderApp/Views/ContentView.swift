@@ -10,6 +10,23 @@ import SwiftUI
 import Combine
 import NFCPassportReader
 
+struct ClearButton: ViewModifier {
+@Binding var text: String
+ 
+public func body(content: Content) -> some View {
+    HStack {
+        content
+        Button(action: {
+            self.text = ""
+        }) {
+            Image(systemName: "multiply.circle.fill")
+                .foregroundColor(.secondary)
+        }
+    }
+}
+}
+
+
 // A View that just uses the UIColor systemBackground allowing
 // For light.dark mode support - willo be removed once this makes its way into SwiftUI properly
 struct BackgroundView : UIViewRepresentable {
@@ -25,7 +42,28 @@ struct BackgroundView : UIViewRepresentable {
     }
 }
 
+// This hopefully will display a textfield with a clear button - doesn't quite work yet though but left here in the hope it will soon!
+/*
+struct ClearTextView: View {
+    var placeHolder: String
+    @Binding var text: String
 
+    var body: some View {
+        ZStack {
+            HStack {
+                TextField(placeHolder, text:$text)
+                if !text.isEmpty {
+                    Button(action: {
+                        self.text = ""
+                    }) {
+                        Image(systemName: "multiply.circle")
+                    }
+                }
+            }
+        }
+    }
+}
+*/
 
 struct ContentView : View {
     @State var passportDetails = PassportDetails()
@@ -46,8 +84,19 @@ struct ContentView : View {
                     .font(.title)
                     .padding(0)
 
+                // Will switch over to this when SwiftUI Actually updates the screen - the underlying binding IS updated but its not reflected on display
+                // as of Version 11.2.1 (11B53)/iOS 13.3 Beta 1
+//                ClearTextView(placeHolder: "Passport number", text: $passportDetails.passportNumber)
+//                .textContentType(.name)
+//                .foregroundColor(Color.primary)
+//                .textFieldStyle(RoundedBorderTextFieldStyle())
+//                .padding([.leading, .trailing])
                 TextField("Passport number",
-                          text: $passportDetails.passportNumber)
+                          text: $passportDetails.passportNumber, onEditingChanged: { (editing) in
+                          if editing {
+                            self.$passportDetails.passportNumber.wrappedValue = ""
+                            }
+                    })
                     .textContentType(.name)
                     .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -107,9 +156,11 @@ extension ContentView {
         let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem")!
         passportReader.setMasterListURL( masterListURL )
 
-        let dataGroups : [DataGroupId] = [.COM, .DG1, .DG2, .SOD]
-//        let dataGroups : [DataGroupId] = [.COM, .DG1, .SOD]
-        passportReader.readPassport(mrzKey: mrzKey, tags: dataGroups, completed: { (passport, error) in
+        // If we want to read only specific data groups we can using:
+//        let dataGroups : [DataGroupId] = [.COM, .SOD, .DG1, .DG2, .DG15 ]
+//        passportReader.readPassport(mrzKey: mrzKey, tags:dataGroups, completed: { (passport, error) in
+        
+        passportReader.readPassport(mrzKey: mrzKey, completed: { (passport, error) in
             if let passport = passport {
                 // All good, we got a passport
 
@@ -132,8 +183,7 @@ extension ContentView {
 struct ContentView_Previews : PreviewProvider {
 
     static var previews: some View {
-        let pptData = "P<GBRTEST<<TEST<TEST<<<<<<<<<<<<<<<<<<<<<<<<1234567891GBR8001019M2106308<<<<<<<<<<<<<<04"
-//        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: true, dataValid: true )
+//        let pptData = "P<GBRTEST<<TEST<TEST<<<<<<<<<<<<<<<<<<<<<<<<1234567891GBR8001019M2106308<<<<<<<<<<<<<<04"
         let passport = NFCPassportModel()
         let pd = PassportDetails()
         pd.passport = passport
