@@ -1,0 +1,138 @@
+V1.0.1
+    Added OS_ACTIVITY_MODE = disabled to Example project scheme to hide internall CoreNFC Logging
+    Fixed bug where specific data groups were requested to be read but COM overrode this and caused everything to be read
+    Fixed bug where if DG3 element came last (which we can't read due to security), then the entire passport read failed
+
+V1.0.0
+    Considered stable enough to release properly
+
+V0.0.13
+    Updated README with new supported features
+    Removed tests folder as they have been moved into the Example Project
+    Removed old Passport model (NFCPassportModel replaces it)
+    Detail view now shows more information on verification status of passport
+    Datagroups 11, 12, and 15 now implemented (DG14 has stub but data not parsed yet)
+    Datagroup 15 only parses out an ECDSA public key (RSA still to be done)
+
+    Passive Authentication now properly verifies the SOD data is correctly signed by the Document Signing Certificate
+    Passive Authentication now checks all read data group hashes
+    
+    Now supports Active Authentication - ONLY for ECDSA certificates in DG15
+    
+    PassportReader now show progress when reading
+    Will re-try up-to 3 times to read passport fields (to reduce failed reads), and also attempts to re-establish BAC if we get an error whilst reading
+    
+    Added Tests back in to Example project
+
+V0.0.12
+    Removed old version of getSignedDataFromPKCS72
+
+    Changed getSignedDataFromPKCS7 to verifyAndGetSignedDataFromPKCS7
+    Updated above method to use CMS (PKCS7) for verifying the contents of the SOD rather than just dumping the contents
+    out (which previously was the case).  The PKCS7_Verify function used only supports PKCS7 V1.5 not the new formats (e.g. RSA-OAEP signed messages)
+    NOTE -if the contents can't be verified then an exception is now returned rather than just returning the non-verified signed data.
+    
+    Fixed a bug with display of Tampered data in the sample app
+    Fixed a feature where I was only reading out DG1 in the sample app
+
+V0.0.11
+    Major (breaking) changes (sorry)
+    Restructured a lot of functionalilty - see sample app
+    LDS and Unicode Version now correctly parsed
+    MRZ element correctly stored
+    Certificates extracted and stored
+    Updated NFCPassportModel to have properties that return data in more meaningful form
+       e.g. documentNumber, name, documentSigningCertificate, countrySigningCertificate (if found)
+    Moved PassiveAuthentication into NFCPassportModel and can be done automatically as passport is read
+    PassportReader now accepts an optional URL to masterlist (currenrly needs to be either included in app bundle or downloaded onto device)
+    If masterlist url is present, PassiveAuthentication is done as part of passport read.
+    Added new X509Wrapper class that wraps up an OpenSSL X509 certificate and can extract elements from it.
+
+V0.0.10
+    Added missing parameter
+    Removed passiveAuthentication from Example app
+    Fixed bug where model changes weren't correctly sent to SwiftUI
+    Bitcode disabled as doesn't compile properly without it!
+    Removed Package.swift
+    Merged in ChristianNorbertBraun's patch for Cocoapod support
+    Added JPEG2000CodestreamButmap header check when parsing DG2 (thanks to stack1overflow for finding and reporting this)
+
+V0.0.9
+    Added check for openssl supporting the cms command
+    Updated sample app to work with to iOS 13 Beta 8 and XCode 11 Beta 6
+
+V0.0.8
+    Updated with iOS 13 Beta 4 changes
+    Merge pull request #8 from haydarKarkin/master
+    Fix that getting MRZ type for ID cards
+    Removed included OpenSSL C code
+    Ported above C code over to Swift and reduced to only what was needed
+    Added .gitattributes files to make project as swift
+    Added additional troubleshooting information for when Mutual Authentication fails due to invalid MRZKey
+    Merge pull request #4 from WooD1k/bugfix/textfield-deprecated-placeholder-init
+        TextFields are using deprecated at iOS 13 beta 3 init
+    Merge pull request #3 from WooD1k/bugfix/content-view-visibility
+        The main screen of the app is not shown at iOS 13 beta 3
+        Use TextField's init without a placeholder property as it's deprecated at iOS 13 beta 3
+        Use UIWindow(windowScene:) instead of UIWindow(frame:) at SceneDelegate
+    Removed storyboard from Info.plist
+
+V0.0.7
+    Passport is now NFCPassportModel as the passportMRZ now actually returns just the MRZ data rather than all the elements.  There is now a passportDataElements which returns these properly.
+    Changed MRZ element key - to 5B rather than 5F5B  so it now correctly matches the spec!
+    Sample app is back in SwiftUI and fairly well updated (I had some time to properly dive in!)
+    Passive  Authentication is now done automatically when the passport is read.
+    Passive Authentication has been split up into the two seperate stages (each one can be done independently - so you can check of a passport is signed by a valid trusted certificate (from a master list), and then whether that data has been tampered with.
+    Moved some code around
+
+
+V0.0.6
+    PassiveAuthentication now throws errors with better details as to why validation failed rather than just returning true/false
+    Added script to create a masterList.pem file from either the ICAO PKD repositry masterlists (LDIF) or a country masterlist CMS file
+    Added docs for above script
+    Added test masterList.pem file which WONT validate anything
+    Updated app readme
+    Reverted back to plain UIKit because I'm not ready to focus on that yet!
+    Refactored PassportReader slightly - fixed some bugs and moved out Passport to its own model
+    You'll note its not using CocoaPods because I'm including OpenSSL!  I was going to use the Perfect-COpenSSL SPM Package but not too happy with that licence! Instead using Marcin Krzyżanowski's OpenSSL-Universal Pod - hopefully this will become a Swift Package at some point
+    Added Passive Authentication!  Its included as part of the Sample App for reasons.  Ideally this should be its own SPM/Pod but not got round to that yet!
+    It uses the Apps code from OpenSSL for the crypto stuff and as such is a bit (very) janky but it works
+    You need to manually add your own masterList.pem file which is a single file of all the unique PEMS in the master list - instructions will be coming soon!
+    Fixed Error handling - missed off error check when passport lost connection
+    Small cleanup of unused code
+
+V0.0.5
+    If an error was sent from the passport whilst reading, the Error now includes a readable reason for that error
+    Refactored main UI slightly
+    Added ability to lookup errors received from the passport - currently just prints to logs not returned yet
+    Moved Sample app UI over to SwiftUI
+
+V0.0.4
+    Implemented parsing for DG2, DG7 and COM data groups (inc tests)
+    Changed PassportReader to take in which data groups you wish to read and will read those
+    PassportReader now pulls data from parsed data groups
+    Added DataGroup2 Parsing and tests
+    Changed TagError - corrected case for NoConnectedTag and added two new errors
+    Renamed DataGroup to DataGroupId and DGMap to DataGroupToFileIdMap due to collision with new DataGroup parsing classes
+    Changed type of asn1Length to int rather than UInt64
+    Added DataGroupParsing - currently only DG1 parsed out
+    Added additional tests
+
+V0.0.3
+    Renamed log to Log
+    Added some initial tests
+    Removed bridging header - no longer required now
+
+V0.0.2
+    Updated Readme's
+
+V0.0.1
+    Fixed url to point to master for SPM
+    Refactored for Swift Package Manager
+    Refactored code slighty to make it simpler to use
+    PassportReader now does all the NFC stuff
+        Just need to call passportReader.readPassport(mrzKey:, completed:) to do the scan
+    Started preparations for packaging
+    Initial version - working
+       Supports Basic Access Control and SecureMessaging
+       Reads DG1 (MRZ) and DG2 (image) - in both JPEG and JPEG2000 formats
