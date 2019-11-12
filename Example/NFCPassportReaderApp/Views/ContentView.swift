@@ -102,13 +102,13 @@ struct ContentView : View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
                 
-                TextField("Date of birth",
+                TextField("Date of birth (YYMMDD)",
                           text: $passportDetails.dateOfBirth)
                     .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
                 
-                TextField("Passport expiry date",
+                TextField("Passport expiry date (YYMMDD)",
                           text: $passportDetails.expiryDate)
                     .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())

@@ -1,3 +1,6 @@
+V1.0.2
+    Sample app now has an icon (passport image from FontAwesome)
+    
 V1.0.1
     Added OS_ACTIVITY_MODE = disabled to Example project scheme to hide internall CoreNFC Logging
     Fixed bug where specific data groups were requested to be read but COM overrode this and caused everything to be read
