@@ -135,24 +135,19 @@ extension PassportReader {
         elementReadAttempts = 0
         self.handleBAC(completed: { [weak self] error in
             if error == nil {
+                Log.info( "BAC Successful" )
                 // At this point, BAC Has been done and the TagReader has been set up with the SecureMessaging
                 // session keys
                 self?.progTitle = "Reading passport data.....\n"
                 self?.readerSession?.alertMessage = "Reading passport data.....\n"
                 
                 self?.readNextDataGroup( ) { [weak self] error in
-                    if error != nil {
-                        if self?.dataGroupsToRead.count == 0 {
-                            self?.readerSession?.invalidate(errorMessage: "Sorry, there was a problem reading the passport. Please try again" )
-                        } else {
-                            
-                            // OK we've got more datagroups to go - we've probably failed security verification
-                            // So lets re-establish BAC and try again
-                            DispatchQueue.main.async {
-                                self?.tagReader?.secureMessaging = nil
-                                self?.startReading()
-                            }
-
+                    if error != nil && self?.dataGroupsToRead.count == 0 {
+                        // OK we've got more datagroups to go - we've probably failed security verification
+                        // So lets re-establish BAC and try again
+                        DispatchQueue.main.async {
+                            self?.tagReader?.secureMessaging = nil
+                            self?.startReading()
                         }
                     } else {
                         OpenSSLUtils.loadOpenSSL()
@@ -173,6 +168,7 @@ extension PassportReader {
                     }
                 }
             } else {
+                Log.info( "BAC Failed" )
                 self?.readerSession?.invalidate(errorMessage: "Sorry, there was a problem reading the passport. Please try again" )
                 self?.scanCompletedHandler(nil, error)
             }
@@ -185,6 +181,8 @@ extension PassportReader {
             return
         }
         
+        Log.info( "Performing Active Authentication" )
+
         let challenge = generateRandomUInt8Array(8)
         self.tagReader?.doInternalAuthentication(challenge: challenge, completed: { (response, err) in
             if let response = response {
@@ -202,6 +200,8 @@ extension PassportReader {
             return
         }
         
+        Log.info( "Starting Basic Access Control (BAC)" )
+
         self.bacHandler = BACHandler( tagReader: tagReader )
         bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey ) { error in
             self.bacHandler = nil
@@ -228,7 +228,7 @@ extension PassportReader {
                     let dg = try DataGroupParser().parseDG(data: response)
                     self.passport.addDataGroup( dgId, dataGroup:dg )
                     
-                    if let com  = dg as? COM {
+                    if self.readAllDatagroups == true, let com = dg as? COM {
                         let foundDGs = com.dataGroupsPresent
                         for dg in foundDGs {
                             let id = DataGroupId.getIDFromName(name:dg)
