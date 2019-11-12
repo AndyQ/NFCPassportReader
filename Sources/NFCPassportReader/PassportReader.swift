@@ -142,7 +142,7 @@ extension PassportReader {
                 self?.readerSession?.alertMessage = "Reading passport data.....\n"
                 
                 self?.readNextDataGroup( ) { [weak self] error in
-                    if error != nil && self?.dataGroupsToRead.count == 0 {
+                    if self?.dataGroupsToRead.count != 0 {
                         // OK we've got more datagroups to go - we've probably failed security verification
                         // So lets re-establish BAC and try again
                         DispatchQueue.main.async {
@@ -150,20 +150,24 @@ extension PassportReader {
                             self?.startReading()
                         }
                     } else {
-                        OpenSSLUtils.loadOpenSSL()
+                        if let error = error {
+                            self?.readerSession?.invalidate(errorMessage: error.value)
+                        } else {
+                            OpenSSLUtils.loadOpenSSL()
 
-                        // Before we finish, check if we should do active authentication
-                        self?.doActiveAuthenticationIfNeccessary() {
-                            self?.readerSession?.invalidate()
-                            
-                            // If we have a masterlist url set then use that and verify the passport now
-                            if let masterListURL = self?.masterListURL {
-                                self?.passport.verifyPassport(masterListURL: masterListURL)
+                            // Before we finish, check if we should do active authentication
+                            self?.doActiveAuthenticationIfNeccessary() {
+                                self?.readerSession?.invalidate()
                                 
+                                // If we have a masterlist url set then use that and verify the passport now
+                                if let masterListURL = self?.masterListURL {
+                                    self?.passport.verifyPassport(masterListURL: masterListURL)
+                                    
+                                }
+                                self?.scanCompletedHandler( self?.passport, nil )
+                                
+                                OpenSSLUtils.cleanupOpenSSL()
                             }
-                            self?.scanCompletedHandler( self?.passport, nil )
-                            
-                            OpenSSLUtils.cleanupOpenSSL()
                         }
                     }
                 }
@@ -253,18 +257,18 @@ extension PassportReader {
                 // E.g. we failed to read the last Datagroup because its protected and we can't
                 let errMsg = err?.value ?? "Unknown  error"
                 print( "ERROR - \(errMsg)" )
-                if errMsg == "Session invalidated" || errMsg == "Class not supported" {
+                if errMsg == "Session invalidated" || errMsg == "Class not supported" || errMsg == "Tag connection lost"  {
                     // Can't go any more!
                     self.dataGroupsToRead.removeAll()
                     completed( err )
                     return
                 } else if errMsg == "Security status not satisfied" {
-                    // Can't read this element as we aren't allowed - remove it and throw error so BAC is re-done
+                    // Can't read this element as we aren't allowed - remove it and return out so we re-do BAC
                     self.dataGroupsToRead.removeFirst()
-                    completed(err)
+                    completed(nil)
                 } else if errMsg == "SM data objects incorrect" {
-                    // Can't read this element security objjects now invalid - just throw error so BAC is re-done
-                    completed(err)
+                    // Can't read this element security objjects now invalid - and return out so we re-do BAC
+                    completed(nil)
                 } else {
                     // Retry
                     if self.elementReadAttempts > 3 {

@@ -1,5 +1,8 @@
 V1.0.2
     Sample app now has an icon (passport image from FontAwesome)
+    Sample app date fields now includes date format in placeholder text
+    Previous fix for handling errors in DG elements didn't quite work if elements came in the wrong order
+       Hopefully this will - thanks to maxxx777 for his help with this
     
 V1.0.1
     Added OS_ACTIVITY_MODE = disabled to Example project scheme to hide internall CoreNFC Logging
