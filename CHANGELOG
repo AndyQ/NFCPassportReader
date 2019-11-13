@@ -1,3 +1,10 @@
+V1.0.3
+    PassportReader now handles DG not found
+    Only tries to read DG's that are available
+    Now defaults to not even attempting to read DataGroups 3 & 4 (as Extended Access Control required and this 
+       isn't implemented (you can force the read if you want by setting skipSecureElements to false on the 
+       readPassport call.
+
 V1.0.2
     Sample app now has an icon (passport image from FontAwesome)
     Sample app date fields now includes date format in placeholder text

@@ -20,6 +20,7 @@ public class PassportReader : NSObject {
 
     private var dataGroupsToRead : [DataGroupId] = []
     private var readAllDatagroups = false
+    private var skipSecureElements = true
 
     private var tagReader : TagReader?
     private var bacHandler : BACHandler?
@@ -38,12 +39,13 @@ public class PassportReader : NSObject {
         self.masterListURL = masterListURL
     }
     
-    public func readPassport( mrzKey : String,  tags: [DataGroupId] = [], completed: @escaping (NFCPassportModel?, TagError?)->() ) {
+    public func readPassport( mrzKey : String,  tags: [DataGroupId] = [], skipSecureElements :Bool = true, completed: @escaping (NFCPassportModel?, TagError?)->() ) {
         self.passport = NFCPassportModel()
         self.mrzKey = mrzKey
         self.dataGroupsToRead.removeAll()
         self.dataGroupsToRead.append( contentsOf:tags)
         self.scanCompletedHandler = completed
+        self.skipSecureElements = skipSecureElements
         
         // If no tags specified, read all
         if self.dataGroupsToRead.count == 0 {
@@ -146,7 +148,6 @@ extension PassportReader {
                         // OK we've got more datagroups to go - we've probably failed security verification
                         // So lets re-establish BAC and try again
                         DispatchQueue.main.async {
-                            self?.tagReader?.secureMessaging = nil
                             self?.startReading()
                         }
                     } else {
@@ -232,14 +233,21 @@ extension PassportReader {
                     let dg = try DataGroupParser().parseDG(data: response)
                     self.passport.addDataGroup( dgId, dataGroup:dg )
                     
-                    if self.readAllDatagroups == true, let com = dg as? COM {
-                        let foundDGs = com.dataGroupsPresent
-                        for dg in foundDGs {
-                            let id = DataGroupId.getIDFromName(name:dg)
-                            self.dataGroupsToRead.append(id)
+                    if let com = dg as? COM {
+                        let foundDGs = [.COM, .SOD] + com.dataGroupsPresent.map { DataGroupId.getIDFromName(name:$0) }
+                        if self.readAllDatagroups == true {
+                            self.dataGroupsToRead = foundDGs
+                        } else {
+                            // We are reading specific datagroups but remove all the ones we've requested to be read that aren't actually available
+                            self.dataGroupsToRead = self.dataGroupsToRead.filter { foundDGs.contains($0) }
+                        }
+                        
+                        // If we are skipping secure elements then remove .DG3 and .DG4
+                        if self.skipSecureElements {
+                            self.dataGroupsToRead = self.dataGroupsToRead.filter { $0 != .DG3 && $0 != .DG4 }
                         }
                     }
-                    
+
                 } catch let error as TagError {
                     Log.error( "TagError reading tag - \(error)" )
                 } catch let error {
@@ -261,13 +269,12 @@ extension PassportReader {
                     // Can't go any more!
                     self.dataGroupsToRead.removeAll()
                     completed( err )
-                    return
-                } else if errMsg == "Security status not satisfied" {
+                } else if errMsg == "Security status not satisfied" || errMsg == "File not found" {
                     // Can't read this element as we aren't allowed - remove it and return out so we re-do BAC
                     self.dataGroupsToRead.removeFirst()
                     completed(nil)
                 } else if errMsg == "SM data objects incorrect" {
-                    // Can't read this element security objjects now invalid - and return out so we re-do BAC
+                    // Can't read this element security objects now invalid - and return out so we re-do BAC
                     completed(nil)
                 } else {
                     // Retry

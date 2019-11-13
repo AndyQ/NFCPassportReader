@@ -157,7 +157,7 @@ extension ContentView {
         passportReader.setMasterListURL( masterListURL )
 
         // If we want to read only specific data groups we can using:
-//        let dataGroups : [DataGroupId] = [.COM, .SOD, .DG1, .DG2, .DG3 ]
+//        let dataGroups : [DataGroupId] = [.COM, .SOD, .DG1, .DG2, .DG7, .DG11, .DG12, .DG14, .DG15]
 //        passportReader.readPassport(mrzKey: mrzKey, tags:dataGroups, completed: { (passport, error) in
         
         passportReader.readPassport(mrzKey: mrzKey, completed: { (passport, error) in
