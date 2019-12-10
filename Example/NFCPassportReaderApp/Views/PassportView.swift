@@ -12,7 +12,7 @@ import NFCPassportReader
 
 // Outline view of passport
 struct PassportView : View {
-    @Binding var passportDetails: PassportDetails
+    @ObservedObject var passportDetails: PassportDetails
     
     var body: some View {
         let passport = passportDetails.passport
@@ -20,7 +20,7 @@ struct PassportView : View {
             if (passport) != nil {
                 
                 ZStack(alignment: .bottomTrailing) {
-                    PassportDetailsView(passportDetails: $passportDetails)
+                    PassportDetailsView(passportDetails: passportDetails)
                     
                     HStack {
                         if !passport!.passportDataNotTampered {
@@ -75,7 +75,7 @@ struct PassportView : View {
 
 // Shows the Pzssport details
 struct PassportDetailsView : View {
-    @Binding var passportDetails: PassportDetails
+    @ObservedObject var passportDetails: PassportDetails
     
     var body: some View {
         let passport = passportDetails.passport
@@ -116,16 +116,16 @@ struct PassportDetailsView : View {
  
 #if DEBUG
 struct PassportView_Previews : PreviewProvider {
-    @State static var pd = PassportDetails()
+    @ObservedObject static var pd = PassportDetails()
     static var previews: some View {
 //        let pptData = "P<GBRTEST<<TEST<TEST<<<<<<<<<<<<<<<<<<<<<<<<1234567891GBR8001019M2106308<<<<<<<<<<<<<<04"
 //        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: false, dataValid: false )        
         
         return Group {
-            PassportView(passportDetails: $pd)
+            PassportView(passportDetails: pd)
 //            PassportView(passportDetails: $pd)
                 .environment( \.colorScheme, .light)
-            PassportView(passportDetails: $pd)
+            PassportView(passportDetails: pd)
 //            PassportView(passportDetails: $pd)
                 .environment( \.colorScheme, .dark)
 

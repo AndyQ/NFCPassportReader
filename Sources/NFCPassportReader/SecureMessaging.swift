@@ -41,7 +41,7 @@ public class SecureMessaging {
         }
         if apdu.expectedResponseLength > 0 {
             tmp += " and DO97"
-            do97 = self.buildD097(apdu: apdu)
+            do97 = try self.buildD097(apdu: apdu)
         }
         
         let M = cmdHeader + do87 + do97
@@ -225,8 +225,14 @@ public class SecureMessaging {
         return res
     }
 
-    func buildD097(apdu : NFCISO7816APDU) -> [UInt8] {
-        let res : [UInt8] = [0x97, 0x01] + intToBin(apdu.expectedResponseLength)
+    func buildD097(apdu : NFCISO7816APDU) throws -> [UInt8] {
+        let le = apdu.expectedResponseLength
+        var binLe = intToBin(le)
+        if (le == 256 || le == 65536) {
+            binLe = [0x00] + (le > 256 ? [0x00] : [])
+        }
+        
+        let res : [UInt8] = try [0x97] + toAsn1Length(binLe.count) + binLe
         Log.debug("Build DO'97")
         Log.debug("\tDO97: \(res)")
         return res
