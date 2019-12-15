@@ -549,7 +549,7 @@ class DataGroup12 : DataGroup {
         }
         
         // Skip the taglist - ideally we would check this but...
-        _ = try getNextValue()
+        let tagList = try getNextValue()
 
         repeat {
             tag = try getNextTag()
