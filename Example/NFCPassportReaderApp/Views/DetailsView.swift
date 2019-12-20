@@ -17,7 +17,7 @@ struct Item : Identifiable {
 
 
 struct DetailsView : View {
-    @Binding var passportDetails: PassportDetails
+    @ObservedObject var passportDetails: PassportDetails
     
     private var sectionNames = ["Chip information", "Verification information", "Document signing certificate", "Country signing certificate", "Datagroup Hashes"]
     private var sections = [[Item]]()
@@ -34,9 +34,9 @@ struct DetailsView : View {
     
 
     
-    init(passportDetails: Binding<PassportDetails>) {
-        self._passportDetails = passportDetails
-        if let passport = passportDetails.wrappedValue.passport {
+    init(passportDetails: PassportDetails) {
+        self.passportDetails = passportDetails
+        if let passport = passportDetails.passport {
 
             sections.append(getChipInfoSection(passport))
             sections.append(getVerificationDetailsSection(passport))
@@ -142,12 +142,12 @@ struct ItemRow : View {
 
 
 struct DetailsView_Previews: PreviewProvider {
-    @State static var pd = PassportDetails()
+    @ObservedObject static var pd = PassportDetails()
 
     static var previews: some View {
         let passport = NFCPassportModel()
         pd.passport = passport
-        return DetailsView(passportDetails:$pd )
+        return DetailsView(passportDetails:pd )
             .environment( \.colorScheme, .light)
     }
 }

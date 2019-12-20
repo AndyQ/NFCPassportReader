@@ -66,7 +66,7 @@ struct ClearTextView: View {
 */
 
 struct ContentView : View {
-    @State var passportDetails = PassportDetails()
+    @ObservedObject var passportDetails = PassportDetails()
 
     @State private var showingAlert = false
     @State private var showDetails = false
@@ -93,15 +93,15 @@ struct ContentView : View {
 //                .padding([.leading, .trailing])
                 TextField("Passport number",
                           text: $passportDetails.passportNumber, onEditingChanged: { (editing) in
-                          if editing {
-                            self.$passportDetails.passportNumber.wrappedValue = ""
-                            }
+//                          if editing {
+//                            self.$passportDetails.passportNumber.wrappedValue = ""
+//                            }
                     })
                     .textContentType(.name)
                     .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
-                
+
                 TextField("Date of birth (YYMMDD)",
                           text: $passportDetails.dateOfBirth)
                     .foregroundColor(Color.primary)
@@ -113,7 +113,6 @@ struct ContentView : View {
                     .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
-
                 
                 Button(action: {
                     self.scanPassport()
@@ -128,13 +127,14 @@ struct ContentView : View {
                     Text("Details").tag(1)
                 }.pickerStyle(SegmentedPickerStyle())
                     .padding(.bottom,20)
-                
+
                 if page == 0 && showDetails {
-                    PassportView(passportDetails:$passportDetails)
+                    PassportView(passportDetails:passportDetails)
                         .frame(width: UIScreen.main.bounds.width-20, height: 220)
                 } else if page == 1 && showDetails {
-                    DetailsView(passportDetails:$passportDetails)
+                    DetailsView(passportDetails:passportDetails)
                 }
+
                 Spacer()
             }
             
@@ -190,8 +190,8 @@ struct ContentView_Previews : PreviewProvider {
         
         
         return Group {
-            ContentView(passportDetails: pd).environment( \.colorScheme, .light).environmentObject(pd)
-            ContentView(passportDetails: pd).environment( \.colorScheme, .dark).environmentObject(pd)
+            ContentView().environment( \.colorScheme, .light).environmentObject(pd)
+            ContentView().environment( \.colorScheme, .dark).environmentObject(pd)
         }
     }
 }

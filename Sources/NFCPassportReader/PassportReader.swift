@@ -276,6 +276,10 @@ extension PassportReader {
                 } else if errMsg == "SM data objects incorrect" {
                     // Can't read this element security objects now invalid - and return out so we re-do BAC
                     completed(nil)
+                } else if errMsg.hasPrefix( "Wrong length" ) {  // Should now handle errors 0x6C xx, and 0x67 0x00
+                    // OK passport can't handle max length so drop it down
+                    self.tagReader?.reduceDataReadingAmount()
+                    completed(nil)
                 } else {
                     // Retry
                     if self.elementReadAttempts > 3 {

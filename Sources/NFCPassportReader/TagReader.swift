@@ -177,12 +177,19 @@ public struct ResponseAPDU {
 public class TagReader {
     var tag : NFCISO7816Tag
     var secureMessaging : SecureMessaging?
-    
+    var maxDataLengthToRead : UInt8 = 0xFF
+
     var progress : ((Int)->())?
 
     init( tag: NFCISO7816Tag) {
         self.tag = tag
     }
+    
+    func reduceDataReadingAmount() {
+         maxDataLengthToRead = 0xA0
+    }
+
+
 
     func readDataGroup( dataGroup: DataGroupId, completed: @escaping ([UInt8]?, TagError?)->() )  {
         guard let tag = DataGroupToFileIdMap[dataGroup] else {
@@ -202,7 +209,7 @@ public class TagReader {
     func doInternalAuthentication( challenge: [UInt8], completed: @escaping (ResponseAPDU?, TagError?)->() ) {
         let randNonce = Data(challenge)
         
-        let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 50)
+        let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 256)
 
         send( cmd: cmd, completed: completed )
     }
@@ -258,11 +265,10 @@ public class TagReader {
         
         send( cmd: cmd, completed: completed )
     }
-
+    
     func readBinaryData( leftToRead: Int, amountRead : Int, completed: @escaping ([UInt8]?, TagError?)->() ) {
-        let maxSize : UInt8 = 0xFF
-        var readAmount : UInt8 = maxSize
-        if leftToRead < maxSize {
+        var readAmount : UInt8 = maxDataLengthToRead
+        if leftToRead < maxDataLengthToRead {
             readAmount = UInt8(leftToRead)
         }
         
@@ -277,7 +283,7 @@ public class TagReader {
                 completed( nil, err)
                 return
             }
-            Log.debug( "got resp - \(response)" )
+            Log.info( "got resp - \(response)" )
             self.header += response.data
             
             let remaining = leftToRead - response.data.count

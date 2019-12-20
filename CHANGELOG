@@ -1,3 +1,12 @@
+V1.0.5
+    Fixes for Active Authentication and encoding of Le in DO97 - thanks to @smlu for this.
+    Minor SwiftUI fixes for the example app
+    Better handling of wrong length (hopefully)
+    
+V1.0.4
+    So, turns out some passports can't send 255 bytes of data in one go, so if we get a wrong length error
+       then reduce the amount of data we are attempting to read
+
 V1.0.3
     PassportReader now handles DG not found
     Only tries to read DG's that are available
