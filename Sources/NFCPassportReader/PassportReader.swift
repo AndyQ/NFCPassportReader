@@ -161,10 +161,7 @@ extension PassportReader {
                                 self?.readerSession?.invalidate()
                                 
                                 // If we have a masterlist url set then use that and verify the passport now
-                                if let masterListURL = self?.masterListURL {
-                                    self?.passport.verifyPassport(masterListURL: masterListURL)
-                                    
-                                }
+                                self?.passport.verifyPassport(masterListURL: self?.masterListURL)
                                 self?.scanCompletedHandler( self?.passport, nil )
                                 
                                 OpenSSLUtils.cleanupOpenSSL()

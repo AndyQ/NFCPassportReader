@@ -143,11 +143,13 @@ public class NFCPassportModel {
     //        guard let sod = model.getDataGroup(.SOD) else { return }
 
 
-    public func verifyPassport( masterListURL: URL ) {
-        do {
-            try validateAndExtractSigningCertificates( masterListURL: masterListURL )
-        } catch let error {
-            verificationErrors.append( error )
+    public func verifyPassport( masterListURL: URL? ) {
+        if let masterListURL = masterListURL {
+            do {
+                try validateAndExtractSigningCertificates( masterListURL: masterListURL )
+            } catch let error {
+                verificationErrors.append( error )
+            }
         }
         
         do {

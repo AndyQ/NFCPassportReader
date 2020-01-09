@@ -134,10 +134,10 @@ class OpenSSLUtils {
     
     /// Checks whether a trust chain can be built up to verify a X509 certificate. A CAFile containing a list of trusted certificates (each in PEM format)
     /// is used to build the trust chain.
-    /// The trusted certificates in this use case are typically from a Countries master list (see the scripts for form more informaton on how to prepare this)
+    /// The trusted certificates in this use case are typically from a Countries master list (see the scripts for  more informaton on how to prepare this)
     /// - Parameter x509Cert: The X509 certificate (in PEM format) to verify
     /// - Parameter CAFile: The URL path of a file containing the list of certificates used to try to discover and build a trust chain
-    /// - Parameter readCertificates: A dictionary containing the keys: documentSigningCert and issuerSigningCertificate with the readable contents
+    /// - Returns: either the X509 issue signing certificate that was used to sign the passed in X509 certificate or an error
     @available(iOS 13, *)
     static func verifyTrustAndGetIssuerCertificate( x509 : X509Wrapper, CAFile : URL ) -> Result<X509Wrapper, OpenSSLError> {
 

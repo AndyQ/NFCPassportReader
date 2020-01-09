@@ -1,3 +1,6 @@
+V1.0.6
+    Change so that SOD hashes are always extracted (if SOD is present)  and checked even if no master list set
+
 V1.0.5
     Fixes for Active Authentication and encoding of Le in DO97 - thanks to @smlu for this.
     Minor SwiftUI fixes for the example app
