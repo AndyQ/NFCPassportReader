@@ -145,7 +145,7 @@ class OpenSSLUtils {
         defer { X509_STORE_free(cert_ctx) }
 
         X509_STORE_set_verify_cb(cert_ctx) { (ok, ctx) -> Int32 in
-            print( "IN CALLBACK" )
+            Log.debug( "IN CALLBACK" )
             let cert_error = X509_STORE_CTX_get_error(ctx)
             
             if ok == 0 {
@@ -154,7 +154,7 @@ class OpenSSLUtils {
                     return String(cString: ptr)
                 }
                 
-                print("error \(cert_error) at \(X509_STORE_CTX_get_error_depth(ctx)) depth lookup:\(val)" )
+                Log.error("error \(cert_error) at \(X509_STORE_CTX_get_error_depth(ctx)) depth lookup:\(val)" )
             }
 
             return ok;
@@ -337,7 +337,7 @@ class OpenSSLUtils {
             defer{ BIO_free(bmd)}
 
             if BIO_ctrl( bmd, BIO_C_GET_MD_CTX, 0, &ctx) != 1 {
-                print( "ERROR GETTING CONTEXT" )
+                Log.error( "ERROR GETTING CONTEXT" )
             }
             
             let pctx : UnsafeMutablePointer<OpaquePointer?>? = nil

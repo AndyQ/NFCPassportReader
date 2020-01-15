@@ -87,7 +87,7 @@ public enum DataGroupId : Int, CaseIterable {
     case SOD = 0x77
     case Unknown = 0x00
     
-    func getName() -> String {
+    public func getName() -> String {
         switch( self ) {
         case .COM: return "COM"
         case .DG1: return "DG1"
@@ -111,7 +111,7 @@ public enum DataGroupId : Int, CaseIterable {
         }
     }
     
-    static func getIDFromName( name: String ) -> DataGroupId {
+    static public func getIDFromName( name: String ) -> DataGroupId {
         switch( name ) {
         case "COM": return .COM
         case "DG1": return .DG1
@@ -283,7 +283,7 @@ public class TagReader {
                 completed( nil, err)
                 return
             }
-            Log.info( "got resp - \(response)" )
+            Log.debug( "got resp - \(response)" )
             self.header += response.data
             
             let remaining = leftToRead - response.data.count

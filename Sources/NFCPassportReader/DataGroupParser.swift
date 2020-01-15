@@ -165,7 +165,7 @@ class COM : DataGroup {
                 dataGroupsPresent.append( DataGroupParser.dataGroupNames[index] )
             }
         }
-        print( "DG Found - \(dataGroupsPresent)" )
+        Log.info( "DG Found - \(dataGroupsPresent)" )
     }
 }
 
@@ -549,7 +549,7 @@ class DataGroup12 : DataGroup {
         }
         
         // Skip the taglist - ideally we would check this but...
-        let tagList = try getNextValue()
+        let _ = try getNextValue()
 
         repeat {
             tag = try getNextTag()

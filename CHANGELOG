@@ -1,3 +1,10 @@
+V1.0.7
+    Change to allow direct access to the underlying DataGroups through read only property dataGroupsRead
+    Changed public properties on MFCPassportModel to read only (private set)
+    Renamed  readDataGroups to dataGroupsAvailable and changed from [String] to [DataGroupId]
+    Made getName() and getIDFromName() on DataGroupId public
+    Fixed some logging
+
 V1.0.6
     Change so that SOD hashes are always extracted (if SOD is present)  and checked even if no master list set
 

@@ -50,7 +50,7 @@ struct DetailsView : View {
         // Build Chip info section
         let chipInfo = [Item(title:"LDS Version", value: passport.LDSVersion),
                         Item(title:"Data groups present", value: passport.dataGroupsPresent.joined(separator: ", ")),
-                        Item(title:"Data groups read", value: passport.readDataGroups.joined(separator: ", "))]
+                        Item(title:"Data groups read", value: passport.dataGroupsAvailable.map { $0.getName()}.joined(separator: ", "))]
 
         return chipInfo
     }

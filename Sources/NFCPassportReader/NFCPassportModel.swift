@@ -18,22 +18,22 @@ public struct DataGroupHash {
 @available(iOS 13, *)
 public class NFCPassportModel {
     
-    public lazy var documentType : String = { return String( passportDataElements?["5F03"]?.first ?? "?" ) }()
-    public lazy var documentSubType : String = { return String( passportDataElements?["5F03"]?.last ?? "?" ) }()
-    public lazy var personalNumber : String = { return (passportDataElements?["53"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
-    public lazy var documentNumber : String = { return (passportDataElements?["5A"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
-    public lazy var issuingAuthority : String = { return passportDataElements?["5F28"] ?? "?" }()
-    public lazy var documentExpiryDate : String = { return passportDataElements?["59"] ?? "?" }()
-    public lazy var dateOfBirth : String = { return passportDataElements?["5F57"] ?? "?" }()
-    public lazy var gender : String = { return passportDataElements?["5F35"] ?? "?" }()
-    public lazy var nationality : String = { return passportDataElements?["5F2C"] ?? "?" }()
+    public private(set) lazy var documentType : String = { return String( passportDataElements?["5F03"]?.first ?? "?" ) }()
+    public private(set) lazy var documentSubType : String = { return String( passportDataElements?["5F03"]?.last ?? "?" ) }()
+    public private(set) lazy var personalNumber : String = { return (passportDataElements?["53"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
+    public private(set) lazy var documentNumber : String = { return (passportDataElements?["5A"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
+    public private(set) lazy var issuingAuthority : String = { return passportDataElements?["5F28"] ?? "?" }()
+    public private(set) lazy var documentExpiryDate : String = { return passportDataElements?["59"] ?? "?" }()
+    public private(set) lazy var dateOfBirth : String = { return passportDataElements?["5F57"] ?? "?" }()
+    public private(set) lazy var gender : String = { return passportDataElements?["5F35"] ?? "?" }()
+    public private(set) lazy var nationality : String = { return passportDataElements?["5F2C"] ?? "?" }()
 
-    public lazy var lastName : String = {
+    public private(set) lazy var lastName : String = {
         let names = (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<")
         return names[0].replacingOccurrences(of: "<", with: " " )
     }()
     
-    public lazy var firstName : String = {
+    public private(set) lazy var firstName : String = {
         let names = (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<")
         var name = ""
         for i in 1 ..< names.count {
@@ -43,38 +43,39 @@ public class NFCPassportModel {
         return name.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }()
     
-    public lazy var passportMRZ : String = { return passportDataElements?["5F1F"] ?? "NOT FOUND" }()
+    public private(set) lazy var passportMRZ : String = { return passportDataElements?["5F1F"] ?? "NOT FOUND" }()
     
         
-    public lazy var documentSigningCertificate : X509Wrapper? = {
+    public private(set) lazy var documentSigningCertificate : X509Wrapper? = {
         return certificateSigningGroups[.documentSigningCertificate]
     }()
 
-    public lazy var countrySigningCertificate : X509Wrapper? = {
+    public private(set) lazy var countrySigningCertificate : X509Wrapper? = {
         return certificateSigningGroups[.issuerSigningCertificate]
     }()
 
     // Extract data from COM
-    public lazy var LDSVersion : String = {
+    public private(set) lazy var LDSVersion : String = {
         guard let com = dataGroupsRead[.COM] as? COM else { return "Unknown" }
         return com.version
     }()
     
     
-    public lazy var dataGroupsPresent : [String] = {
+    public private(set) lazy var dataGroupsPresent : [String] = {
         guard let com = dataGroupsRead[.COM] as? COM else { return [] }
         return com.dataGroupsPresent
     }()
     
     // Parsed datagroup hashes
-    public var readDataGroups = [String]()
-    public var dataGroupHashes = [DataGroupId: DataGroupHash]()
-    
-    public var passportCorrectlySigned : Bool = false
-    public var documentSigningCertificateVerified : Bool = false
-    public var passportDataNotTampered : Bool = false
-    public var activeAuthenticationPassed : Bool = false
-    public var verificationErrors : [Error] = []
+    public private(set) var dataGroupsAvailable = [DataGroupId]()
+    public private(set) var dataGroupsRead : [DataGroupId:DataGroup] = [:]
+    public private(set) var dataGroupHashes = [DataGroupId: DataGroupHash]()
+
+    public private(set) var passportCorrectlySigned : Bool = false
+    public private(set) var documentSigningCertificateVerified : Bool = false
+    public private(set) var passportDataNotTampered : Bool = false
+    public private(set) var activeAuthenticationPassed : Bool = false
+    public private(set) var verificationErrors : [Error] = []
 
     
     public var passportImage : UIImage? {
@@ -97,7 +98,6 @@ public class NFCPassportModel {
         return false
     }
 
-    private var dataGroupsRead : [DataGroupId:DataGroup] = [:]
     private var certificateSigningGroups : [CertificateType:X509Wrapper] = [:]
 
     private var passportDataElements : [String:String]? {
@@ -114,7 +114,7 @@ public class NFCPassportModel {
     public func addDataGroup(_ id : DataGroupId, dataGroup: DataGroup ) {
         self.dataGroupsRead[id] = dataGroup
         if id != .COM && id != .SOD {
-            self.readDataGroups.append( id.getName() )
+            self.dataGroupsAvailable.append( id )
         }
     }
 
@@ -173,6 +173,23 @@ public class NFCPassportModel {
         }
     }
     
+    // Check if signing certificate is on the revocation list
+    // We do this by trying to build a trust chain of the passport certificate against the ones in the revocation list
+    // and if we are successful then its been revoked.
+    func hasCertBeenRevoked( revocationListURL : URL ) -> Bool {
+        var revoked = false
+        do {
+            try validateAndExtractSigningCertificates( masterListURL: revocationListURL )
+            
+            // Certificate chain found - which means certificate is on revocation list
+            revoked = true
+        } catch {
+            // No chain found - certificate not revoked
+        }
+        
+        return revoked
+    }
+
     private func validateAndExtractSigningCertificates( masterListURL: URL ) throws {
         self.passportCorrectlySigned = false
         
@@ -241,7 +258,7 @@ public class NFCPassportModel {
         }
         
         if errors != "" {
-            print( "HASH ERRORS - \(errors)" )
+            Log.error( "HASH ERRORS - \(errors)" )
             throw PassiveAuthenticationError.InvalidDataGroupHash(errors)
         }
         

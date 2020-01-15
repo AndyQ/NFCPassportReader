@@ -261,7 +261,7 @@ extension PassportReader {
                 // OK we had an error - depending on what happened, we may want to try to re-read this
                 // E.g. we failed to read the last Datagroup because its protected and we can't
                 let errMsg = err?.value ?? "Unknown  error"
-                print( "ERROR - \(errMsg)" )
+                Log.error( "ERROR - \(errMsg)" )
                 if errMsg == "Session invalidated" || errMsg == "Class not supported" || errMsg == "Tag connection lost"  {
                     // Can't go any more!
                     self.dataGroupsToRead.removeAll()
