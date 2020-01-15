@@ -10,7 +10,7 @@ It can accept either the ICOA PDK master list file in LDIF format (which is a co
 # Where can I get a master list from?
 ICAO makes their master lists available "freely available online to any person or State who wishes to download it. However, the process of downloading is manual and cannot be automated" (https://www.icao.int/Security/FAL/PKD/BVRT/Pages/Access.aspx) 
 
-The master lists can be downloaded from: https://pkddownloadsg.icao.int
+The master lists can be downloaded from: https://download.pkd.icao.int (previously was https://pkddownloadsg.icao.int but this seems to be unavailable now)
 
 These are in LDIF (LDAP Data Interchange Format) format
 
