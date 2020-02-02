@@ -130,6 +130,8 @@ public class NFCPassportModel {
                 ret[key] = calcSHA256Hash(value.body)
             } else if hashAlgorythm == "SHA1" {
                 ret[key] = calcSHA1Hash(value.body)
+            } else if hashAlgorythm == "SHA384" {
+                ret[key] = calcSHA384Hash(value.body)
             }
         }
         
@@ -269,7 +271,7 @@ public class NFCPassportModel {
     
     /// Parses an text ASN1 structure, and extracts the Hash Algorythm and Hashes contained from the Octect strings
     /// - Parameter content: the text ASN1 stucure format
-    /// - Returns: The Has Algorythm used - either SHA1 or SHA256, and a dictionary of hashes for the datagroups (currently only DG1 and DG2 are handled)
+    /// - Returns: The Has Algorythm used - SHA1, SHA256 or SHA384, and a dictionary of hashes for the datagroups (currently only DG1 and DG2 are handled)
     private func parseSODSignatureContent( _ content : String ) throws -> (String, [DataGroupId : String]){
         var currentDG = ""
         var sodHashAlgo = ""
@@ -285,6 +287,8 @@ public class NFCPassportModel {
                     sodHashAlgo = "SHA1"
                 } else if line.contains( "sha256" ) {
                     sodHashAlgo = "SHA256"
+                } else if line.contains( "sha384" ) {
+                    sodHashAlgo = "SHA384"
                 }
             } else if line.contains("d=3" ) && line.contains( "INTEGER" ) {
                 if let range = line.range(of: "INTEGER") {

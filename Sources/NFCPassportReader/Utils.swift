@@ -282,4 +282,19 @@ func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
     #endif
 }
 
-
+/// This function is used during the Derivation of Document Basic Acces Keys.
+/// @param Kseed: A 16 bytes random value
+/// @type Kseed: Binary
+/// @return: A set of two 8 bytes encryption keys
+@available(iOS 13, *)
+func calcSHA384Hash( _ data: [UInt8] ) -> [UInt8] {
+    #if canImport(CryptoKit)
+    var sha384 = SHA384()
+    sha384.update(data: data)
+    let hash = sha384.finalize()
+    
+    return Array(hash)
+    #else
+    fatalError("Couldn't import CryptoKit")
+    #endif
+}
