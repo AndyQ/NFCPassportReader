@@ -275,9 +275,16 @@ public class TagReader {
         self.progress?( Int(Float(amountRead) / Float(leftToRead+amountRead ) * 100))
         let offset = intToBin(amountRead, pad:4)
 
-        let data : [UInt8] = [0x00, 0xB0, offset[0], offset[1], 0x00, 0x00, readAmount]
-        //print( "Sending \(binToHexRep(data))" )
-        let cmd = NFCISO7816APDU(data:Data(data))!
+        let cmd = NFCISO7816APDU(
+            instructionClass: 00,
+            instructionCode: 0xB0,
+            p1Parameter: offset[0],
+            p2Parameter: offset[1],
+            data: Data(),
+            expectedResponseLength: 256
+        )
+
+        print( "Expected response length: \(readAmount)" )
         self.send( cmd: cmd ) { (resp,err) in
             guard let response = resp else {
                 completed( nil, err)
