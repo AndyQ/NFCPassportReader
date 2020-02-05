@@ -112,7 +112,7 @@ class NotImplementedDG : DataGroup {
 }
 
 @available(iOS 13, *)
-class COM : DataGroup {
+public class COM : DataGroup {
     public var version : String = "Unknown"
     public var unicodeVersion : String = "Unknown"
     public var dataGroupsPresent : [String] = []
@@ -170,7 +170,7 @@ class COM : DataGroup {
 }
 
 @available(iOS 13, *)
-class SOD : DataGroup {
+public class SOD : DataGroup {
     public var pkck7CertificateData : [UInt8] = []
     
      required init( _ data : [UInt8] ) throws {
@@ -184,9 +184,9 @@ class SOD : DataGroup {
 }
 
 @available(iOS 13, *)
-class DataGroup1 : DataGroup {
+public class DataGroup1 : DataGroup {
 
-    var elements : [String:String] = [:]
+    public var elements : [String:String] = [:]
 
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
@@ -277,31 +277,31 @@ class DataGroup1 : DataGroup {
 }
 
 @available(iOS 13, *)
-class DataGroup2 : DataGroup {
-    var nrImages : Int = 0
-    var versionNumber : Int = 0
-    var lengthOfRecord : Int = 0
-    var numberOfFacialImages : Int = 0
-    var facialRecordDataLength : Int = 0
-    var nrFeaturePoints : Int = 0
-    var gender : Int = 0
-    var eyeColor : Int = 0
-    var hairColor : Int = 0
-    var featureMask : Int = 0
-    var expression : Int = 0
-    var poseAngle : Int = 0
-    var poseAngleUncertainty : Int = 0
-    var faceImageType : Int = 0
-    var imageDataType : Int = 0
-    var imageWidth : Int = 0
-    var imageHeight : Int = 0
-    var imageColorSpace : Int = 0
-    var sourceType : Int = 0
-    var deviceType : Int = 0
-    var quality : Int = 0
+public class DataGroup2 : DataGroup {
+    public var nrImages : Int = 0
+    public var versionNumber : Int = 0
+    public var lengthOfRecord : Int = 0
+    public var numberOfFacialImages : Int = 0
+    public var facialRecordDataLength : Int = 0
+    public var nrFeaturePoints : Int = 0
+    public var gender : Int = 0
+    public var eyeColor : Int = 0
+    public var hairColor : Int = 0
+    public var featureMask : Int = 0
+    public var expression : Int = 0
+    public var poseAngle : Int = 0
+    public var poseAngleUncertainty : Int = 0
+    public var faceImageType : Int = 0
+    public var imageDataType : Int = 0
+    public var imageWidth : Int = 0
+    public var imageHeight : Int = 0
+    public var imageColorSpace : Int = 0
+    public var sourceType : Int = 0
+    public var deviceType : Int = 0
+    public var quality : Int = 0
     var imageData : [UInt8] = []
     
-    func getImage() -> UIImage? {
+    public func getImage() -> UIImage? {
         if imageData.count == 0 {
             return nil
         }
@@ -427,7 +427,7 @@ class DataGroup2 : DataGroup {
 }
 
 @available(iOS 13, *)
-class DataGroup7 : DataGroup {
+public class DataGroup7 : DataGroup {
     
     var imageData : [UInt8] = []
 
@@ -436,7 +436,7 @@ class DataGroup7 : DataGroup {
         datagroupType = .DG7
     }
     
-    func getImage() -> UIImage? {
+    public func getImage() -> UIImage? {
         if imageData.count == 0 {
             return nil
         }
@@ -465,20 +465,20 @@ class DataGroup7 : DataGroup {
 
 
 @available(iOS 13, *)
-class DataGroup11 : DataGroup {
-    
-    var fullName : String?
-    var personalNumber : String?
-    var dateOfBirth : String?
-    var placeOfBirth : String?
-    var address : String?
-    var telephone : String?
-    var profession : String?
-    var title : String?
-    var personalSummary : String?
-    var proofOfCitizenship : String?
-    var tdNumbers : String?
-    var custodyInfo : String?
+public class DataGroup11 : DataGroup {
+
+    public var fullName : String?
+    public var personalNumber : String?
+    public var dateOfBirth : String?
+    public var placeOfBirth : String?
+    public var address : String?
+    public var telephone : String?
+    public var profession : String?
+    public var title : String?
+    public var personalSummary : String?
+    public var proofOfCitizenship : String?
+    public var tdNumbers : String?
+    public var custodyInfo : String?
 
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
@@ -525,17 +525,17 @@ class DataGroup11 : DataGroup {
 }
 
 @available(iOS 13, *)
-class DataGroup12 : DataGroup {
-    
-    var issuingAuthority : String?
-    var dateOfIssue : String?
-    var otherPersonsDetails : String?
-    var endorsementsOrObservations : String?
-    var taxOrExitRequirements : String?
-    var frontImage : [UInt8]?
-    var rearImage : [UInt8]?
-    var personalizationTime : String?
-    var personalizationDeviceSerialNr : String?
+public class DataGroup12 : DataGroup {
+
+    public var issuingAuthority : String?
+    public var dateOfIssue : String?
+    public var otherPersonsDetails : String?
+    public var endorsementsOrObservations : String?
+    public var taxOrExitRequirements : String?
+    public var frontImage : [UInt8]?
+    public var rearImage : [UInt8]?
+    public var personalizationTime : String?
+    public var personalizationDeviceSerialNr : String?
 
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
@@ -579,7 +579,7 @@ class DataGroup12 : DataGroup {
 }
 
 @available(iOS 13, *)
-class DataGroup14 : DataGroup {
+public class DataGroup14 : DataGroup {
     
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
@@ -592,10 +592,10 @@ class DataGroup14 : DataGroup {
 
 
 @available(iOS 13, *)
-class DataGroup15 : DataGroup {
+public class DataGroup15 : DataGroup {
     
-    var rsaPublicKey : OpaquePointer?
-    var ecdsaPublicKey : UnsafeMutablePointer<EVP_PKEY>?
+    public var rsaPublicKey : OpaquePointer?
+    public var ecdsaPublicKey : UnsafeMutablePointer<EVP_PKEY>?
     
     deinit {
         EVP_PKEY_free(ecdsaPublicKey);
