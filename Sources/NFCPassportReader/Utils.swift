@@ -248,10 +248,9 @@ public func toAsn1Length(_ data : Int) throws -> [UInt8] {
 }
         
 
-/// This function is used during the Derivation of Document Basic Acces Keys.
-/// @param Kseed: A 16 bytes random value
-/// @type Kseed: Binary
-/// @return: A set of two 8 bytes encryption keys
+/// This function calculates a SHA1 Hash of the input data
+/// @param data: a byte array of data
+/// @return: A SHA1 hash of the data
 @available(iOS 13, *)
 func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
     #if canImport(CryptoKit)
@@ -265,10 +264,9 @@ func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
     #endif
 }
 
-/// This function is used during the Derivation of Document Basic Acces Keys.
-/// @param Kseed: A 16 bytes random value
-/// @type Kseed: Binary
-/// @return: A set of two 8 bytes encryption keys
+/// This function calculates a SHA256 Hash of the input data
+/// @param data: a byte array of data
+/// @return: A SHA256 hash of the data
 @available(iOS 13, *)
 func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
     #if canImport(CryptoKit)
@@ -282,4 +280,19 @@ func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
     #endif
 }
 
+/// This function calculates a SHA384 Hash of the input data
+/// @param data: a byte array of data
+/// @return: A SHA1 hash of the data
+@available(iOS 13, *)
+func calcSHA384Hash( _ data: [UInt8] ) -> [UInt8] {
+    #if canImport(CryptoKit)
+    var sha384 = SHA384()
+    sha384.update(data: data)
+    let hash = sha384.finalize()
+    
+    return Array(hash)
+    #else
+    fatalError("Couldn't import CryptoKit")
+    #endif
+}
 
