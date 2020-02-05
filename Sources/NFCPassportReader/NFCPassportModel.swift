@@ -177,6 +177,7 @@ public class NFCPassportModel {
     // Check if signing certificate is on the revocation list
     // We do this by trying to build a trust chain of the passport certificate against the ones in the revocation list
     // and if we are successful then its been revoked.
+    // NOTE - NOT USED YET AS NOT ABLE TO TEST
     func hasCertBeenRevoked( revocationListURL : URL ) -> Bool {
         var revoked = false
         do {
