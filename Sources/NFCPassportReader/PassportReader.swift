@@ -9,13 +9,63 @@
 import UIKit
 import CoreNFC
 
+@available(iOS 13, *)
+public enum AlertMessage {
+    case HoldYourPhoneNearNFCDocument
+    case AuthenticatingPassport(Int)
+    case ReadingPassport
+    case ReadingDataGroup(DataGroupId, Int)
+    case Error(TagError)
+    case SuccessfulRead
+}
+
+@available(iOS 13, *)
+extension AlertMessage {
+    public var description: String {
+        switch self {
+        case .HoldYourPhoneNearNFCDocument:
+            return "Hold your iPhone near an NFC enabled passport."
+        case .AuthenticatingPassport(let progress):
+            let progressString = progressEmoji(percentualProgress: progress)
+            return "Authenticating with passport.....\n\n\(progressString)"
+        case .ReadingPassport:
+            return "Reading passport data.....\n"
+        case .ReadingDataGroup(let dataGroup, let progress):
+            let progressString = progressEmoji(percentualProgress: progress)
+            return "Reading \(dataGroup).....\n\n\(progressString)"
+        case .Error(let tagError):
+            switch tagError {
+            case TagError.TagNotValid:
+                return "Tag not valid."
+            case TagError.MoreThanOneTagFound:
+                return "More than 1 tags was found. Please present only 1 tag."
+            case TagError.ConnectionError:
+                return "Connection error. Please try again."
+            case TagError.InvalidMRZKey:
+                return "MRZ Key not valid for this document."
+            case TagError.ResponseError(let description):
+                return "Sorry, there was a problem reading the passport. \(description)"
+            default:
+                return "Sorry, there was a problem reading the passport. Please try again"
+            }
+        case .SuccessfulRead:
+            return "Passport read successfully"
+        }
+    }
+
+    func progressEmoji(percentualProgress: Int) -> String {
+        let p = (percentualProgress/20)
+        let full = String(repeating: "🟢 ", count: p)
+        let empty = String(repeating: "⚪️ ", count: 5-p)
+        return "\(full)\(empty)"
+    }
+}
 
 @available(iOS 13, *)
 public class PassportReader : NSObject {
     
     private var passport : NFCPassportModel = NFCPassportModel()
     private var readerSession: NFCTagReaderSession?
-    private var progTitle = ""
     private var elementReadAttempts = 0
 
     private var dataGroupsToRead : [DataGroupId] = []
@@ -27,6 +77,7 @@ public class PassportReader : NSObject {
     private var mrzKey : String = ""
     
     private var scanCompletedHandler: ((NFCPassportModel?, TagError?)->())!
+    private var customAlertMessageHandler: ((AlertMessage) -> String?)?
     private var masterListURL : URL?
     private var shouldNotReportNextReaderSessionInvalidationErrorUserCanceled : Bool = false
 
@@ -40,12 +91,18 @@ public class PassportReader : NSObject {
         self.masterListURL = masterListURL
     }
     
-    public func readPassport( mrzKey : String,  tags: [DataGroupId] = [], skipSecureElements :Bool = true, completed: @escaping (NFCPassportModel?, TagError?)->() ) {
+    public func readPassport(
+        mrzKey : String,
+        tags: [DataGroupId] = [],
+        skipSecureElements :Bool = true,
+        customAlertMessage: ((AlertMessage) -> String?)? = nil,
+        completed: @escaping (NFCPassportModel?, TagError?)->()) {
         self.passport = NFCPassportModel()
         self.mrzKey = mrzKey
         self.dataGroupsToRead.removeAll()
         self.dataGroupsToRead.append( contentsOf:tags)
         self.scanCompletedHandler = completed
+        self.customAlertMessageHandler = customAlertMessage
         self.skipSecureElements = skipSecureElements
         
         // If no tags specified, read all
@@ -65,7 +122,8 @@ public class PassportReader : NSObject {
         
         if NFCTagReaderSession.readingAvailable {
             readerSession = NFCTagReaderSession(pollingOption: [.iso14443], delegate: self, queue: nil)
-            readerSession?.alertMessage = "Hold your iPhone near an NFC enabled passport."
+
+            self.updateReaderSessionMessage( alertMessage: AlertMessage.HoldYourPhoneNearNFCDocument )
             readerSession?.begin()
         }
     }
@@ -106,7 +164,8 @@ extension PassportReader : NFCTagReaderSessionDelegate {
     public func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
         Log.debug( "tagReaderSession:didDetect - \(tags[0])" )
         if tags.count > 1 {
-            self.invalidateSession(errorMessage: "More than 1 tag was found. Please present only 1 tag.", error: TagError.MoreThanOneTagFound)
+            let alertMessage = AlertMessage.Error(.MoreThanOneTagFound)
+            self.invalidateSession(errorMessage: self.customAlertMessageHandler?(alertMessage) ?? alertMessage.description, error: TagError.MoreThanOneTagFound)
             return
         }
 
@@ -116,33 +175,32 @@ extension PassportReader : NFCTagReaderSessionDelegate {
         case let .iso7816(tag):
             passportTag = tag
         default:
-            self.invalidateSession(errorMessage: "Tag not valid.", error: TagError.TagNotValid)
+            let alertMessage = AlertMessage.Error(TagError.TagNotValid)
+            self.invalidateSession(errorMessage: self.customAlertMessageHandler?(alertMessage) ?? alertMessage.description, error: TagError.TagNotValid)
             return
         }
         
         // Connect to tag
         session.connect(to: tag) { [unowned self] (error: Error?) in
             if error != nil {
-                self.invalidateSession(errorMessage: "Connection error. Please try again.", error: TagError.ConnectionError)
+                let alertMessage = AlertMessage.Error(TagError.ConnectionError)
+                self.invalidateSession(errorMessage: self.customAlertMessageHandler?(alertMessage) ?? alertMessage.description, error: TagError.ConnectionError)
                 return
             }
             
-            self.readerSession?.alertMessage = "Authenticating with passport.....\n"
+            self.updateReaderSessionMessage( alertMessage: AlertMessage.AuthenticatingPassport(0) )
 
             self.tagReader = TagReader(tag:passportTag)
             self.tagReader!.progress = { [unowned self] (progress) in
-                self.updateReaderAlertProgress( progressPercentage: progress )
+                self.updateReaderSessionMessage( alertMessage: AlertMessage.AuthenticatingPassport(progress) )
             }
 
             self.startReading( )
         }
     }
     
-    func updateReaderAlertProgress( progressPercentage progress: Int ) {
-        let p = (progress/20)
-        let full = String(repeating: "🟢 ", count: p)
-        let empty = String(repeating: "⚪️ ", count: 5-p)
-        self.readerSession?.alertMessage = "\(self.progTitle)\n\(full)\(empty)"
+    func updateReaderSessionMessage(alertMessage: AlertMessage ) {
+        self.readerSession?.alertMessage = self.customAlertMessageHandler?(alertMessage) ?? alertMessage.description
     }
 }
 
@@ -156,9 +214,7 @@ extension PassportReader {
                 Log.info( "BAC Successful" )
                 // At this point, BAC Has been done and the TagReader has been set up with the SecureMessaging
                 // session keys
-                self?.progTitle = "Reading passport data.....\n"
-                self?.readerSession?.alertMessage = "Reading passport data.....\n"
-                
+                self?.updateReaderSessionMessage(alertMessage: AlertMessage.ReadingPassport)
                 self?.readNextDataGroup( ) { [weak self] error in
                     if self?.dataGroupsToRead.count != 0 {
                         // OK we've got more datagroups to go - we've probably failed security verification
@@ -168,8 +224,10 @@ extension PassportReader {
                         }
                     } else {
                         if let error = error {
-                            self?.invalidateSession(errorMessage: error.value, error: error)
+                            self?.invalidateSession(errorMessage: self?.customAlertMessageHandler?(AlertMessage.Error(error)) ?? AlertMessage.Error(error).description, error: error)
                         } else {
+                            self?.updateReaderSessionMessage(alertMessage: AlertMessage.SuccessfulRead)
+
                             OpenSSLUtils.loadOpenSSL()
 
                             // Before we finish, check if we should do active authentication
@@ -183,7 +241,7 @@ extension PassportReader {
                                 // If we have a masterlist url set then use that and verify the passport now
                                 self?.passport.verifyPassport(masterListURL: self?.masterListURL)
                                 self?.scanCompletedHandler( self?.passport, nil )
-                                
+
                                 OpenSSLUtils.cleanupOpenSSL()
                             }
                         }
@@ -191,7 +249,8 @@ extension PassportReader {
                 }
             } else if let error = error {
                 Log.info( "BAC Failed" )
-                self?.invalidateSession(errorMessage: "Sorry, there was a problem reading the passport. Please try again", error: error)
+                let alertMessage = AlertMessage.Error(error)
+                self?.invalidateSession(errorMessage: self?.customAlertMessageHandler?(alertMessage) ?? alertMessage.description, error: error)
             }
         })
     }
@@ -200,7 +259,7 @@ extension PassportReader {
         // Mark the next 'invalid session' error as not reportable (we're about to cause it by invalidating the
         // session). The real error is reported back with the call to the completed handler
         self.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
-        self.readerSession?.invalidate(errorMessage: "Sorry, there was a problem reading the passport. Please try again" )
+        self.readerSession?.invalidate(errorMessage: errorMessage)
         self.scanCompletedHandler(nil, error)
     }
     
@@ -247,11 +306,10 @@ extension PassportReader {
         
         let dgId = dataGroupsToRead[0]
         Log.info( "Reading tag - \(dgId)" )
-        self.progTitle = "Reading \(dgId).....\n"
         elementReadAttempts += 1
         
         tagReader.readDataGroup(dataGroup:dgId) { [unowned self] (response, err) in
-            self.updateReaderAlertProgress( progressPercentage: 100 )
+            self.updateReaderSessionMessage( alertMessage: AlertMessage.ReadingDataGroup(dgId, 100) )
             if let response = response {
                 do {
                     let dg = try DataGroupParser().parseDG(data: response)
