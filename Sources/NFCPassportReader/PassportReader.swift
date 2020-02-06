@@ -28,6 +28,7 @@ public class PassportReader : NSObject {
     
     private var scanCompletedHandler: ((NFCPassportModel?, TagError?)->())!
     private var masterListURL : URL?
+    private var shouldNotReportNextReaderSessionInvalidationErrorUserCanceled : Bool = false
 
     public init( masterListURL: URL? = nil ) {
         super.init()
@@ -84,30 +85,45 @@ extension PassportReader : NFCTagReaderSessionDelegate {
         // You must create a new session to restart RF polling.
         Log.debug( "tagReaderSession:didInvalidateWithError - \(error)" )
         self.readerSession = nil
-        
+
+        if let readerError = error as? NFCReaderError, readerError.code == NFCReaderError.readerSessionInvalidationErrorUserCanceled
+            && self.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled {
+            self.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = false
+        } else {
+            var userError = TagError.UnexpectedError
+            if let readerError = error as? NFCReaderError {
+                switch (readerError.code) {
+                case NFCReaderError.readerSessionInvalidationErrorUserCanceled:
+                    userError = TagError.UserCanceled
+                default:
+                    userError = TagError.UnexpectedError
+                }
+            }
+            self.scanCompletedHandler(nil, userError)
+        }
     }
     
     public func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
         Log.debug( "tagReaderSession:didDetect - \(tags[0])" )
         if tags.count > 1 {
-            session.alertMessage = "More than 1 tags was found. Please present only 1 tag."
+            self.invalidateSession(errorMessage: "More than 1 tags was found. Please present only 1 tag.", error: TagError.MoreThanOneTagFound)
             return
         }
-        
+
         let tag = tags.first!
         var passportTag: NFCISO7816Tag
         switch tags.first! {
         case let .iso7816(tag):
             passportTag = tag
         default:
-            session.invalidate(errorMessage: "Tag not valid.")
+            self.invalidateSession(errorMessage: "Tag not valid.", error: TagError.TagNotValid)
             return
         }
         
         // Connect to tag
         session.connect(to: tag) { [unowned self] (error: Error?) in
             if error != nil {
-                session.invalidate(errorMessage: "Connection error. Please try again.")
+                self.invalidateSession(errorMessage: "Connection error. Please try again.", error: TagError.ConnectionError)
                 return
             }
             
@@ -152,14 +168,18 @@ extension PassportReader {
                         }
                     } else {
                         if let error = error {
-                            self?.readerSession?.invalidate(errorMessage: error.value)
+                            self?.invalidateSession(errorMessage: error.value, error: error)
                         } else {
                             OpenSSLUtils.loadOpenSSL()
 
                             // Before we finish, check if we should do active authentication
                             self?.doActiveAuthenticationIfNeccessary() {
+                                // We succesfully read the passport, now we're about to invalidate the session. Before
+                                // doing so, we want to be sure that the 'user cancelled' error that we're causing by
+                                // calling 'invalidate' will not be reported back to the user
+                                self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
                                 self?.readerSession?.invalidate()
-                                
+
                                 // If we have a masterlist url set then use that and verify the passport now
                                 self?.passport.verifyPassport(masterListURL: self?.masterListURL)
                                 self?.scanCompletedHandler( self?.passport, nil )
@@ -169,12 +189,19 @@ extension PassportReader {
                         }
                     }
                 }
-            } else {
+            } else if let error = error {
                 Log.info( "BAC Failed" )
-                self?.readerSession?.invalidate(errorMessage: "Sorry, there was a problem reading the passport. Please try again" )
-                self?.scanCompletedHandler(nil, error)
+                self?.invalidateSession(errorMessage: "Sorry, there was a problem reading the passport. Please try again", error: error)
             }
         })
+    }
+
+    func invalidateSession(errorMessage: String, error: TagError) {
+        // Mark the next 'invalid session' error as not reportable (we're about to cause it by invalidating the
+        // session). The real error is reported back with the call to the completed handler
+        self.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
+        self.readerSession?.invalidate(errorMessage: "Sorry, there was a problem reading the passport. Please try again" )
+        self.scanCompletedHandler(nil, error)
     }
     
     func doActiveAuthenticationIfNeccessary( completed: @escaping ()->() ) {
