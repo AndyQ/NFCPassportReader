@@ -41,6 +41,11 @@ public enum TagError: Error {
     case UnknownTag
     case UnknownImageFormat
     case NotImplemented
+    case TagNotValid
+    case ConnectionError
+    case UserCanceled
+    case InvalidMRZKey
+    case MoreThanOneTagFound
 
     var value: String {
         switch self {
@@ -61,6 +66,11 @@ public enum TagError: Error {
         case .UnknownTag: return "UnknownTag"
         case .UnknownImageFormat: return "UnknownImageFormat"
         case .NotImplemented: return "NotImplemented"
+        case .TagNotValid: return "TagNotValid"
+        case .ConnectionError: return "ConnectionError"
+        case .UserCanceled: return "UserCanceled"
+        case .InvalidMRZKey: return "InvalidMRZKey"
+        case .MoreThanOneTagFound: return "MoreThanOneTagFound"
         }
     }
 }
@@ -338,9 +348,16 @@ public class TagReader {
                 if rep.sw1 == 0x90 && rep.sw2 == 0x00 {
                     completed( rep, nil )
                 } else {
-                    let errorMsg = self.decodeError(sw1: rep.sw1, sw2: rep.sw2)
-                    Log.error( "Error reading tag: sw1 - \(binToHexRep(sw1)), sw2 - \(binToHexRep(sw2)) - reason: \(errorMsg)" )
-                    completed( nil, TagError.ResponseError( errorMsg ) )
+                    Log.error( "Error reading tag: sw1 - 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2))" )
+                    let tagError: TagError
+                    if (rep.sw1 == 0x63 && rep.sw2 == 0x00) {
+                        tagError = TagError.InvalidMRZKey
+                    } else {
+                        let errorMsg = self.decodeError(sw1: rep.sw1, sw2: rep.sw2)
+                        Log.error( "reason: \(errorMsg)" )
+                        tagError = TagError.ResponseError( errorMsg )
+                    }
+                    completed( nil, tagError)
                 }
             }
         }
@@ -355,8 +372,7 @@ public class TagReader {
                    0x83:"Selected file invalidated",
                    0x84:"FCI not formatted according to ISO7816-4 section 5.1.5"],
             
-            0x63: [0x00:"No information given",
-                   0x81:"File filled up by the last write",
+            0x63: [0x81:"File filled up by the last write",
                    0x82:"Card Key not supported",
                    0x83:"Reader Key not supported",
                    0x84:"Plain transmission not supported",
@@ -411,7 +427,7 @@ public class TagReader {
             return errorMsg
         }
         
-        return "Unknown error - sw1: \(sw1), sw2: \(sw2)"
+        return "Unknown error - sw1: 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2)) "
     }
 }
 

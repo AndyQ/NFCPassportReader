@@ -1,3 +1,6 @@
+V1.0.9
+    Add better error handling on different session invalidation error conditions - Thanks to @danydev - PR 39
+
 v1.0.8
     Changed readingBinary data use 256 (0x100) instead of an expected read amount - this tells the reader that an arbitrary long chunk of data is expected in response.  Thanks to @maxxx777 for this
     Made DataGroup fields publicly readable (after review of PR 38 by @danydev)
