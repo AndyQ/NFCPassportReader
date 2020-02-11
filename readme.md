@@ -68,6 +68,23 @@ This will then handle the reading of the passport, and image and will call the c
 
 If successful, the passportReader object will then contain valid data for the passportMRZ and passportImage fields.
 
+In addition, you can customise the messages displayed in the NFC Session Reader by providing a customDisplayMessage callback
+e.g. to override just the initial request to present passport message:
+
+```
+passportReader.readPassport(mrzKey: mrzKey, tags: [.COM, .DG1, .DG2],
+    customDisplayMessage: { (displayMessage) in
+        switch displayMessage {
+            case .requestPresentPassport:
+                return "Hold your iPhone near an NFC enabled passport."
+            default: 
+                return nil
+    }, completed: { (error) in
+        ...
+}
+```
+
+
 ## Logging
 Additional logging (very verbose)  can be enabled on the PassportReader by passing in a log level on creation:
 e.g.

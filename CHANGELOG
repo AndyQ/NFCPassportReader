@@ -1,3 +1,6 @@
+V1.0.10
+    Added ability to customise the mesasges displayed in NFCReaderSession View - Thanks to @danydev for PR 41
+    
 V1.0.9
     Add better error handling on different session invalidation error conditions - Thanks to @danydev - PR 39
 

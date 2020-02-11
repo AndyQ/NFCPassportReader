@@ -294,7 +294,7 @@ public class TagReader {
             expectedResponseLength: 256
         )
 
-        print( "Expected response length: \(readAmount)" )
+        Log.debug( "Expected response length: \(readAmount)" )
         self.send( cmd: cmd ) { (resp,err) in
             guard let response = resp else {
                 completed( nil, err)

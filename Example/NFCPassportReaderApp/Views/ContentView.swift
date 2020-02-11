@@ -160,7 +160,16 @@ extension ContentView {
 //        let dataGroups : [DataGroupId] = [.COM, .SOD, .DG1, .DG2, .DG7, .DG11, .DG12, .DG14, .DG15]
 //        passportReader.readPassport(mrzKey: mrzKey, tags:dataGroups, completed: { (passport, error) in
         
-        passportReader.readPassport(mrzKey: mrzKey, completed: { (passport, error) in
+        // This salso how you can overriding the default messages displayed by the NFC View Controller
+        passportReader.readPassport(mrzKey: mrzKey, customDisplayMessage: { (displayMessage) in
+            switch displayMessage {
+                case .requestPresentPassport:
+                    return "Hold your iPhone near an NFC enabled passport."
+                default:
+                    // Return nil for all other messages so we use the provided default
+                    return nil
+            }
+        }, completed: { (passport, error) in
             if let passport = passport {
                 // All good, we got a passport
 
