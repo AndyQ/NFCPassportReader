@@ -24,7 +24,7 @@ extension PassportTagError: LocalizedError {
 
 @available(iOS 13, *)
 public enum TagError: Error {
-    case ResponseError(String)
+    case ResponseError(String, UInt8, UInt8)
     case InvalidResponse
     case UnexpectedError
     case NFCNotSupported
@@ -49,7 +49,7 @@ public enum TagError: Error {
 
     var value: String {
         switch self {
-        case .ResponseError(let errMsg): return errMsg
+        case .ResponseError(let errMsg, _, _): return errMsg
         case .InvalidResponse: return "InvalidResponse"
         case .UnexpectedError: return "UnexpectedError"
         case .NFCNotSupported: return "NFCNotSupported"
@@ -187,7 +187,7 @@ public struct ResponseAPDU {
 public class TagReader {
     var tag : NFCISO7816Tag
     var secureMessaging : SecureMessaging?
-    var maxDataLengthToRead : UInt8 = 0xFF
+    var maxDataLengthToRead : Int = 256
 
     var progress : ((Int)->())?
 
@@ -196,7 +196,9 @@ public class TagReader {
     }
     
     func reduceDataReadingAmount() {
-         maxDataLengthToRead = 0xA0
+        if maxDataLengthToRead == 256 {
+            maxDataLengthToRead = 0xA0
+        }
     }
 
 
@@ -277,9 +279,9 @@ public class TagReader {
     }
     
     func readBinaryData( leftToRead: Int, amountRead : Int, completed: @escaping ([UInt8]?, TagError?)->() ) {
-        var readAmount : UInt8 = maxDataLengthToRead
+        var readAmount : Int = maxDataLengthToRead
         if leftToRead < maxDataLengthToRead {
-            readAmount = UInt8(leftToRead)
+            readAmount = leftToRead
         }
         
         self.progress?( Int(Float(amountRead) / Float(leftToRead+amountRead ) * 100))
@@ -291,7 +293,7 @@ public class TagReader {
             p1Parameter: offset[0],
             p2Parameter: offset[1],
             data: Data(),
-            expectedResponseLength: 256
+            expectedResponseLength: readAmount
         )
 
         Log.debug( "Expected response length: \(readAmount)" )
@@ -331,7 +333,7 @@ public class TagReader {
         tag.sendCommand(apdu: toSend) { [unowned self] (data, sw1, sw2, error) in
             if let error = error {
                 Log.error( "Error reading tag - \(error.localizedDescription)" )
-                completed( nil, TagError.ResponseError( error.localizedDescription ) )
+                completed( nil, TagError.ResponseError( error.localizedDescription, sw1, sw2 ) )
             } else {
                 var rep = ResponseAPDU(data: [UInt8](data), sw1: sw1, sw2: sw2)
                 
@@ -355,7 +357,7 @@ public class TagReader {
                     } else {
                         let errorMsg = self.decodeError(sw1: rep.sw1, sw2: rep.sw2)
                         Log.error( "reason: \(errorMsg)" )
-                        tagError = TagError.ResponseError( errorMsg )
+                        tagError = TagError.ResponseError( errorMsg, sw1, sw2 )
                     }
                     completed( nil, tagError)
                 }
