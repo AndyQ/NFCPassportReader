@@ -1,3 +1,8 @@
+v1.0.11
+    TagReaader starts off trying to read arbitary data amounts, however this can fail on some passports which
+    seem to need an explicit length so in this case, when we get a failure, fall back to reading smaller specific
+    amounts - Thanks for @douglasg for reporting and testing and @SaliienkoAleksandr for testing this.
+
 V1.0.10
     Added ability to customise the mesasges displayed in NFCReaderSession View - Thanks to @danydev for PR 41
     
