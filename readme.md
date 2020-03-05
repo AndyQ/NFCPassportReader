@@ -108,6 +108,12 @@ There is a sample app included in the repo which demonstrates the functionality.
 
 ## Troubleshooting
 * If when doing the initial Mutual Authenticate challenge, you get an error with and SW1 code 0x63, SW2 code 0x00, reason: No information given, then this is usualy because your MRZ key is incorrect, and possibly because your passport number is not quite right.  If your passport number in the MRZ contains a '<' then you need to include this in the MRZKey - the checksum should work out correct too.  For more details, check out App-D2 in the ICAO 9303 Part 11 document (https://www.icao.int/publications/Documents/9303_p11_cons_en.pdf)
+<br><br>e.g. if the bottom line on the MRZ looks like:
+12345678<8AUT7005233M2507237<<<<<<<<<<<<<<06
+<br><br>
+In this case the passport number is 12345678 but is padded out with an additonal <. This needs to be included in the MRZ key used for BAC.
+e.g. 12345678<870052332507237 would be the key used.
+
 
 
 ## To do
