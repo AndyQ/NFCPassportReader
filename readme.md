@@ -62,7 +62,7 @@ passportReader.readPassport(mrzKey: mrzKey, tags: [.COM, .DG1, .DG2], completed:
 }
 ```
 
-Currently the datagroups supported are: COM, DG1, DG2, DG7, DG11, DG12, DG154, and SOD
+Currently the datagroups supported are: COM, DG1, DG2, DG7, DG11, DG12, DG15, and SOD
 
 This will then handle the reading of the passport, and image and will call the completion block either with an TagError error if there was an error of some kind, or nil if successful.
 
