@@ -97,6 +97,8 @@ struct ContentView : View {
 //                            self.$passportDetails.passportNumber.wrappedValue = ""
 //                            }
                     })
+                    .disableAutocorrection(true)
+                    .autocapitalization(.allCharacters)
                     .textContentType(.name)
                     .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -104,12 +106,14 @@ struct ContentView : View {
 
                 TextField("Date of birth (YYMMDD)",
                           text: $passportDetails.dateOfBirth)
+                    .keyboardType(.numberPad)
                     .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
                 
                 TextField("Passport expiry date (YYMMDD)",
                           text: $passportDetails.expiryDate)
+                    .keyboardType(.numberPad)
                     .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
