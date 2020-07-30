@@ -40,6 +40,7 @@ public enum TagError: Error {
     case DataGroupNotRead
     case UnknownTag
     case UnknownImageFormat
+    case ImageNotFound
     case NotImplemented
     case TagNotValid
     case ConnectionError
@@ -65,6 +66,7 @@ public enum TagError: Error {
         case .DataGroupNotRead: return "DataGroupNotRead"
         case .UnknownTag: return "UnknownTag"
         case .UnknownImageFormat: return "UnknownImageFormat"
+        case .ImageNotFound: return "ImageNotFound"
         case .NotImplemented: return "NotImplemented"
         case .TagNotValid: return "TagNotValid"
         case .ConnectionError: return "ConnectionError"
