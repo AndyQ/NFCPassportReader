@@ -40,8 +40,8 @@ extension NFCViewDisplayMessage {
                 return "Connection error. Please try again."
             case TagError.InvalidMRZKey:
                 return "MRZ Key not valid for this document."
-            case TagError.ResponseError(let description):
-                return "Sorry, there was a problem reading the passport. \(description)"
+            case TagError.ResponseError(let description, let sw1, let sw2):
+                return "Sorry, there was a problem reading the passport. \(description) - (0x\(sw1), 0x\(sw2)"
             default:
                 return "Sorry, there was a problem reading the passport. Please try again"
             }

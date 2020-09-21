@@ -1,3 +1,7 @@
+v1.0.12
+    Fix for verifyECDSASignature - better handling of sigData so it compiles with Swift 5.3
+    ResponseError now displays the SW tag values
+
 v1.0.11
     TagReaader starts off trying to read arbitary data amounts, however this can fail on some passports which
     seem to need an explicit length so in this case, when we get a failure, fall back to reading smaller specific

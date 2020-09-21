@@ -318,15 +318,18 @@ class OpenSSLUtils {
         // We first need to convert the signature from PLAIN ECDSA to ASN1 DER encoded
         let ecsig = ECDSA_SIG_new()
         defer { ECDSA_SIG_free(ecsig) }
-        var sigData = signature
-        BN_bin2bn(&sigData, 32, ecsig?.pointee.r)
-        BN_bin2bn(&sigData + 32, 32, ecsig?.pointee.s)
-        
+        let sigData = signature
+        sigData.withUnsafeBufferPointer { (unsafeBufPtr) in
+            let unsafePointer = unsafeBufPtr.baseAddress!
+            BN_bin2bn(unsafePointer, 32, ecsig?.pointee.r)
+            BN_bin2bn(unsafePointer + 32, 32, ecsig?.pointee.s)
+        }
         let sigSize = i2d_ECDSA_SIG(ecsig, nil)
         var derBytes = [UInt8](repeating: 0, count: Int(sigSize))
-        var derEncodedSignature: UnsafeMutablePointer<UInt8>? = UnsafeMutablePointer<UInt8>(mutating:&derBytes)
-        let _ = i2d_ECDSA_SIG(ecsig, &derEncodedSignature)
-
+        derBytes.withUnsafeMutableBufferPointer { (unsafeBufPtr) in
+            var unsafePointer = unsafeBufPtr.baseAddress
+            let _ = i2d_ECDSA_SIG(ecsig, &unsafePointer)
+        }
         var nRes : Int32 = -1
         // check if ECDSA signature and then verify
         let type = EVP_PKEY_base_id(publicKey);
