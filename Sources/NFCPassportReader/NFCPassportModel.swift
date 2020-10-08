@@ -16,7 +16,7 @@ public struct DataGroupHash {
 }
 
 @available(iOS 13, *)
-public class NFCPassportModel {
+public class NFCPassportModel: NSObject {
     
     public private(set) lazy var documentType : String = { return String( passportDataElements?["5F03"]?.first ?? "?" ) }()
     public private(set) lazy var documentSubType : String = { return String( passportDataElements?["5F03"]?.last ?? "?" ) }()
@@ -103,11 +103,6 @@ public class NFCPassportModel {
         guard let dg1 = dataGroupsRead[.DG1] as? DataGroup1 else { return nil }
         
         return dg1.elements
-    }
-        
-    
-    public init() {
-        
     }
     
     public func addDataGroup(_ id : DataGroupId, dataGroup: DataGroup ) {

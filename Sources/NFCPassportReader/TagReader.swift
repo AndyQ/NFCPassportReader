@@ -76,6 +76,7 @@ public enum TagError: Error {
 }
 
 @available(iOS 13, *)
+@objc
 public enum DataGroupId : Int, CaseIterable {
     case COM = 0x60
     case DG1 = 0x61
