@@ -16,24 +16,24 @@ public struct DataGroupHash {
 }
 
 @available(iOS 13, *)
-public class NFCPassportModel {
+public class NFCPassportModel: NSObject {
     
-    public private(set) lazy var documentType : String = { return String( passportDataElements?["5F03"]?.first ?? "?" ) }()
-    public private(set) lazy var documentSubType : String = { return String( passportDataElements?["5F03"]?.last ?? "?" ) }()
-    public private(set) lazy var personalNumber : String = { return (passportDataElements?["53"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
-    public private(set) lazy var documentNumber : String = { return (passportDataElements?["5A"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
-    public private(set) lazy var issuingAuthority : String = { return passportDataElements?["5F28"] ?? "?" }()
-    public private(set) lazy var documentExpiryDate : String = { return passportDataElements?["59"] ?? "?" }()
-    public private(set) lazy var dateOfBirth : String = { return passportDataElements?["5F57"] ?? "?" }()
-    public private(set) lazy var gender : String = { return passportDataElements?["5F35"] ?? "?" }()
-    public private(set) lazy var nationality : String = { return passportDataElements?["5F2C"] ?? "?" }()
+    @objc public private(set) lazy var documentType : String = { return String( passportDataElements?["5F03"]?.first ?? "?" ) }()
+    @objc public private(set) lazy var documentSubType : String = { return String( passportDataElements?["5F03"]?.last ?? "?" ) }()
+    @objc public private(set) lazy var personalNumber : String = { return (passportDataElements?["53"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
+    @objc public private(set) lazy var documentNumber : String = { return (passportDataElements?["5A"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
+    @objc public private(set) lazy var issuingAuthority : String = { return passportDataElements?["5F28"] ?? "?" }()
+    @objc public private(set) lazy var documentExpiryDate : String = { return passportDataElements?["59"] ?? "?" }()
+    @objc public private(set) lazy var dateOfBirth : String = { return passportDataElements?["5F57"] ?? "?" }()
+    @objc public private(set) lazy var gender : String = { return passportDataElements?["5F35"] ?? "?" }()
+    @objc public private(set) lazy var nationality : String = { return passportDataElements?["5F2C"] ?? "?" }()
 
-    public private(set) lazy var lastName : String = {
+    @objc public private(set) lazy var lastName : String = {
         let names = (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<")
         return names[0].replacingOccurrences(of: "<", with: " " )
     }()
     
-    public private(set) lazy var firstName : String = {
+    @objc public private(set) lazy var firstName : String = {
         let names = (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<")
         var name = ""
         for i in 1 ..< names.count {
@@ -43,7 +43,7 @@ public class NFCPassportModel {
         return name.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }()
     
-    public private(set) lazy var passportMRZ : String = { return passportDataElements?["5F1F"] ?? "NOT FOUND" }()
+    @objc public private(set) lazy var passportMRZ : String = { return passportDataElements?["5F1F"] ?? "NOT FOUND" }()
     
         
     public private(set) lazy var documentSigningCertificate : X509Wrapper? = {
@@ -55,13 +55,13 @@ public class NFCPassportModel {
     }()
 
     // Extract data from COM
-    public private(set) lazy var LDSVersion : String = {
+    @objc public private(set) lazy var LDSVersion : String = {
         guard let com = dataGroupsRead[.COM] as? COM else { return "Unknown" }
         return com.version
     }()
     
     
-    public private(set) lazy var dataGroupsPresent : [String] = {
+    @objc public private(set) lazy var dataGroupsPresent : [String] = {
         guard let com = dataGroupsRead[.COM] as? COM else { return [] }
         return com.dataGroupsPresent
     }()
@@ -71,25 +71,25 @@ public class NFCPassportModel {
     public private(set) var dataGroupsRead : [DataGroupId:DataGroup] = [:]
     public private(set) var dataGroupHashes = [DataGroupId: DataGroupHash]()
 
-    public private(set) var passportCorrectlySigned : Bool = false
-    public private(set) var documentSigningCertificateVerified : Bool = false
-    public private(set) var passportDataNotTampered : Bool = false
-    public private(set) var activeAuthenticationPassed : Bool = false
-    public private(set) var verificationErrors : [Error] = []
+    @objc public private(set) var passportCorrectlySigned : Bool = false
+    @objc public private(set) var documentSigningCertificateVerified : Bool = false
+    @objc public private(set) var passportDataNotTampered : Bool = false
+    @objc public private(set) var activeAuthenticationPassed : Bool = false
+    @objc public private(set) var verificationErrors : [Error] = []
 
-    public var passportImage : UIImage? {
+    @objc public var passportImage : UIImage? {
         guard let dg2 = dataGroupsRead[.DG2] as? DataGroup2 else { return nil }
         
         return dg2.getImage()
     }
     
-    public var signatureImage : UIImage? {
+    @objc public var signatureImage : UIImage? {
         guard let dg7 = dataGroupsRead[.DG7] as? DataGroup7 else { return nil }
         
         return dg7.getImage()
     }
     
-    public var activeAuthenticationSupported : Bool {
+    @objc public var activeAuthenticationSupported : Bool {
         guard let dg15 = dataGroupsRead[.DG15] as? DataGroup15 else { return false }
         if dg15.ecdsaPublicKey != nil || dg15.rsaPublicKey != nil {
             return true
@@ -103,11 +103,6 @@ public class NFCPassportModel {
         guard let dg1 = dataGroupsRead[.DG1] as? DataGroup1 else { return nil }
         
         return dg1.elements
-    }
-        
-    
-    public init() {
-        
     }
     
     public func addDataGroup(_ id : DataGroupId, dataGroup: DataGroup ) {

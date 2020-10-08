@@ -79,14 +79,30 @@ public class PassportReader : NSObject {
     private var masterListURL : URL?
     private var shouldNotReportNextReaderSessionInvalidationErrorUserCanceled : Bool = false
 
+    @objc
     public init( masterListURL: URL? = nil ) {
         super.init()
         
         self.masterListURL = masterListURL
     }
     
+    @objc
     public func setMasterListURL( _ masterListURL : URL ) {
         self.masterListURL = masterListURL
+    }
+    
+    @objc
+    public func readPassport(
+        mrzKey: String,
+        completed: @escaping (NFCPassportModel?, Error?) -> ()
+    ) {
+        self.readPassport(
+            mrzKey: mrzKey,
+            tags: [],
+            skipSecureElements: true,
+            customDisplayMessage: nil,
+            completed: completed
+        )
     }
     
     public func readPassport( mrzKey : String, tags: [DataGroupId] = [], skipSecureElements :Bool = true, customDisplayMessage: ((NFCViewDisplayMessage) -> String?)? = nil, completed: @escaping (NFCPassportModel?, TagError?)->()) {
