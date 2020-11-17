@@ -1,3 +1,12 @@
+v1.0.13
+    Extract script (for creating masterlist files) now skips embedded masterlists which fail verification 
+    e.g. UnitedNations CSCA in current ICAO list (icaopkd-002-ml-000161.ldif).
+    You can now get the whole byte array for a datagroup (including headers) not just the body
+    Added dumpPassportData method to NFCPassportModel to save the passport datagroups as a String:base64String dictionary
+    Can now set the logLevel on the PassportReader - defaults to info
+    Added better comments for the ASN1 functions
+    Demo app now has ability to clear textfields
+    Demo app now has the ability to export passport data as JSON file (via ShareSheet)
 v1.0.12
     Fix for verifyECDSASignature - better handling of sigData so it compiles with Swift 5.3
     ResponseError now displays the SW tag values

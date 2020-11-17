@@ -24,14 +24,38 @@ struct DetailsView : View {
 
     var body: some View {
         GeometryReader { geometry in
-            return List {
-                ForEach( 0 ..< self.sectionNames.count ) { i in
-                    SectionGroup(sectionTitle: self.sectionNames[i], items: self.sections[i], itemWidth: (geometry.size.width / 2)-10)
+            VStack {
+                HStack {
+                    Spacer()
+                    Button( "Export passport" ) {
+                        sharePassport()
+
+                    } .padding()
+                }
+                List {
+                    ForEach( 0 ..< self.sectionNames.count ) { i in
+                        SectionGroup(sectionTitle: self.sectionNames[i], items: self.sections[i], itemWidth: (geometry.size.width / 2)-10)
+                    }
                 }
             }
         }
     }
     
+    func sharePassport() {
+        do {
+            if let dict = passportDetails.passport?.dumpPassportData() {
+                let data = try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
+                
+                let temporaryURL = URL(fileURLWithPath: NSTemporaryDirectory() + "passport.json")
+                try data.write(to: temporaryURL)
+                
+                let av = UIActivityViewController(activityItems: [temporaryURL], applicationActivities: nil)
+                UIApplication.shared.windows.first?.rootViewController?.present(av, animated: true, completion: nil)
+            }
+        } catch {
+            print( "ERROR - \(error)" )
+        }
+    }
 
     
     init(passportDetails: PassportDetails) {

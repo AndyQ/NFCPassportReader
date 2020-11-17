@@ -183,13 +183,15 @@ public func mac(key : [UInt8], msg : [UInt8]) -> [UInt8]{
 
 /// Take an asn.1 length, and return a couple with the decoded length in hexa and the total length of the encoding (1,2 or 3 bytes)
 ///
-/// >>> from pyPassport.asn1.asn1 import *
-/// >>> asn1Length("\x22")
-/// (34, 1)
-/// >>> asn1Length("\x81\xaa")
-/// (170, 2)
-/// >>> asn1Length("\x82\xaa\xbb")
-/// (43707, 3)
+/// Using Basic Encoding Rules (BER):
+/// If the first byte is <= 0x7F (0-127), then this is the total length of the data
+/// If the first byte is 0x81 then the length is the value of the next byte
+/// If the first byte is 0x82 then the length is the value of the next two bytes
+/// If the first byte is 0x80 then the length is indefinite (never seen this and not sure exactle what it means)
+/// e.g.
+/// if the data was 0x02, 0x11, 0x12, then the amount of data we have to read is two bytes, and the actual data is [0x11, 0x12]
+/// If the length was 0x81,0x80,....... then we know that the data length is contained in the next byte - 0x80 (128), so the amount of data to read is 128 bytes
+/// If the length was 0x82,0x01,0x01,....... then we know that the data length is contained in the next 2 bytes - 0x01, 0x01 (257) so the amount of data to read is 257 bytes
 ///
 /// @param data: A length value encoded in the asn.1 format.
 /// @type data: A binary string.
@@ -218,14 +220,8 @@ public func asn1Length(_ data : [UInt8]) throws -> (Int, Int)  {
     
 }
 
-/// Take an hexa value and return the value encoded in the asn.1 format.
+/// Take an hexavalue and return the value encoded in the asn.1 format.
 ///
-/// >>> binToHexRep(toAsn1Length(34))
-/// '22'
-/// >>> binToHexRep(toAsn1Length(170))
-/// '81aa'
-/// >>> binToHexRep(toAsn1Length(43707))
-/// '82aabb'
 ///
 /// @param data: The value to encode in asn.1
 /// @type data: An integer (hexa)

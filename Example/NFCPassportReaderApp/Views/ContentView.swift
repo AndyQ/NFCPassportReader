@@ -11,16 +11,18 @@ import Combine
 import NFCPassportReader
 
 struct ClearButton: ViewModifier {
-@Binding var text: String
- 
+    @Binding var text: String
+    
 public func body(content: Content) -> some View {
     HStack {
         content
-        Button(action: {
-            self.text = ""
-        }) {
-            Image(systemName: "multiply.circle.fill")
-                .foregroundColor(.secondary)
+        if ( text != "" ) {
+            Button(action: {
+                self.text = ""
+            }) {
+                Image(systemName: "multiply.circle.fill")
+                    .foregroundColor(.secondary)
+            }
         }
     }
 }
@@ -42,29 +44,6 @@ struct BackgroundView : UIViewRepresentable {
     }
 }
 
-// This hopefully will display a textfield with a clear button - doesn't quite work yet though but left here in the hope it will soon!
-/*
-struct ClearTextView: View {
-    var placeHolder: String
-    @Binding var text: String
-
-    var body: some View {
-        ZStack {
-            HStack {
-                TextField(placeHolder, text:$text)
-                if !text.isEmpty {
-                    Button(action: {
-                        self.text = ""
-                    }) {
-                        Image(systemName: "multiply.circle")
-                    }
-                }
-            }
-        }
-    }
-}
-*/
-
 struct ContentView : View {
     @ObservedObject var passportDetails = PassportDetails()
 
@@ -84,19 +63,9 @@ struct ContentView : View {
                     .font(.title)
                     .padding(0)
 
-                // Will switch over to this when SwiftUI Actually updates the screen - the underlying binding IS updated but its not reflected on display
-                // as of Version 11.2.1 (11B53)/iOS 13.3 Beta 1
-//                ClearTextView(placeHolder: "Passport number", text: $passportDetails.passportNumber)
-//                .textContentType(.name)
-//                .foregroundColor(Color.primary)
-//                .textFieldStyle(RoundedBorderTextFieldStyle())
-//                .padding([.leading, .trailing])
                 TextField("Passport number",
-                          text: $passportDetails.passportNumber, onEditingChanged: { (editing) in
-//                          if editing {
-//                            self.$passportDetails.passportNumber.wrappedValue = ""
-//                            }
-                    })
+                          text: $passportDetails.passportNumber)
+                    .modifier(ClearButton(text: $passportDetails.passportNumber))
                     .textContentType(.name)
                     .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -104,12 +73,14 @@ struct ContentView : View {
 
                 TextField("Date of birth (YYMMDD)",
                           text: $passportDetails.dateOfBirth)
+                    .modifier(ClearButton(text: $passportDetails.dateOfBirth))
                     .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
                 
                 TextField("Passport expiry date (YYMMDD)",
                           text: $passportDetails.expiryDate)
+                    .modifier(ClearButton(text: $passportDetails.expiryDate))
                     .foregroundColor(Color.primary)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])

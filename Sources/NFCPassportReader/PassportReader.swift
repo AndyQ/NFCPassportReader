@@ -79,9 +79,10 @@ public class PassportReader : NSObject {
     private var masterListURL : URL?
     private var shouldNotReportNextReaderSessionInvalidationErrorUserCanceled : Bool = false
 
-    public init( masterListURL: URL? = nil ) {
+    public init( logLevel: LogLevel = .info, masterListURL: URL? = nil ) {
         super.init()
         
+        Log.logLevel = logLevel
         self.masterListURL = masterListURL
     }
     

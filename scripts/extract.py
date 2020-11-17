@@ -29,17 +29,22 @@ def main( filename ):
     # Identify Type of file - either LDIF or MasterList (CMS)
     if filename.lower().endswith( ".ldif" ):
         # Read and parse LDIF File
-        masterLists = readAndExtractLDIFFile( filename )
+        (cns,masterLists) = readAndExtractLDIFFile( filename )
     elif filename.lower().endswith( ".ml" ):
         masterLists = readInMasterListFile( filename )
 
     print( f"Read in {len(masterLists)} masterlist files" )
+    print( f"Read in {cns} CNS" )
 
     for index, ml in enumerate(masterLists):
         certNr = 1
         print( "-----------------------------------" )
-        print(f"Verifying and extracting MasterList {index}")
-        extractCertsFromMasterlist( ml )
+        print(f"Verifying and extracting MasterList {index} - {cns[index]}")
+        try:
+            extractCertsFromMasterlist( ml )
+        except Exception as e:
+            print( "Error extracting certs from masterlist") 
+            print( "Skipping this masterlist - certs from this list will not be included.")
 
     print( "====================================" )
     print( f"Created MasterList.pem containing {totalCerts} certificates")
@@ -49,19 +54,25 @@ def readAndExtractLDIFFile( file ):
     
     adding = False
     certs = []
+    cns = []
+    cn = ""
     with open(file, "r") as inf:
         for line in inf:
-            if line.startswith( "CscaMasterListData:: "):
+            if line.startswith( "cn: "):
+                cn = line[4:]
+            elif line.startswith( "CscaMasterListData:: "):
                 cert = line[21:]
                 adding = True
             elif not line.startswith(" ") and adding == True:
                 adding = False
                 certs.append( cert )
+                cns.append( cn )
                 cert = ""
             elif adding == True:
                 cert += line
         if cert != "":
             certs.append( cert )
+            cns.append( cn )
 
     print( f"Read {len(certs)} certs" )
     masterLists = []
@@ -69,7 +80,7 @@ def readAndExtractLDIFFile( file ):
         data = base64.b64decode(cert)
         masterLists.append( data )
 
-    return masterLists
+    return (cns,masterLists)
 
 def readInMasterListFile( file ):
     with open(file, "rb") as inf:

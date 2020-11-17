@@ -121,6 +121,20 @@ public class NFCPassportModel {
         return dataGroupsRead[id]
     }
 
+    /// Dumps the passport data 
+    /// - Returns: dictionary of DataGroup ids and Base64 encoded data
+    public func dumpPassportData() -> [String:String] {
+        var ret = [String:String]()
+        for dg in [.SOD, .COM] + self.dataGroupsAvailable {
+            if let dataGroup = self.dataGroupsRead[dg] {
+                let val = Data(dataGroup.data)
+                let base64 = val.base64EncodedString()
+                ret[dg.getName()] = base64
+            }
+        }
+        return ret
+    }
+
     public func getHashesForDatagroups( hashAlgorythm: String ) -> [DataGroupId:[UInt8]]  {
         var ret = [DataGroupId:[UInt8]]()
         

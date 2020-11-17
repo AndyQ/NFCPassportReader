@@ -119,7 +119,7 @@ struct PassportView_Previews : PreviewProvider {
     @ObservedObject static var pd = PassportDetails()
     static var previews: some View {
 //        let pptData = "P<GBRTEST<<TEST<TEST<<<<<<<<<<<<<<<<<<<<<<<<1234567891GBR8001019M2106308<<<<<<<<<<<<<<04"
-//        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: false, dataValid: false )        
+//        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: false, dataValid: false )
         
         return Group {
             PassportView(passportDetails: pd)

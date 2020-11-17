@@ -45,7 +45,7 @@ public class DataGroup {
     public private(set) var body : [UInt8] = []
 
     /// Data contains the whole DataGroup data (as that is what the hash is calculated from
-    private var data : [UInt8] = []
+    public private(set) var data : [UInt8] = []
 
     var pos = 0
     
