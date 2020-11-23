@@ -503,7 +503,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.qnb.sampleapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iagent.nfcpassportreader;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = SAMPLE_APP_DEV_23.11.20;
 				SWIFT_OBJC_BRIDGING_HEADER = "NFCPassportReaderApp/NFCPassportReaderApp-Bridging-Header.h";
@@ -528,7 +528,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.qnb.sampleapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iagent.nfcpassportreader;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = SAMPLE_APP_DEV_23.11.20;
 				SWIFT_OBJC_BRIDGING_HEADER = "NFCPassportReaderApp/NFCPassportReaderApp-Bridging-Header.h";
