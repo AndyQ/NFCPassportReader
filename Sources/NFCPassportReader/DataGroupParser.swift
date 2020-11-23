@@ -594,7 +594,7 @@ public class DataGroup14 : DataGroup {
 @available(iOS 13, *)
 public class DataGroup15 : DataGroup {
     
-    public private(set) var rsaPublicKey : OpaquePointer?
+    public private(set) var rsaPublicKey : [UInt8]?
     public private(set) var ecdsaPublicKey : UnsafeMutablePointer<EVP_PKEY>?
     
     deinit {

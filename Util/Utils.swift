@@ -26,6 +26,15 @@ extension FileManager {
     }
 }
 
+extension Int {
+  public func handleProgress() -> String {
+        let p = (self / 20)
+        let full = String(repeating: "🟢 ", count: p)
+        let empty = String(repeating: "⚪️ ", count: 5 - p)
+        return "\(full)\(empty)"
+    }
+}
+
 extension StringProtocol {
     subscript(bounds: CountableClosedRange<Int>) -> SubSequence {
         let start = index(startIndex, offsetBy: bounds.lowerBound)

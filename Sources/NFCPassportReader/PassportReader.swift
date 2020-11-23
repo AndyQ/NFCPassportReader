@@ -25,10 +25,10 @@ extension NFCViewDisplayMessage {
         case .requestPresentPassport:
             return "Hold your iPhone near an NFC enabled passport."
         case .authenticatingWithPassport(let progress):
-            let progressString = handleProgress(percentualProgress: progress)
+            let progressString = progress.handleProgress()
             return "Authenticating with passport.....\n\n\(progressString)"
         case .readingDataGroupProgress(let dataGroup, let progress):
-            let progressString = handleProgress(percentualProgress: progress)
+            let progressString = progress.handleProgress()
             return "Reading \(dataGroup).....\n\n\(progressString)"
         case .error(let tagError):
             switch tagError {
@@ -48,13 +48,6 @@ extension NFCViewDisplayMessage {
         case .successfulRead:
             return "Passport read successfully"
         }
-    }
-
-    func handleProgress(percentualProgress: Int) -> String {
-        let p = (percentualProgress/20)
-        let full = String(repeating: "🟢 ", count: p)
-        let empty = String(repeating: "⚪️ ", count: 5-p)
-        return "\(full)\(empty)"
     }
 }
 
