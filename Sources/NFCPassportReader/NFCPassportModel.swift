@@ -77,6 +77,7 @@ public class NFCPassportModel {
     public private(set) var documentSigningCertificateVerified : Bool = false
     public private(set) var passportDataNotTampered : Bool = false
     public private(set) var activeAuthenticationPassed : Bool = false
+    public private(set) var cscaSigningCertificateVerified : Bool = false
     public private(set) var verificationErrors : [Error] = []
 
     public var passportImage : UIImage? {
@@ -223,6 +224,7 @@ public class NFCPassportModel {
         switch rc {
         case .success(let csca):
             self.certificateSigningGroups[.issuerSigningCertificate] = csca
+            self.cscaSigningCertificateVerified = true
         case .failure(let error):
             throw error
         }
