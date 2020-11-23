@@ -25,15 +25,8 @@ class PassportDetails : ObservableObject {
         d.set(passportNumber, forKey: "passportNumber")
         d.set(dateOfBirth, forKey: "dateOfBirth")
         d.set(expiryDate, forKey: "expiryDate")
-        
-        // Calculate checksums
-        let passportNrChksum = calcCheckSum(passportNumber)
-        let dateOfBirthChksum = calcCheckSum(dateOfBirth)
-        let expiryDateChksum = calcCheckSum(expiryDate)
-        
-        let mrzKey = "\(passportNumber)\(passportNrChksum)\(dateOfBirth)\(dateOfBirthChksum)\(expiryDate)\(expiryDateChksum)"
-        
-        return mrzKey
+            
+        return NFCKeyUtils.instance.getMRZKey(idNumber: passportNumber, birthDate: dateOfBirth, cardExpiryDate: expiryDate)
     }
     
     func calcCheckSum( _ checkString : String ) -> Int {

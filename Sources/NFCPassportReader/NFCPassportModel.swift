@@ -17,7 +17,7 @@ public struct DataGroupHash {
 
 @available(iOS 13, *)
 public class NFCPassportModel {
-    
+        
     public private(set) lazy var documentType : String = { return String( passportDataElements?["5F03"]?.first ?? "?" ) }()
     public private(set) lazy var documentSubType : String = { return String( passportDataElements?["5F03"]?.last ?? "?" ) }()
     public private(set) lazy var personalNumber : String = { return (passportDataElements?["53"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
@@ -27,6 +27,8 @@ public class NFCPassportModel {
     public private(set) lazy var dateOfBirth : String = { return passportDataElements?["5F57"] ?? "?" }()
     public private(set) lazy var gender : String = { return passportDataElements?["5F35"] ?? "?" }()
     public private(set) lazy var nationality : String = { return passportDataElements?["5F2C"] ?? "?" }()
+    
+    public private(set) var requestObject : ActiveAuthenticationRequest?
 
     public private(set) lazy var lastName : String = {
         let names = (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<")
@@ -73,6 +75,8 @@ public class NFCPassportModel {
 
     public private(set) var passportCorrectlySigned : Bool = false
     public private(set) var documentSigningCertificateVerified : Bool = false
+    public private(set) var cscaSigningCertificateVerified : Bool = false
+    
     public private(set) var passportDataNotTampered : Bool = false
     public private(set) var activeAuthenticationPassed : Bool = false
     public private(set) var verificationErrors : [Error] = []
@@ -179,8 +183,9 @@ public class NFCPassportModel {
         // Get AA Public key
         self.activeAuthenticationPassed = false
         guard  let dg15 = self.dataGroupsRead[.DG15] as? DataGroup15 else { return }
-        if let _ = dg15.rsaPublicKey {
-            // TODO
+        
+        if let rsaPublicKey = dg15.rsaPublicKey {
+            requestObject = ActiveAuthenticationRequest(publicKey: rsaPublicKey, challenge: challenge, signature: signature)
         } else if let ecdsaPublicKey = dg15.ecdsaPublicKey {
             if OpenSSLUtils.verifyECDSASignature( publicKey:ecdsaPublicKey, signature: signature, data: challenge ) {
                 self.activeAuthenticationPassed = true
@@ -221,6 +226,7 @@ public class NFCPassportModel {
         switch rc {
         case .success(let csca):
             self.certificateSigningGroups[.issuerSigningCertificate] = csca
+            self.cscaSigningCertificateVerified = true
         case .failure(let error):
             throw error
         }
@@ -334,5 +340,30 @@ public class NFCPassportModel {
         Log.debug( "      - Hashes     - \(sodHashes)" )
         
         return (sodHashAlgo, sodHashes)
+    }
+}
+
+public struct ActiveAuthenticationRequest {
+    var publicKey : [UInt8]
+    var challenge : [UInt8]
+    var signature : [UInt8]
+
+    public var publicKeyBase64String : String
+    public var challengeBase64String : String
+    public var signatureBase64String : String
+
+    init (publicKey : [UInt8] , challenge : [UInt8] , signature : [UInt8]){
+        self.publicKey = publicKey
+        self.challenge = challenge
+        self.signature = signature
+        
+        let publicKeyData = NSData(bytes: publicKey, length: publicKey.count)
+        let challengeData = NSData(bytes: challenge, length: challenge.count)
+        let signatureData = NSData(bytes: signature, length: signature.count)
+        
+        
+        self.publicKeyBase64String = publicKeyData.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0))
+        self.challengeBase64String = challengeData.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0))
+        self.signatureBase64String = signatureData.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0))
     }
 }

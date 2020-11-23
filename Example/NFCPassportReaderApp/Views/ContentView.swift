@@ -122,6 +122,7 @@ extension ContentView {
     func scanPassport( ) {
         self.showDetails = false
         let mrzKey = self.passportDetails.getMRZKey()
+//
 
         // Set the masterListURL on the Passport Reader to allow auto passport verification
         let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem")!
@@ -136,6 +137,11 @@ extension ContentView {
             switch displayMessage {
                 case .requestPresentPassport:
                     return "Hold your iPhone near an NFC enabled passport."
+            case .readingDataGroupProgress(let dataGroup, let progress):
+                
+                let progrssString = progress.handleProgress()
+                return "Reading vb \(dataGroup).....\n\n\(progress)"
+                
                 default:
                     // Return nil for all other messages so we use the provided default
                     return nil

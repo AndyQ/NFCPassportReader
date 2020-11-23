@@ -1,0 +1,6 @@
+framework module NFCPassportReader {
+  umbrella header "NFCPassportReader-umbrella.h"
+
+  export *
+  module * { export * }
+}

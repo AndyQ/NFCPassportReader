@@ -1,0 +1,6 @@
+framework module Pods_NFCPassportReaderAppTests {
+  umbrella header "Pods-NFCPassportReaderAppTests-umbrella.h"
+
+  export *
+  module * { export * }
+}
