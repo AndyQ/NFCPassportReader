@@ -43,6 +43,27 @@ public class NFCPassportModel {
         return name.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }()
     
+    
+//  adding capability to read different data such as residence address, place of birth, phone number from data group 11
+    
+    ///place of birth
+    public private(set) lazy var placeOfBirth : String = {
+        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11 else { return "State/City not available" }
+        return dg11.placeOfBirth ?? "State/City not available"
+    }()
+    
+    ///residence address
+    public private(set) lazy var residenceAddress : String = {
+        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11 else { return "Residence is not available at this time" }
+        return dg11.address ?? "Residence is not available at this time"
+    }()
+    
+    ///phone number
+    public private(set) lazy var phoneNumber : String = {
+        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11 else { return "Phone number could not be found" }
+        return dg11.telephone ?? "Phone number could not be found"
+    }()
+    
     public private(set) lazy var passportMRZ : String = { return passportDataElements?["5F1F"] ?? "NOT FOUND" }()
     
         
