@@ -608,13 +608,7 @@ public class DataGroup15 : DataGroup {
     
     
     override func parse(_ data: [UInt8]) throws {
-        
-        // the public key can either be in EC (elliptic curve) or RSA format
-        // Try ec
-        if let key = try OpenSSLUtils.readECPublicKey( data:body ) {
-            // NOTE We are responsible for freeing the key!
-            ecdsaPublicKey = key
-        }
+        self.rsaPublicKey = body
     }
 }
 
