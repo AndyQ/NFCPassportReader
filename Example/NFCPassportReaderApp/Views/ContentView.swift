@@ -10,22 +10,58 @@ import SwiftUI
 import Combine
 import NFCPassportReader
 
-struct ClearButton: ViewModifier {
-    @Binding var text: String
+struct MyButtonStyle: ButtonStyle {
     
-public func body(content: Content) -> some View {
-    HStack {
-        content
-        if ( text != "" ) {
+    func makeBody(configuration: Self.Configuration) -> some View {
+        configuration.label
+            .foregroundColor(.secondary)
+    }
+    
+}
+
+
+struct CheckBoxView: View {
+    @Binding var checked: Bool
+    var text : String
+    
+    var body: some View {
+        HStack() {
+
             Button(action: {
-                self.text = ""
+                self.checked.toggle()
             }) {
-                Image(systemName: "multiply.circle.fill")
-                    .foregroundColor(.secondary)
+                HStack(alignment: .center, spacing: 10) {
+
+                Text(text)
+                Image(systemName:self.checked ? "checkmark.square.fill" : "square")
+                }
             }
+            .frame(height: 44, alignment: .center)
+            .padding(.trailing)
+            .foregroundColor(Color.secondary)
+            .background(Color(red: 0.999, green: 0.999, blue: 0.999))
+            .buttonStyle(MyButtonStyle())
+//            .buttonStyle(PlainButtonStyle())
         }
     }
 }
+
+struct ClearButton: ViewModifier {
+    @Binding var text: String
+    
+    public func body(content: Content) -> some View {
+        HStack {
+            content
+            if ( text != "" ) {
+                Button(action: {
+                    self.text = ""
+                }) {
+                    Image(systemName: "multiply.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
 }
 
 
@@ -51,12 +87,17 @@ struct ContentView : View {
     @State private var showDetails = false
     @State private var alertTitle : String = ""
     @State private var alertMessage : String = ""
+    @State private var captureLog : Bool = true
+    @State private var logLevel : Int = 0
     @State var page = 0
+    
+    private var logLevels = ["Verbose", "Debug", "Info", "Warning", "Error"]
 
     private let passportReader = PassportReader()
 
     var body: some View {
         ZStack {
+
             VStack {
                 Text( "Enter passport details" )
                     .foregroundColor(Color.secondary)
@@ -85,6 +126,26 @@ struct ContentView : View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding([.leading, .trailing])
                 
+                HStack {
+                    CheckBoxView( checked: $captureLog, text: "Capture logs" )
+                        .padding([.leading, .trailing])
+                    Spacer()
+                    Button( action: {
+                        shareLogs()
+                    }) {
+                        Text( "Share logs" )
+                            .foregroundColor(.secondary)
+                    }
+                    .padding([.trailing])
+                }
+                
+                Picker(selection: $logLevel, label:Text("") ) {
+                    ForEach(0 ..< logLevels.count) {
+                        Text(logLevels[$0]).tag(0)
+                    }
+                }.pickerStyle(SegmentedPickerStyle())
+                .padding([.leading, .trailing])
+
                 Button(action: {
                     self.scanPassport()
                 }) {
@@ -93,11 +154,13 @@ struct ContentView : View {
                     .foregroundColor(passportDetails.isValid ? .secondary : Color.secondary.opacity(0.25))
                     }
                     .disabled( !passportDetails.isValid )
+                
                 Picker(selection: $page, label: Text("View?")) {
                     Text("Passport").tag(0)
                     Text("Details").tag(1)
                 }.pickerStyle(SegmentedPickerStyle())
                     .padding(.bottom,20)
+                    .padding([.leading, .trailing])
 
                 if page == 0 && showDetails {
                     PassportView(passportDetails:passportDetails)
@@ -119,6 +182,22 @@ struct ContentView : View {
 }
 
 extension ContentView {
+    
+    func shareLogs() {
+        do {
+            let arr = Log.logData
+            let data = try JSONSerialization.data(withJSONObject: arr, options: .prettyPrinted)
+            
+            let temporaryURL = URL(fileURLWithPath: NSTemporaryDirectory() + "passportreader.log")
+            try data.write(to: temporaryURL)
+            
+            let av = UIActivityViewController(activityItems: [temporaryURL], applicationActivities: nil)
+            UIApplication.shared.windows.first?.rootViewController?.present(av, animated: true, completion: nil)
+        } catch {
+            print( "ERROR - \(error)" )
+        }
+
+    }
     func scanPassport( ) {
         self.showDetails = false
         let mrzKey = self.passportDetails.getMRZKey()
@@ -131,7 +210,13 @@ extension ContentView {
 //        let dataGroups : [DataGroupId] = [.COM, .SOD, .DG1, .DG2, .DG7, .DG11, .DG12, .DG14, .DG15]
 //        passportReader.readPassport(mrzKey: mrzKey, tags:dataGroups, completed: { (passport, error) in
         
-        // This salso how you can overriding the default messages displayed by the NFC View Controller
+        Log.logLevel = LogLevel(rawValue: self.logLevel) ?? .info
+        if captureLog {
+            Log.storeLogs = true
+        }
+        Log.clearStoredLogs()
+        
+        // This is also how you can override the default messages displayed by the NFC View Controller
         passportReader.readPassport(mrzKey: mrzKey, customDisplayMessage: { (displayMessage) in
             switch displayMessage {
                 case .requestPresentPassport:

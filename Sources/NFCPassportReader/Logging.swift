@@ -19,6 +19,8 @@ public enum LogLevel : Int {
 
 public class Log {
     public static var logLevel : LogLevel = .info
+    public static var storeLogs = false
+    public static var logData = [String]()
 
     public class func verbose( _ msg : String ) {
         log( .verbose, msg )
@@ -36,9 +38,17 @@ public class Log {
         log( .error, msg )
     }
     
+    public class func clearStoredLogs() {
+        logData.removeAll()
+    }
+    
     class func log( _ logLevel : LogLevel, _ msg : String ) {
         if self.logLevel.rawValue <= logLevel.rawValue {
             print( msg )
+            
+            if storeLogs {
+                logData.append( msg)
+            }
         }
     }
 }

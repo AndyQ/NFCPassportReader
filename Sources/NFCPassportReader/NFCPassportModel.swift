@@ -45,7 +45,27 @@ public class NFCPassportModel {
     
     public private(set) lazy var passportMRZ : String = { return passportDataElements?["5F1F"] ?? "NOT FOUND" }()
     
-        
+    // Extract fields from DG11 if present
+    public private(set) lazy var placeOfBirth : String? = {
+        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
+              let placeOfBirth = dg11.placeOfBirth else { return nil }
+        return placeOfBirth
+    }()
+    
+    /// residence address
+    public private(set) lazy var residenceAddress : String? = {
+        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
+              let address = dg11.address else { return nil }
+        return address
+    }()
+    
+    /// phone number
+    public private(set) lazy var phoneNumber : String? = {
+        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
+              let telephone = dg11.telephone else { return nil }
+        return telephone
+    }()
+
     public private(set) lazy var documentSigningCertificate : X509Wrapper? = {
         return certificateSigningGroups[.documentSigningCertificate]
     }()

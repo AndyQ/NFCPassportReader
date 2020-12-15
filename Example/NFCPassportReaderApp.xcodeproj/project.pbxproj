@@ -37,6 +37,8 @@
 		0E13B507954E1D53F42BD498 /* Pods-NFCPassportReaderAppTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NFCPassportReaderAppTests.release.xcconfig"; path = "Target Support Files/Pods-NFCPassportReaderAppTests/Pods-NFCPassportReaderAppTests.release.xcconfig"; sourceTree = "<group>"; };
 		32FECA885A76030E1893F05A /* Pods-NFCPassportReaderApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NFCPassportReaderApp.debug.xcconfig"; path = "Target Support Files/Pods-NFCPassportReaderApp/Pods-NFCPassportReaderApp.debug.xcconfig"; sourceTree = "<group>"; };
 		388788F527905BEB9506642C /* Pods_NFCPassportReaderAppTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_NFCPassportReaderAppTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1095E982588FBB100D2A46A /* CHANGELOG */ = {isa = PBXFileReference; lastKnownFileType = text; name = CHANGELOG; path = ../../CHANGELOG; sourceTree = "<group>"; };
+		A1095E9B2589032D00D2A46A /* readme.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = readme.md; path = ../../readme.md; sourceTree = "<group>"; };
 		A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NFCPassportReaderApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A16EB23022A9E9E10008F53F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A16EB23222A9E9E10008F53F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -123,6 +125,8 @@
 				A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */,
 				A16EB23E22A9E9E20008F53F /* Info.plist */,
 				A1DD3F3E22C535F00067255C /* masterList.pem */,
+				A1095E982588FBB100D2A46A /* CHANGELOG */,
+				A1095E9B2589032D00D2A46A /* readme.md */,
 			);
 			path = NFCPassportReaderApp;
 			sourceTree = "<group>";
@@ -496,6 +500,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = NFCPassportReaderApp/NFCPassportReader.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3FGHH7FLK4;
 				INFOPLIST_FILE = NFCPassportReaderApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -519,6 +524,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = NFCPassportReaderApp/NFCPassportReader.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3FGHH7FLK4;
 				INFOPLIST_FILE = NFCPassportReaderApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

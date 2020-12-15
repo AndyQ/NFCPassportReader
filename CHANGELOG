@@ -1,3 +1,10 @@
+v1.0.14
+    Merged pull request from @JokeCoder - to expose phone number, residence address and place of birth from DG11 if present.
+    Changed logging to be able to store all passport logs to a temporary array for sharing
+    Example app can now capture logs and share them
+    Changed TagReader - now uses LE - 256 for most reads, and only read a specific data amount if maxDataToRead (le) is not set to 256.
+        This seems to fix an issue when reading the image and it fails on the last read and drops down to a smaller size. (iOS14 change?)
+    
 v1.0.13
     Extract script (for creating masterlist files) now skips embedded masterlists which fail verification 
     e.g. UnitedNations CSCA in current ICAO list (icaopkd-002-ml-000161.ldif).

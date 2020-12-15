@@ -196,7 +196,7 @@ public class TagReader {
     }
     
     func reduceDataReadingAmount() {
-        if maxDataLengthToRead == 256 {
+        if maxDataLengthToRead > 0xA0 {
             maxDataLengthToRead = 0xA0
         }
     }
@@ -227,7 +227,7 @@ public class TagReader {
     }
 
     func doMutualAuthentication( cmdData : Data, completed: @escaping (ResponseAPDU?, TagError?)->() ) {
-        let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x82, p1Parameter: 0, p2Parameter: 0, data: cmdData, expectedResponseLength: 40)
+        let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x82, p1Parameter: 0, p2Parameter: 0, data: cmdData, expectedResponseLength: 256)
 
         send( cmd: cmd, completed: completed )
     }
@@ -280,7 +280,7 @@ public class TagReader {
     
     func readBinaryData( leftToRead: Int, amountRead : Int, completed: @escaping ([UInt8]?, TagError?)->() ) {
         var readAmount : Int = maxDataLengthToRead
-        if leftToRead < maxDataLengthToRead {
+        if maxDataLengthToRead != 256 && leftToRead < maxDataLengthToRead {
             readAmount = leftToRead
         }
         
