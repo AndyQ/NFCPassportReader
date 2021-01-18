@@ -158,6 +158,8 @@ extension PassportReader : NFCTagReaderSessionDelegate {
     public func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
         Log.debug( "tagReaderSession:didDetect - \(tags[0])" )
         if tags.count > 1 {
+            Log.debug( "tagReaderSession:more than 1 tag detected! - \(tags)" )
+
             let errorMessage = NFCViewDisplayMessage.error(.MoreThanOneTagFound)
             self.invalidateSession(errorMessage: errorMessage, error: TagError.MoreThanOneTagFound)
             return
@@ -169,19 +171,25 @@ extension PassportReader : NFCTagReaderSessionDelegate {
         case let .iso7816(tag):
             passportTag = tag
         default:
+            Log.debug( "tagReaderSession:invalid tag detected!!!" )
+
             let errorMessage = NFCViewDisplayMessage.error(TagError.TagNotValid)
             self.invalidateSession(errorMessage:errorMessage, error: TagError.TagNotValid)
             return
         }
         
+        
         // Connect to tag
+        Log.debug( "tagReaderSession:connecting to tag - \(tag)" )
         session.connect(to: tag) { [unowned self] (error: Error?) in
             if error != nil {
+                Log.debug( "tagReaderSession:failed to connect to tag - \(error?.localizedDescription ?? "Unknown error")" )
                 let errorMessage = NFCViewDisplayMessage.error(TagError.ConnectionError)
                 self.invalidateSession(errorMessage: errorMessage, error: TagError.ConnectionError)
                 return
             }
             
+            Log.debug( "tagReaderSession:connected to tag - starting authentication" )
             self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.authenticatingWithPassport(0) )
 
             self.tagReader = TagReader(tag:passportTag)

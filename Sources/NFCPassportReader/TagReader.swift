@@ -47,6 +47,7 @@ public enum TagError: Error {
     case InvalidMRZKey
     case MoreThanOneTagFound
 
+    
     var value: String {
         switch self {
         case .ResponseError(let errMsg, _, _): return errMsg
@@ -74,6 +75,14 @@ public enum TagError: Error {
         }
     }
 }
+
+@available(iOS 13, *)
+extension TagError: LocalizedError {
+    public var errorDescription: String? {
+        return NSLocalizedString(value, comment: "My error")
+    }
+}
+
 
 @available(iOS 13, *)
 public enum DataGroupId : Int, CaseIterable {
@@ -187,7 +196,7 @@ public struct ResponseAPDU {
 public class TagReader {
     var tag : NFCISO7816Tag
     var secureMessaging : SecureMessaging?
-    var maxDataLengthToRead : Int = 256
+    var maxDataLengthToRead : Int = 0xA0  // Should be able to use 256 to read arbitrary amounts of data t full speed BUT this isn't supported across all passports so for reliability just use the smaller amount.
 
     var progress : ((Int)->())?
 
