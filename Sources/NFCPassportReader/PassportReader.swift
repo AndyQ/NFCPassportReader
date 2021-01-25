@@ -73,6 +73,7 @@ public class PassportReader : NSObject {
     private var tagReader : TagReader?
     private var bacHandler : BACHandler?
     private var mrzKey : String = ""
+    private var dataAmountToReadOverride : Int? = nil
     
     private var scanCompletedHandler: ((NFCPassportModel?, TagError?)->())!
     private var nfcViewDisplayMessageHandler: ((NFCViewDisplayMessage) -> String?)?
@@ -88,6 +89,14 @@ public class PassportReader : NSObject {
     
     public func setMasterListURL( _ masterListURL : URL ) {
         self.masterListURL = masterListURL
+    }
+    
+    // This function allows you to override the amount of data the TagReader tries to read from the NFC
+    // chip. NOTE - this really shouldn't be used for production but is useful for testing as different
+    // passports support different data amounts.
+    // It appears that the most reliable is 0xA0 (160 chars) but some will support arbitary reads (0xFF or 256)
+    public func overrideNFCDataAmountToRead( amount: Int ) {
+        dataAmountToReadOverride = amount
     }
     
     public func readPassport( mrzKey : String, tags: [DataGroupId] = [], skipSecureElements :Bool = true, customDisplayMessage: ((NFCViewDisplayMessage) -> String?)? = nil, completed: @escaping (NFCPassportModel?, TagError?)->()) {
@@ -193,6 +202,11 @@ extension PassportReader : NFCTagReaderSessionDelegate {
             self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.authenticatingWithPassport(0) )
 
             self.tagReader = TagReader(tag:passportTag)
+            
+            if let newAmount = self.dataAmountToReadOverride {
+                self.tagReader?.overrideDataAmountToRead(newAmount: newAmount)
+            }
+            
             self.tagReader!.progress = { [unowned self] (progress) in
                 if let dgId = self.currentlyReadingDataGroup {
                     self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.readingDataGroupProgress(dgId, progress) )

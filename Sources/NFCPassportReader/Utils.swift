@@ -276,9 +276,25 @@ func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
     #endif
 }
 
+/// This function calculates a SHA512 Hash of the input data
+/// @param data: a byte array of data
+/// @return: A SHA512 hash of the data
+@available(iOS 13, *)
+func calcSHA512Hash( _ data: [UInt8] ) -> [UInt8] {
+    #if canImport(CryptoKit)
+    var sha1 = SHA512()
+    sha1.update(data: data)
+    let hash = sha1.finalize()
+    
+    return Array(hash)
+    #else
+    fatalError("Couldn't import CryptoKit")
+    #endif
+}
+
 /// This function calculates a SHA384 Hash of the input data
 /// @param data: a byte array of data
-/// @return: A SHA1 hash of the data
+/// @return: A SHA384 hash of the data
 @available(iOS 13, *)
 func calcSHA384Hash( _ data: [UInt8] ) -> [UInt8] {
     #if canImport(CryptoKit)

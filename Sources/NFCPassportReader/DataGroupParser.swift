@@ -5,7 +5,7 @@
 //  Created by Andy Qua on 14/06/2019.
 //
 
-import Foundation
+import UIKit
 import OpenSSL
 
 @available(iOS 13, *)
@@ -92,12 +92,16 @@ public class DataGroup {
     
     public func hash( _ hashAlgorythm: String ) -> [UInt8]  {
         var ret : [UInt8] = []
-        if hashAlgorythm == "SHA256" {
-            ret = calcSHA256Hash(self.data)
-        } else if hashAlgorythm == "SHA1" {
+        if hashAlgorythm == "SHA1" {
             ret = calcSHA1Hash(self.data)
+        } else if hashAlgorythm == "SHA256" {
+            ret = calcSHA256Hash(self.data)
+        } else if hashAlgorythm == "SHA384" {
+            ret = calcSHA384Hash(self.data)
+        } else if hashAlgorythm == "SHA512" {
+            ret = calcSHA512Hash(self.data)
         }
-        
+
         return ret
     }
 

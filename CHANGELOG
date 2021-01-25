@@ -1,3 +1,15 @@
+v1.0.15
+    Reverted previous TagReader change and dropped MaxReadData back  back to 160 (A0) as this causes issues with older passports
+        not supporting arbitrary amounts and failing to re-establish connection. Means a slightly longer read time but better 
+        reliability (I hope)
+    Added better error messages (fixes the TagError 11 message) and debug messages
+    Locked OpenSSL version to 1.0.2.20 - (OpenSSL 1.0.2u).  There are currently issues upgrading to latest OpenSSL due to underlying
+        c-struct changes.
+    Sample app now correctly pads fields if not valid length (e.g. if a passport number if < 9 chars then pads with filler char (<)    
+    Added ability for Sample App to import a passport dump file IF a passport.json is included in the app bundle (will possibly look at being able to import from Files later)
+    Version is displayed in sample app
+
+    
 v1.0.14
     Merged pull request from @JokeCoder - to expose phone number, residence address and place of birth from DG11 if present.
     Changed logging to be able to store all passport logs to a temporary array for sharing

@@ -36,18 +36,18 @@ extension OpenSSLError: LocalizedError {
     }
 }
 
-class OpenSSLUtils {
+public class OpenSSLUtils {
     
     /// Initialised the OpenSSL Library
     /// Must be called prior to calling any OpenSSL functions
-    static func loadOpenSSL() {
+    public static func loadOpenSSL() {
         OPENSSL_add_all_algorithms_noconf();
         ERR_load_crypto_strings();
         SSL_load_error_strings();
     }
     
     /// Cleans up the OpenSSL library
-    static func cleanupOpenSSL() {
+    public static func cleanupOpenSSL() {
         CONF_modules_unload(1)
         OBJ_cleanup();
         EVP_cleanup();

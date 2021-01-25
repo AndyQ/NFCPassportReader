@@ -37,12 +37,14 @@ public class BACHandler {
             return
         }
         
+        Log.debug( "BACHandler - deriving Document Basic Access Keys" )
         _ = self.deriveDocumentBasicAccessKeys(mrz: mrzKey)
         
         // Make sure we clear secure messaging (could happen if we read an invalid DG or we hit a secure error
         tagReader.secureMessaging = nil
         
         // get Challenge
+        Log.debug( "BACHandler - Getting initial challenge" )
         tagReader.getChallenge() { [unowned self] (response, error) in
             
             guard let response = response else {

@@ -38,8 +38,8 @@ struct CheckBoxView: View {
             }
             .frame(height: 44, alignment: .center)
             .padding(.trailing)
-            .foregroundColor(Color.secondary)
-            .background(Color(red: 0.999, green: 0.999, blue: 0.999))
+//            .foregroundColor(Color.secondary)
+//            .background(Color.primary)
             .buttonStyle(MyButtonStyle())
 //            .buttonStyle(PlainButtonStyle())
         }
@@ -95,39 +95,46 @@ struct ContentView : View {
 
     private let passportReader = PassportReader()
 
+    func showImport() -> Bool {
+        return Bundle.main.path(forResource: "passport", ofType: "json") != nil
+    }
+    
     var body: some View {
         ZStack {
 
             VStack {
-                Text( "Enter passport details" )
-                    .foregroundColor(Color.secondary)
-                    .font(.title)
-                    .padding(0)
+                Group {
+                    Text( "Enter passport details" )
+                        .foregroundColor(Color.secondary)
+                        .font(.title)
+                        .padding(0)
 
-                TextField("Passport number",
-                          text: $passportDetails.passportNumber)
-                    .modifier(ClearButton(text: $passportDetails.passportNumber))
-                    .textContentType(.name)
-                    .foregroundColor(Color.primary)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding([.leading, .trailing])
+                    TextField("Passport number",
+                              text: $passportDetails.passportNumber)
+                        .modifier(ClearButton(text: $passportDetails.passportNumber))
+                        .textContentType(.name)
+                        .foregroundColor(Color.primary)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding([.leading, .trailing])
 
-                TextField("Date of birth (YYMMDD)",
-                          text: $passportDetails.dateOfBirth)
-                    .modifier(ClearButton(text: $passportDetails.dateOfBirth))
-                    .foregroundColor(Color.primary)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding([.leading, .trailing])
-                
-                TextField("Passport expiry date (YYMMDD)",
-                          text: $passportDetails.expiryDate)
-                    .modifier(ClearButton(text: $passportDetails.expiryDate))
-                    .foregroundColor(Color.primary)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding([.leading, .trailing])
+                    TextField("Date of birth (YYMMDD)",
+                              text: $passportDetails.dateOfBirth)
+                        .modifier(ClearButton(text: $passportDetails.dateOfBirth))
+                        .foregroundColor(Color.primary)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding([.leading, .trailing])
+                    
+                    TextField("Passport expiry date (YYMMDD)",
+                              text: $passportDetails.expiryDate)
+                        .modifier(ClearButton(text: $passportDetails.expiryDate))
+                        .foregroundColor(Color.primary)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding([.leading, .trailing])
+                }
                 
                 HStack {
                     CheckBoxView( checked: $captureLog, text: "Capture logs" )
+                        .foregroundColor(Color.secondary)
                         .padding([.leading, .trailing])
                     Spacer()
                     Button( action: {
@@ -137,6 +144,19 @@ struct ContentView : View {
                             .foregroundColor(.secondary)
                     }
                     .padding([.trailing])
+                }
+                
+                if ( self.showImport() ) {
+                    HStack {
+                        Button(action: {
+                            self.importPassport()
+                        }) {
+                            Text("Import passport")
+                        }
+                        .foregroundColor(.secondary)
+                        .padding([.leading])
+                        Spacer()
+                    }
                 }
                 
                 Picker(selection: $logLevel, label:Text("") ) {
@@ -162,14 +182,21 @@ struct ContentView : View {
                     .padding(.bottom,20)
                     .padding([.leading, .trailing])
 
-                if page == 0 && showDetails {
-                    PassportView(passportDetails:passportDetails)
-                        .frame(width: UIScreen.main.bounds.width-20, height: 220)
-                } else if page == 1 && showDetails {
-                    DetailsView(passportDetails:passportDetails)
-                }
+                Group {
+                    if page == 0 && showDetails {
+                        PassportView(passportDetails:passportDetails)
+                            .frame(width: UIScreen.main.bounds.width-20, height: 220)
+                    } else if page == 1 && showDetails {
+                        DetailsView(passportDetails:passportDetails)
+                    }
 
-                Spacer()
+                    Spacer()
+                    HStack {
+                        Text( "Version - \(UIApplication.version)" )
+                            .padding(.leading)
+                        Spacer()
+                    }
+                }
             }
             
 
@@ -198,6 +225,38 @@ extension ContentView {
         }
 
     }
+    
+    func importPassport() {
+        Log.logLevel = LogLevel(rawValue: self.logLevel) ?? .info
+        if captureLog {
+            Log.storeLogs = true
+        }
+        Log.clearStoredLogs()
+
+        do {
+            guard let file = Bundle.main.url(forResource: "passport", withExtension: "json"),
+                  let data = try? Data(contentsOf: file) else { return }
+        
+            let json = try JSONSerialization.jsonObject(with: data, options: [])
+            if let arr = json as? [String:String] {
+                let passport = NFCPassportModel(from: arr)
+                
+                let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem")!
+
+                OpenSSLUtils.loadOpenSSL()
+
+                passport.verifyPassport(masterListURL: masterListURL)
+
+                OpenSSLUtils.cleanupOpenSSL()
+
+                self.passportDetails.passport = passport
+                self.showDetails = true
+            }
+        } catch {
+            print( "Failed to import passport" )
+        }
+    }
+    
     func scanPassport( ) {
         self.showDetails = false
         let mrzKey = self.passportDetails.getMRZKey()

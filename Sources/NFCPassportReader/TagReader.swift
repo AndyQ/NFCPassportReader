@@ -196,12 +196,16 @@ public struct ResponseAPDU {
 public class TagReader {
     var tag : NFCISO7816Tag
     var secureMessaging : SecureMessaging?
-    var maxDataLengthToRead : Int = 0xA0  // Should be able to use 256 to read arbitrary amounts of data t full speed BUT this isn't supported across all passports so for reliability just use the smaller amount.
+    var maxDataLengthToRead : Int = 0xA0  // Should be able to use 256 to read arbitrary amounts of data at full speed BUT this isn't supported across all passports so for reliability just use the smaller amount.
 
     var progress : ((Int)->())?
 
-    init( tag: NFCISO7816Tag) {
+    init( tag: NFCISO7816Tag ) {
         self.tag = tag
+    }
+    
+    func overrideDataAmountToRead( newAmount : Int ) {
+        maxDataLengthToRead = newAmount
     }
     
     func reduceDataReadingAmount() {
@@ -209,7 +213,6 @@ public class TagReader {
             maxDataLengthToRead = 0xA0
         }
     }
-
 
 
     func readDataGroup( dataGroup: DataGroupId, completed: @escaping ([UInt8]?, TagError?)->() )  {
@@ -329,6 +332,7 @@ public class TagReader {
     
     func send( cmd: NFCISO7816APDU, completed: @escaping (ResponseAPDU?, TagError?)->() ) {
         
+        Log.debug( "TagReader - sending \(cmd)" )
         var toSend = cmd
         if let sm = secureMessaging {
             do {
@@ -336,24 +340,28 @@ public class TagReader {
             } catch {
                 completed( nil, TagError.UnableToProtectAPDU )
             }
-            Log.debug("[SM] \(toSend)" )
+            Log.debug("BACHandler: [SM] \(toSend)" )
         }
 
         tag.sendCommand(apdu: toSend) { [unowned self] (data, sw1, sw2, error) in
             if let error = error {
-                Log.error( "Error reading tag - \(error.localizedDescription)" )
+                Log.error( "TagReader - Error reading tag - \(error.localizedDescription))" )
                 completed( nil, TagError.ResponseError( error.localizedDescription, sw1, sw2 ) )
             } else {
+                Log.debug( "TagReader - Received response" )
                 var rep = ResponseAPDU(data: [UInt8](data), sw1: sw1, sw2: sw2)
-                
+
                 if let sm = self.secureMessaging {
                     do {
                         rep = try sm.unprotect(rapdu:rep)
-//                        Log.debug(String(format:"[SM] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
+                        Log.debug(String(format:"TagReader [SM - unprotected] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
                     } catch {
                         completed( nil, TagError.UnableToUnprotectAPDU )
                         return
                     }
+                } else {
+                    Log.debug(String(format:"TagReader [unprotected] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
+
                 }
                 
                 if rep.sw1 == 0x90 && rep.sw2 == 0x00 {

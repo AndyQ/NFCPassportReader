@@ -4,6 +4,7 @@ working
 .vscode
 scripts/*.pem
 test_sod.der
+passport.json
 
 # Xcode
 #

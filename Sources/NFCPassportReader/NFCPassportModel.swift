@@ -130,6 +130,23 @@ public class NFCPassportModel {
         
     }
     
+    public init( from dump: [String:String] ) {
+        for (key,value) in dump {
+            if let data = Data(base64Encoded: value) {
+                let bin = [UInt8](data)
+                do {
+                    let dg = try DataGroupParser().parseDG(data: bin)
+                    let dgId = DataGroupId.getIDFromName(name:key)
+                    self.addDataGroup( dgId, dataGroup:dg )
+                } catch {
+                    Log.error("Failed to import Datagroup - \(key) from dump - \(error)" )
+                }
+            }
+
+        }
+
+    }
+    
     public func addDataGroup(_ id : DataGroupId, dataGroup: DataGroup ) {
         self.dataGroupsRead[id] = dataGroup
         if id != .COM && id != .SOD {
@@ -305,7 +322,7 @@ public class NFCPassportModel {
     
     /// Parses an text ASN1 structure, and extracts the Hash Algorythm and Hashes contained from the Octect strings
     /// - Parameter content: the text ASN1 stucure format
-    /// - Returns: The Has Algorythm used - either SHA1 or SHA256, and a dictionary of hashes for the datagroups (currently only DG1 and DG2 are handled)
+    /// - Returns: The Hash Algorythm used - either SHA1 or SHA256, and a dictionary of hashes for the datagroups (currently only DG1 and DG2 are handled)
     private func parseSODSignatureContent( _ content : String ) throws -> (String, [DataGroupId : String]){
         var currentDG = ""
         var sodHashAlgo = ""
@@ -323,6 +340,8 @@ public class NFCPassportModel {
                     sodHashAlgo = "SHA256"
                 } else if line.contains( "sha384" ) {
                     sodHashAlgo = "SHA384"
+                } else if line.contains( "sha512" ) {
+                    sodHashAlgo = "SHA512"
                 }
             } else if line.contains("d=3" ) && line.contains( "INTEGER" ) {
                 if let range = line.range(of: "INTEGER") {

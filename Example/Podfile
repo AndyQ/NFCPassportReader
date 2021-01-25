@@ -3,7 +3,8 @@ platform :ios, '13.0'
 
 # Disable use of input/output files here so that when we build it includes any changes to the development pod
 # rather than having to manually clean and rebuuild each time
-install! 'cocoapods', :disable_input_output_paths => true
+# Note this is commented out as it breaks archive project! But useful for dev
+#install! 'cocoapods', :disable_input_output_paths => true
 
 target 'NFCPassportReaderApp' do
   # Comment the next line if you don't want to use dynamic frameworks
@@ -17,3 +18,4 @@ target 'NFCPassportReaderApp' do
     # Pods for testing
   end
 end
+
