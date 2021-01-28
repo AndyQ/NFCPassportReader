@@ -335,7 +335,9 @@ public class NFCPassportModel {
             signedData = try OpenSSLUtils.verifyAndGetSignedDataFromPKCS7(pkcs7Der: data)
             documentSigningCertificateVerified = true
         } catch {
-            signedData = try OpenSSLUtils.extractSignedDataNoVerificationFromPKCS7( pkcs7Der : data)
+            let p = SimpleASN1Parser()
+            let asn1 = try p.parse(data: data)
+            signedData = try OpenSSLUtils.extractEncapsulatedContentFromPKCS7( pkcs7Der : data, asn1: asn1)
         }
                 
         // Now Verify passport data by comparing compare Hashes in SOD against

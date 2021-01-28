@@ -8,6 +8,7 @@
 import Foundation
 import OpenSSL
 
+@available(iOS 13, *)
 public enum OpenSSLError: Error {
     case UnableToGetX509CertificateFromPKCS7(String)
     case UnableToVerifyX509CertificateForSOD(String)
@@ -18,6 +19,7 @@ public enum OpenSSLError: Error {
     case UnableToDecryptRSASignature(String)
 }
 
+@available(iOS 13, *)
 extension OpenSSLError: LocalizedError {
     public var errorDescription: String? {
         switch self {
@@ -39,6 +41,7 @@ extension OpenSSLError: LocalizedError {
     }
 }
 
+@available(iOS 13, *)
 public class OpenSSLUtils {
     
     /// Initialised the OpenSSL Library
@@ -154,7 +157,6 @@ public class OpenSSLUtils {
     /// - Parameter x509Cert: The X509 certificate (in PEM format) to verify
     /// - Parameter CAFile: The URL path of a file containing the list of certificates used to try to discover and build a trust chain
     /// - Returns: either the X509 issue signing certificate that was used to sign the passed in X509 certificate or an error
-    @available(iOS 13, *)
     static func verifyTrustAndGetIssuerCertificate( x509 : X509Wrapper, CAFile : URL ) -> Result<X509Wrapper, OpenSSLError> {
 
         guard let cert_ctx = X509_STORE_new() else { return .failure(OpenSSLError.UnableToVerifyX509CertificateForSOD("Unable to create certificate store")) }
@@ -225,8 +227,21 @@ public class OpenSSLUtils {
     /// Verifies the signed data section against the stored certificate and extracts the signed data section from a PKCS7 container (if present and valid)
     /// - Parameter pkcs7Der: The PKCS7 container in DER format
     /// - Returns: The signed data from a PKCS7 container if we could read it
+    ///
+    /// - Note: To test from the command line using openssl (NOTE NOT THE default mac version as it doesn't currently support CMS):
+    ///      extract the SOD Base64 from an exported passport (you will need to unescape slashes!) - save this to ppt.b64
+    ///      convert to binary (cat ppt.b64 | base64 -D > ppt.bin
+    ///      extract the der file from the SOD (which includes header) - tail -c+5 ppt.bin > aq.der (blindy discards header)
+    ///      convert der to PEM - openssl pkcs7 -in ppt.der --inform der -out ppt.pem -outform pem
+    ///      verify signature data against included document signing cert - openssl cms -verify -in ppt.pem -inform pem -noverify
+    ///           the -noverify is don't verify against the signers certifcate (as we don' thave that!)
+    ///
+    ///      This should return Verification Successful and the signed data
     static func verifyAndGetSignedDataFromPKCS7( pkcs7Der : Data ) throws -> Data {
 
+        return try verifyAndGetSignedDataFromPKCS7Manually(pkcs7Der: pkcs7Der)
+        
+        
         guard let inf = BIO_new(BIO_s_mem()) else { throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Unable to allocate input buffer") }
         defer { BIO_free(inf) }
 
@@ -236,6 +251,7 @@ public class OpenSSLUtils {
         let _ = pkcs7Der.withUnsafeBytes { (ptr) in
             BIO_write(inf, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self), Int32(pkcs7Der.count))
         }
+                        
         guard let cms = d2i_CMS_bio(inf, nil) else {
             throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Verification of P7 failed - unable to create CMS")
         }
@@ -255,31 +271,346 @@ public class OpenSSLUtils {
 
         return sigData
     }
-
-    /// Extracts the signed data section from a PKCS7 container (if present) but does NO verification., Just dumps the data
-    /// - Parameter pkcs7Der: The PKCS7 container in DER format
-    /// - Returns: The signed data from a PKCS7 container if we could read it
-    static func extractSignedDataNoVerificationFromPKCS7(pkcs7Der : Data ) throws -> Data {
-        // Dump ASN1 structre
-        let asn1 = try ASN1Parse(data: pkcs7Der)
+    
+    
+    static func verifyAndGetSignedDataFromPKCS7Manually( pkcs7Der : Data ) throws -> Data {
+        // Dump ASN1 structure
+        let p = SimpleASN1Parser()
+        let asn1 = try p.parse(data: pkcs7Der)
         
-        // Grab first OCTET value
-        var sigData : Data?
-        let lines = asn1.components(separatedBy: "\n")
-        for line in lines {
-            if line.contains( "OCTET STRING" ) {
-                if let range = line.range(of: "[HEX DUMP]:") {
-                    let val = String(line[range.upperBound..<line.endIndex])
-                    sigData = Data(hexRepToBin( val ))
-                    break
-                }
+        
+        let attrsToBeSigned = try extractEncapsulatedContentFromPKCS7(pkcs7Der: pkcs7Der, asn1: asn1)
+        let signedAttribsHashAlgo = try getAttrsToBeSignedHashAlgorithm(pkcs7Der: pkcs7Der, asn1: asn1)
+        let signedAttributes = try extractSignedAttributesFromPKCS7(pkcs7Der: pkcs7Der, asn1: asn1)
+        let messageDigest = try extractMessageDigestFromPKCS7(pkcs7Der: pkcs7Der, asn1: asn1)
+        let signature = try extractSignatureFromPKCS7(pkcs7Der: pkcs7Der, asn1: asn1)
+        
+        let segType = try getSignatureType(pkcs7Der: pkcs7Der, asn1: asn1)
+        
+        var mdHash : Data
+        if signedAttribsHashAlgo == "sha256" {
+            mdHash = Data(calcSHA256Hash( [UInt8](attrsToBeSigned) ))
+        } else if signedAttribsHashAlgo == "sha512" {
+            mdHash = Data(calcSHA512Hash( [UInt8](attrsToBeSigned) ))
+        } else {
+            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Unsupported hash algorithm - \(signedAttribsHashAlgo)")
+        }
+        
+        // Make sure that hash equals the messageDigest
+        if messageDigest != mdHash {
+            // Invalid - signed data hash doesn't match message digest hash
+            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("messageDigest Hash doesn't hatch that of the signed attributes")
+        }
+        
+        guard let pubKey = try extractPublicKeyFromPKCS7(pkcs7Der:pkcs7Der) else {
+            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Failed to extract public key from pkcs7")
+        }
+        defer { EVP_PKEY_free (pubKey) }
+        
+        // Verify signed attributes
+        try verifySignedAttributes( signedAttributes: signedAttributes, signature: signature, pubKey: pubKey )
+
+
+        return attrsToBeSigned
+    }
+    
+    /// This code is taken pretty much from pkeyutl.c - to verify a signature with a public key extract
+    static func verifySignedAttributes( signedAttributes : Data, signature : Data, pubKey : UnsafeMutablePointer<EVP_PKEY> ) throws -> Bool {
+
+        // Create EVP_PKEY_CTX
+        guard let ctx = EVP_PKEY_CTX_new(pubKey, nil) else {
+            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Failed to extract public key from pkcs7")
+        }
+        defer { EVP_PKEY_CTX_free(ctx) }
+        
+        var rv = EVP_PKEY_verify_init(ctx);
+        if (rv <= 0) {
+            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Failed to set verify mode")
+        }
+
+        // Set our options
+        let opts = ["digest":"sha256" , "rsa_padding_mode":"pkcs1"]
+//        let opts = ["digest":"sha256" ,"rsa_padding_mode":"pss", "rsa_pss_saltlen":"-1"]
+        for (key,val) in opts {
+            if EVP_PKEY_CTX_ctrl_str(ctx, key, val) <= 0 {
+                throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Error setting parameter")
             }
+        }
+
+        // Verify signature against hash
+        let saHash = calcSHA256Hash(  [UInt8](signedAttributes) )
+        let _ = signature.withUnsafeBytes { (sigPtr) in
+            let _ = saHash.withUnsafeBytes{ (saHashPtr) in
+                rv = EVP_PKEY_verify(ctx, sigPtr.baseAddress?.assumingMemoryBound(to: UInt8.self), signature.count,
+                             saHashPtr.baseAddress?.assumingMemoryBound(to: UInt8.self), saHash.count);
+            }
+        }
+        if rv == 0 {
+            print("Signature Verification Failure")
+        } else if (rv == 1) {
+            print( "Signature Verified Successfully");
+        }
+
+        return rv == 1
+    }
+
+    static func getSignatureType( pkcs7Der: Data, asn1: ASN1Item) throws -> String {
+        var ret = "pkcs1" // Default
+        
+        // SignerInfo ::= SEQUENCE {
+        //     version CMSVersion,
+        //     sid SignerIdentifier,
+        //     digestAlgorithm DigestAlgorithmIdentifier,
+        //     signedAttrs [0] IMPLICIT SignedAttributes OPTIONAL,
+        //     signatureAlgorithm SignatureAlgorithmIdentifier,
+        //     signature SignatureValue,
+        //     unsignedAttrs [1] IMPLICIT UnsignedAttributes OPTIONAL }
+
+        guard let signedData = asn1.getChild(1)?.getChild(0),
+              let signerInfo = signedData.getChild(4),
+              let signatureAlgo = signerInfo.getChild(0)?.getChild(4)?.getChild(0) else {
+
+            throw OpenSSLError.UnableToExtractSignedDataFromPKCS7("Data in invalid format")
+        }
+        
+        // Vals I've seen are:
+        // sha256WithRSAEncryption => default pkcs1
+        // rsassaPss => pss
+        if signatureAlgo.value.contains("Pss") {
+            ret = "pss"
+        }
+        
+        return ret
+    }
+
+    static func extractPublicKeyFromPKCS7( pkcs7Der :Data ) throws -> UnsafeMutablePointer<EVP_PKEY>? {
+        
+        let certs = try getX509CertificatesFromPKCS7(pkcs7Der:pkcs7Der)
+        let pubkey = X509_get_pubkey (certs[0].cert);
+
+        return pubkey
+    }
+
+
+    /// Extracts the encapsulated content section from a SignedData PKCS7 container (if present)
+    /// - Parameter pkcs7Der: The PKCS7 container in DER format
+    /// - Returns: The encapsulated content from a PKCS7 container if we could read it
+    /// - Throws: Error if we can't find or read the encapsulated content
+    static func extractEncapsulatedContentFromPKCS7(pkcs7Der : Data, asn1: ASN1Item) throws -> Data {
+                
+        // Format of ASN1 - Signed Data:
+        // Sequence
+        //   Object ID: signedData
+        //   Content: SignedData
+        //       SignedData ::= SEQUENCE {
+        //           INTEGER version CMSVersion,
+        //           SET digestAlgorithms DigestAlgorithmIdentifiers,
+        //           SEQUENCE encapContentInfo EncapsulatedContentInfo,
+        //           certificates [0] IMPLICIT CertificateSet OPTIONAL,
+        //           crls [1] IMPLICIT RevocationInfoChoices OPTIONAL,
+        //           SET signerInfos SignerInfos }
+  
+        // AlgorithmIdentifier ::= SEQUENCE {
+        //     algorithm       OBJECT IDENTIFIER,
+        //     parameters      ANY OPTIONAL
+        // }
+
+        // EncapsulatedContentInfo ::= SEQUENCE {
+        //    eContentType ContentType,
+        //    eContent [0] EXPLICIT OCTET STRING OPTIONAL }
+        //
+        // ContentType ::= OBJECT IDENTIFIER
+
+        
+        guard let signedData = asn1.getChild(1)?.getChild(0),
+              let encContent = signedData.getChild(2)?.getChild(1),
+              let content = encContent.getChild(0) else {
+
+            throw OpenSSLError.UnableToExtractSignedDataFromPKCS7("Data in invalid format")
+        }
+
+        var sigData : Data?
+        if content.type.hasPrefix("OCTET STRING" ) {
+            sigData = Data(hexRepToBin( content.value ))
         }
         
         guard let ret = sigData else { throw OpenSSLError.UnableToExtractSignedDataFromPKCS7("noDataReturned") }
-
         return ret
     }
+    
+    static func getAttrsToBeSignedHashAlgorithm(pkcs7Der: Data, asn1: ASN1Item) throws -> String {
+        guard let signedData = asn1.getChild(1)?.getChild(0),
+              let digestAlgo = signedData.getChild(1)?.getChild(0)?.getChild(0) else {
+            throw OpenSSLError.UnableToExtractSignedDataFromPKCS7("Data in invalid format")
+        }
+
+        return String(digestAlgo.value)
+    }
+
+    static func extractSignedAttributesFromPKCS7( pkcs7Der: Data, asn1: ASN1Item ) throws -> Data {
+        
+        // Format of ASN1 - Signed Data:
+        // Sequence
+        //   Object ID: signedData
+        //   Content: SignedData
+        //       SignedData ::= SEQUENCE {
+        //           INTEGER version CMSVersion,
+        //           SET digestAlgorithms DigestAlgorithmIdentifiers,
+        //           SEQUENCE encapContentInfo EncapsulatedContentInfo,
+        //           certificates [0] IMPLICIT CertificateSet OPTIONAL,
+        //           crls [1] IMPLICIT RevocationInfoChoices OPTIONAL,
+        //           SET signerInfos SignerInfos }
+        
+        // SignerInfos ::= SET OF SignerInfo
+        //
+        // SignerInfo ::= SEQUENCE {
+        //     version CMSVersion,
+        //     sid SignerIdentifier,
+        //     digestAlgorithm DigestAlgorithmIdentifier,
+        //     signedAttrs [0] IMPLICIT SignedAttributes OPTIONAL,
+        //     signatureAlgorithm SignatureAlgorithmIdentifier,
+        //     signature SignatureValue,
+        //     unsignedAttrs [1] IMPLICIT UnsignedAttributes OPTIONAL }
+        
+        // SignerIdentifier ::= CHOICE {
+        //     issuerAndSerialNumber IssuerAndSerialNumber,
+        //     subjectKeyIdentifier [0] SubjectKeyIdentifier }
+        
+        // SignedAttributes ::= SET SIZE (1..MAX) OF Attribute
+        // UnsignedAttributes ::= SET SIZE (1..MAX) OF Attribute
+        // Attribute ::= SEQUENCE {
+        //     attrType OBJECT IDENTIFIER,
+        //     attrValues SET OF AttributeValue }
+        // AttributeValue ::= ANY
+        // SignatureValue ::= OCTET STRING
+        
+        // In this case, the SignedAttributes consists of:
+        // A Content type Object (which has the value of the attributes content type)
+        // A messageDigest Object which has its values as the messageDigest value
+        // We want the messageDigest value
+        
+        guard let signedData = asn1.getChild(1)?.getChild(0),
+              let signerInfo = signedData.getChild(4),
+              let signedAttrs = signerInfo.getChild(0)?.getChild(3) else {
+            
+            throw OpenSSLError.UnableToExtractSignedDataFromPKCS7("Data in invalid format")
+        }
+        
+        var bytes = [UInt8]((pkcs7Der)[signedAttrs.pos ..< signedAttrs.pos + signedAttrs.headerLen + signedAttrs.length])
+        
+        // The first byte will be 0xA0 -> as its a explicit tag for a contextual item which we need to convert
+        // for the hash to calculate correctly
+        // We know that the actual tag is a SET (0x31) - See section 5.4 of https://tools.ietf.org/html/rfc5652
+        // So we need to change this from 0xA0 to 0x30
+        if bytes[0] == 0xA0 {
+            bytes[0] = 0x31
+        }
+        let signedAttribs = Data(bytes)
+        
+        return signedAttribs
+    }
+    
+    static func extractMessageDigestFromPKCS7( pkcs7Der: Data, asn1: ASN1Item ) throws -> Data {
+        
+        // Format of ASN1 - Signed Data:
+        // Sequence
+        //   Object ID: signedData
+        //   Content: SignedData
+        //       SignedData ::= SEQUENCE {
+        //           INTEGER version CMSVersion,
+        //           SET digestAlgorithms DigestAlgorithmIdentifiers,
+        //           SEQUENCE encapContentInfo EncapsulatedContentInfo,
+        //           certificates [0] IMPLICIT CertificateSet OPTIONAL,
+        //           crls [1] IMPLICIT RevocationInfoChoices OPTIONAL,
+        //           SET signerInfos SignerInfos }
+        
+        // SignerInfos ::= SET OF SignerInfo
+        //
+        // SignerInfo ::= SEQUENCE {
+        //     version CMSVersion,
+        //     sid SignerIdentifier,
+        //     digestAlgorithm DigestAlgorithmIdentifier,
+        //     signedAttrs [0] IMPLICIT SignedAttributes OPTIONAL,
+        //     signatureAlgorithm SignatureAlgorithmIdentifier,
+        //     signature SignatureValue,
+        //     unsignedAttrs [1] IMPLICIT UnsignedAttributes OPTIONAL }
+        
+        // SignerIdentifier ::= CHOICE {
+        //     issuerAndSerialNumber IssuerAndSerialNumber,
+        //     subjectKeyIdentifier [0] SubjectKeyIdentifier }
+        
+        // SignedAttributes ::= SET SIZE (1..MAX) OF Attribute
+        // UnsignedAttributes ::= SET SIZE (1..MAX) OF Attribute
+        // Attribute ::= SEQUENCE {
+        //     attrType OBJECT IDENTIFIER,
+        //     attrValues SET OF AttributeValue }
+        // AttributeValue ::= ANY
+        // SignatureValue ::= OCTET STRING
+        
+        // In this case, the SignedAttributes consists of:
+        // A Content type Object (which has the value of the attributes content type)
+        // A messageDigest Object which has its values as the messageDigest value
+        // We want the messageDigest value
+        
+        guard let signedData = asn1.getChild(1)?.getChild(0),
+              let signerInfo = signedData.getChild(4),
+              let signedAttrs = signerInfo.getChild(0)?.getChild(3),
+              let digest = signedAttrs.getChild(1)?.getChild(1)?.getChild(0) else {
+            
+            throw OpenSSLError.UnableToExtractSignedDataFromPKCS7("Data in invalid format")
+        }
+
+        var sigData : Data?
+        if digest.type.hasPrefix("OCTET STRING" ) {
+            sigData = Data(hexRepToBin( digest.value ))
+        }
+
+        guard let messageDigest = sigData else { throw OpenSSLError.UnableToExtractSignedDataFromPKCS7("No messageDigest Returned") }
+        
+        return messageDigest
+    }
+    
+    static func extractSignatureFromPKCS7(pkcs7Der: Data, asn1: ASN1Item ) throws -> Data {
+        
+        // Format of ASN1 - Signed Data:
+        // Sequence
+        //   Object ID: signedData
+        //   Content: SignedData
+        //       SignedData ::= SEQUENCE {
+        //           INTEGER version CMSVersion,
+        //           SET digestAlgorithms DigestAlgorithmIdentifiers,
+        //           SEQUENCE encapContentInfo EncapsulatedContentInfo,
+        //           certificates [0] IMPLICIT CertificateSet OPTIONAL,
+        //           crls [1] IMPLICIT RevocationInfoChoices OPTIONAL,
+        //           SET signerInfos SignerInfos }
+        
+        // SignerInfos ::= SET OF SignerInfo
+        //
+        // SignerInfo ::= SEQUENCE {
+        //     version CMSVersion,
+        //     sid SignerIdentifier,
+        //     digestAlgorithm DigestAlgorithmIdentifier,
+        //     signedAttrs [0] IMPLICIT SignedAttributes OPTIONAL,
+        //     signatureAlgorithm SignatureAlgorithmIdentifier,
+        //     signature SignatureValue,
+        //     unsignedAttrs [1] IMPLICIT UnsignedAttributes OPTIONAL }
+
+        guard let signedData = asn1.getChild(1)?.getChild(0),
+              let signerInfo = signedData.getChild(4),
+              let signature = signerInfo.getChild(0)?.getChild(5) else {
+            
+            throw OpenSSLError.UnableToExtractSignedDataFromPKCS7("Data in invalid format")
+        }
+        
+        var sigData : Data?
+        if signature.type.hasPrefix("OCTET STRING" ) {
+            sigData = Data(hexRepToBin( signature.value ))
+        }
+        
+        guard let ret = sigData else { throw OpenSSLError.UnableToExtractSignedDataFromPKCS7("noDataReturned") }
+        return ret
+    }
+    
 
     /// Parses a signed data structures encoded in ASN1 format and returns the structure in text format
     /// - Parameter data: The data to be parsed in ASN1 format
@@ -287,11 +618,16 @@ public class OpenSSLUtils {
     static func ASN1Parse( data: Data ) throws -> String {
         guard let out = BIO_new(BIO_s_mem()) else { throw OpenSSLError.UnableToParseASN1("Unable to allocate output buffer") }
         defer { BIO_free(out) }
-
+        
+        
         var parsed : String = ""
         let _ = try data.withUnsafeBytes { (ptr) in
-            let rc = ASN1_parse_dump(out, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self), data.count, 1, 0)
+            let rc = ASN1_parse_dump(out, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self), data.count, 0, 0)
             if rc == 0 {
+                ERR_print_errors( out )
+                let str = OpenSSLUtils.bioToString( bio:out )
+                
+                print( str )
                 throw OpenSSLError.UnableToParseASN1("Failed to parse ASN1 Data")
             }
         
@@ -300,6 +636,7 @@ public class OpenSSLUtils {
     
         return parsed
     }
+
     
     
     /// Reads an RSA Public Key  in DER  format and converts it to an OpenSSL EVP_PKEY value for use whilst decrypting or verifying an RSA signature

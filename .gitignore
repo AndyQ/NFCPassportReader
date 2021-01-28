@@ -5,6 +5,7 @@ working
 scripts/*.pem
 test_sod.der
 passport.json
+passport*.json
 
 # Xcode
 #
