@@ -510,14 +510,14 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = NFCPassportReaderApp/NFCPassportReader.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
-				DEVELOPMENT_TEAM = 3FGHH7FLK4;
+				CURRENT_PROJECT_VERSION = 15;
+				DEVELOPMENT_TEAM = A4ZM73UFF5;
 				INFOPLIST_FILE = NFCPassportReaderApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.iagent.nfcpassportreader;
+				PRODUCT_BUNDLE_IDENTIFIER = com.andyquq.nfcpassportreader;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "NFCPassportReaderApp/NFCPassportReaderApp-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -534,14 +534,14 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = NFCPassportReaderApp/NFCPassportReader.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
-				DEVELOPMENT_TEAM = 3FGHH7FLK4;
+				CURRENT_PROJECT_VERSION = 15;
+				DEVELOPMENT_TEAM = A4ZM73UFF5;
 				INFOPLIST_FILE = NFCPassportReaderApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.iagent.nfcpassportreader;
+				PRODUCT_BUNDLE_IDENTIFIER = com.andyquq.nfcpassportreader;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "NFCPassportReaderApp/NFCPassportReaderApp-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
