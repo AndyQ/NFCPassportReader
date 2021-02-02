@@ -189,13 +189,19 @@ public class NFCPassportModel {
     }
     
             
-    // Two Parts:
-    // Part 1 - Has the SOD (Security Object Document) been signed by a valid country signing certificate authority (CSCA)?
-    // Part 2 - has it been tampered with (e.g. hashes of Datagroups match those in the SOD?
-    //        guard let sod = model.getDataGroup(.SOD) else { return }
-
-
-    public func verifyPassport( masterListURL: URL? ) {
+    /// This method performs the passive authentication
+    /// Passive Authentication : Two Parts:
+    /// Part 1 - Has the SOD (Security Object Document) been signed by a valid country signing certificate authority (CSCA)?
+    /// Part 2 - has it been tampered with (e.g. hashes of Datagroups match those in the SOD?
+    ///        guard let sod = model.getDataGroup(.SOD) else { return }
+    ///
+    /// - Parameter masterListURL: the path to the masterlist to try to verify the document signing certiifcate in the SOD
+    /// - Parameter useCMSVerification: Should we use OpenSSL CMS verification to verify the SOD content
+    ///         is correctly signed by the document signing certificate OR should we do this manully based on RFC5652
+    ///         CMS fails under certain circumstances (e.g. hashes are SHA512 whereas content is signed with SHA256RSA).
+    ///         Currently defaulting to manual verification - hoping this will replace the CMS verification totally
+    ///         CMS Verification currently there just in case
+    public func verifyPassport( masterListURL: URL?, useCMSVerification : Bool = false ) {
         if let masterListURL = masterListURL {
             do {
                 try validateAndExtractSigningCertificates( masterListURL: masterListURL )
@@ -205,7 +211,7 @@ public class NFCPassportModel {
         }
         
         do {
-            try ensureReadDataNotBeenTamperedWith( )
+            try ensureReadDataNotBeenTamperedWith( useCMSVerification : useCMSVerification )
         } catch let error {
             verificationErrors.append( error )
         }
@@ -322,22 +328,23 @@ public class NFCPassportModel {
 
     }
 
-    private func ensureReadDataNotBeenTamperedWith( ) throws  {
-        guard let sod = getDataGroup(.SOD) else {
+    private func ensureReadDataNotBeenTamperedWith( useCMSVerification: Bool ) throws  {
+        guard let sod = getDataGroup(.SOD) as? SOD else {
             throw PassiveAuthenticationError.SODMissing("No SOD found" )
         }
 
         // Get SOD Content and verify that its correctly signed by the Document Signing Certificate
-        let data = Data(sod.body)
         var signedData : Data
         documentSigningCertificateVerified = false
         do {
-            signedData = try OpenSSLUtils.verifyAndGetSignedDataFromPKCS7(pkcs7Der: data)
+            if useCMSVerification {
+                signedData = try OpenSSLUtils.verifyAndReturnSODEncapsulatedDataUsingCMS(sod: sod)
+            } else {
+                signedData = try OpenSSLUtils.verifyAndReturnSODEncapsulatedData(sod: sod)
+            }
             documentSigningCertificateVerified = true
         } catch {
-            let p = SimpleASN1Parser()
-            let asn1 = try p.parse(data: data)
-            signedData = try OpenSSLUtils.extractEncapsulatedContentFromPKCS7( pkcs7Der : data, asn1: asn1)
+            signedData = try sod.getEncapsulatedContent()
         }
                 
         // Now Verify passport data by comparing compare Hashes in SOD against

@@ -248,8 +248,6 @@ extension PassportReader {
                         } else {
                             self?.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.successfulRead)
 
-                            OpenSSLUtils.loadOpenSSL()
-
                             // Before we finish, check if we should do active authentication
                             self?.doActiveAuthenticationIfNeccessary() {
                                 // We succesfully read the passport, now we're about to invalidate the session. Before
@@ -261,8 +259,6 @@ extension PassportReader {
                                 // If we have a masterlist url set then use that and verify the passport now
                                 self?.passport.verifyPassport(masterListURL: self?.masterListURL)
                                 self?.scanCompletedHandler( self?.passport, nil )
-
-                                OpenSSLUtils.cleanupOpenSSL()
                             }
                         }
                     }

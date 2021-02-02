@@ -69,6 +69,10 @@ class ASN1Item : CustomDebugStringConvertible {
         }
     }
     
+    func getNumberOfChildren() -> Int {
+        return children.count
+    }
+    
     var debugDescription: String {
         var ret = "pos:\(pos), d=\(depth), hl=\(headerLen), l=\(length): \(itemType): \(type) \(value)\n"
         children.forEach { ret += $0.debugDescription }
@@ -79,7 +83,7 @@ class ASN1Item : CustomDebugStringConvertible {
 /// Very very basic ASN1 parser class - uses OpenSSL to dump an ASN1 structure to a string, and then parses that out into
 /// a tree based hieracy of ASN1Item structures - depth based
 @available(iOS 13, *)
-class SimpleASN1Parser {
+class SimpleASN1DumpParser {
     
     func parse( data: Data ) throws -> ASN1Item {
         var parsed : String = ""
