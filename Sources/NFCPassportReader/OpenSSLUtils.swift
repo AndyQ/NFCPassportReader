@@ -12,9 +12,10 @@ import OpenSSL
 public enum OpenSSLError: Error {
     case UnableToGetX509CertificateFromPKCS7(String)
     case UnableToVerifyX509CertificateForSOD(String)
-    case UnableToGetSignedDataFromPKCS7(String)
+    case VerifyAndReturnSODEncapsulatedData(String)
     case UnableToReadECPublicKey(String)
     case UnableToExtractSignedDataFromPKCS7(String)
+    case VerifySignedAttributes(String)
     case UnableToParseASN1(String)
     case UnableToDecryptRSASignature(String)
 }
@@ -27,12 +28,14 @@ extension OpenSSLError: LocalizedError {
                 return NSLocalizedString("Unable to read the SOD PKCS7 Certificate. \(reason)", comment: "UnableToGetPKCS7CertificateForSOD")
             case .UnableToVerifyX509CertificateForSOD(let reason):
                 return NSLocalizedString("Unable to verify the SOD X509 certificate. \(reason)", comment: "UnableToVerifyX509CertificateForSOD")
-            case .UnableToGetSignedDataFromPKCS7(let reason):
-                return NSLocalizedString("Unable to parse the SOD Datagroup hashes. \(reason)", comment: "UnableToGetSignedDataFromPKCS7")
+            case .VerifyAndReturnSODEncapsulatedData(let reason):
+                return NSLocalizedString("Unable to verify the SOD Datagroup hashes. \(reason)", comment: "UnableToGetSignedDataFromPKCS7")
             case .UnableToReadECPublicKey(let reason):
                 return NSLocalizedString("Unable to read ECDSA Public key  \(reason)!", comment: "UnableToReadECPublicKey")
             case .UnableToExtractSignedDataFromPKCS7(let reason):
                 return NSLocalizedString("Unable to extract Signer data from PKCS7  \(reason)!", comment: "UnableToExtractSignedDataFromPKCS7")
+            case .VerifySignedAttributes(let reason):
+                return NSLocalizedString("Unable to Verify the SOD SignedAttributes  \(reason)!", comment: "UnableToExtractSignedDataFromPKCS7")
             case .UnableToParseASN1(let reason):
                 return NSLocalizedString("DatUnable to parse ANS1  \(reason)!", comment: "UnableToParseASN1")
             case .UnableToDecryptRSASignature(let reason):
@@ -49,6 +52,9 @@ public class OpenSSLUtils {
     /// Initialised the OpenSSL Library
     /// Must be called prior to calling any OpenSSL functions
     public static func loadOpenSSL() {
+        if ( loaded ) {
+            return
+        }
         OPENSSL_add_all_algorithms_noconf()
         ERR_load_crypto_strings()
         SSL_load_error_strings()
@@ -58,6 +64,9 @@ public class OpenSSLUtils {
     
     /// Cleans up the OpenSSL library
     public static func cleanupOpenSSL() {
+        if ( !loaded ) {
+            return
+        }
         CONF_modules_unload(1)
         OBJ_cleanup()
         EVP_cleanup()
@@ -83,9 +92,8 @@ public class OpenSSLUtils {
     }
 
     static func X509ToPEM( x509: UnsafeMutablePointer<X509> ) -> String {
-        if ( !loaded ) {
-            loadOpenSSL()
-        }
+        loadOpenSSL()
+
         let out = BIO_new(BIO_s_mem())!
         defer { BIO_free( out) }
 
@@ -96,9 +104,8 @@ public class OpenSSLUtils {
     }
 
     static func pkcs7DataToPEM( pkcs7: Data ) -> String {
-        if ( !loaded ) {
-            loadOpenSSL()
-        }
+        loadOpenSSL()
+
         let inf = BIO_new(BIO_s_mem())!
         defer { BIO_free( inf) }
         let out = BIO_new(BIO_s_mem())!
@@ -121,9 +128,7 @@ public class OpenSSLUtils {
     /// - Returns: The PEM formatted X509 certificate
     /// - Throws: A OpenSSLError.UnableToGetX509CertificateFromPKCS7 are thrown for any error
     static func getX509CertificatesFromPKCS7( pkcs7Der : Data ) throws -> [X509Wrapper] {
-        if ( !loaded ) {
-            loadOpenSSL()
-        }
+        loadOpenSSL()
 
         guard let inf = BIO_new(BIO_s_mem()) else { throw OpenSSLError.UnableToGetX509CertificateFromPKCS7("Unable to allocate input buffer") }
         defer { BIO_free(inf) }
@@ -173,9 +178,8 @@ public class OpenSSLUtils {
     /// - Parameter CAFile: The URL path of a file containing the list of certificates used to try to discover and build a trust chain
     /// - Returns: either the X509 issue signing certificate that was used to sign the passed in X509 certificate or an error
     static func verifyTrustAndGetIssuerCertificate( x509 : X509Wrapper, CAFile : URL ) -> Result<X509Wrapper, OpenSSLError> {
-        if ( !loaded ) {
-            loadOpenSSL()
-        }
+
+        loadOpenSSL()
 
         guard let cert_ctx = X509_STORE_new() else { return .failure(OpenSSLError.UnableToVerifyX509CertificateForSOD("Unable to create certificate store")) }
         defer { X509_STORE_free(cert_ctx) }
@@ -231,9 +235,7 @@ public class OpenSSLUtils {
     /// - Parameter bio: a Pointer to a BIO buffer
     /// - Returns: A string containing the contents of the BIO buffer
     static func bioToString( bio : UnsafeMutablePointer<BIO> ) -> String {
-        if ( !loaded ) {
-            loadOpenSSL()
-        }
+        loadOpenSSL()
         
         let len = BIO_ctrl(bio, BIO_CTRL_PENDING, 0, nil)
         var buffer = [CChar](repeating: 0, count: len+1)
@@ -259,14 +261,12 @@ public class OpenSSLUtils {
     ///
     ///      This should return Verification Successful and the signed data
     static func verifyAndReturnSODEncapsulatedDataUsingCMS( sod : SOD ) throws -> Data {
-        if ( !loaded ) {
-            loadOpenSSL()
-        }        
+        loadOpenSSL()
         
-        guard let inf = BIO_new(BIO_s_mem()) else { throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Unable to allocate input buffer") }
+        guard let inf = BIO_new(BIO_s_mem()) else { throw OpenSSLError.VerifyAndReturnSODEncapsulatedData("CMS - Unable to allocate input buffer") }
         defer { BIO_free(inf) }
 
-        guard let out = BIO_new(BIO_s_mem()) else { throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Unable to allocate output buffer") }
+        guard let out = BIO_new(BIO_s_mem()) else { throw OpenSSLError.VerifyAndReturnSODEncapsulatedData("CMS - Unable to allocate output buffer") }
         defer { BIO_free(out) }
 
         let _ = sod.body.withUnsafeBytes { (ptr) in
@@ -274,17 +274,17 @@ public class OpenSSLUtils {
         }
                         
         guard let cms = d2i_CMS_bio(inf, nil) else {
-            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Verification of P7 failed - unable to create CMS")
+            throw OpenSSLError.VerifyAndReturnSODEncapsulatedData("CMS - Verification of P7 failed - unable to create CMS")
         }
         defer { CMS_ContentInfo_free(cms) }
 
         let flags : UInt32 = UInt32(CMS_NO_SIGNER_CERT_VERIFY)
 
         if CMS_verify(cms, nil, nil, nil, out, flags) == 0 {
-            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Verification of P7 failed - unable to verify signature")
+            throw OpenSSLError.VerifyAndReturnSODEncapsulatedData("CMS - Verification of P7 failed - unable to verify signature")
         }
 
-        // print("Verification successful\n");
+        Log.debug("Verification successful\n");
         let len = BIO_ctrl(out, BIO_CTRL_PENDING, 0, nil)
         var buffer = [UInt8](repeating: 0, count: len)
         BIO_read(out, &buffer, Int32(len))
@@ -295,14 +295,12 @@ public class OpenSSLUtils {
     
     
     static func verifyAndReturnSODEncapsulatedData( sod : SOD ) throws -> Data {
-        if ( !loaded ) {
-            loadOpenSSL()
-        }
+        loadOpenSSL()
 
         let encapsulatedContent = try sod.getEncapsulatedContent()
         let signedAttribsHashAlgo = try sod.getEncapsulatedContentDigestAlgorithm()
         let signedAttributes = try sod.getSignedAttributes()
-        let messageDigest = try sod.getMessageDigest()
+        let messageDigest = try sod.getMessageDigestFromSignedAttributes()
         let signature = try sod.getSignature()
         let sigType = try sod.getSignatureAlgorithm()
 
@@ -316,13 +314,13 @@ public class OpenSSLUtils {
         } else if signedAttribsHashAlgo == "sha512" {
             mdHash = Data(calcSHA512Hash( [UInt8](encapsulatedContent) ))
         } else {
-            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Unsupported hash algorithm - \(signedAttribsHashAlgo)")
+            throw OpenSSLError.VerifyAndReturnSODEncapsulatedData("Unsupported hash algorithm - \(signedAttribsHashAlgo)")
         }
         
         // Make sure that hash equals the messageDigest
         if messageDigest != mdHash {
             // Invalid - signed data hash doesn't match message digest hash
-            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("messageDigest Hash doesn't hatch that of the signed attributes")
+            throw OpenSSLError.VerifyAndReturnSODEncapsulatedData("messageDigest Hash doesn't hatch that of the signed attributes")
         }
         
         // Verify signed attributes
@@ -333,19 +331,18 @@ public class OpenSSLUtils {
     
     /// This code is taken pretty much from pkeyutl.c - to verify a signature with a public key extract
     static func verifySignedAttributes( signedAttributes : Data, signature : Data, pubKey : UnsafeMutablePointer<EVP_PKEY>, signatureType: String ) throws {
-        if ( !loaded ) {
-            loadOpenSSL()
-        }
+
+        loadOpenSSL()
 
         // Create EVP_PKEY_CTX
         guard let ctx = EVP_PKEY_CTX_new(pubKey, nil) else {
-            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Failed to extract public key from pkcs7")
+            throw OpenSSLError.VerifySignedAttributes("Failed to extract public key from pkcs7")
         }
         defer { EVP_PKEY_CTX_free(ctx) }
         
         var rv = EVP_PKEY_verify_init(ctx);
         if (rv <= 0) {
-            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Failed to set verify mode")
+            throw OpenSSLError.VerifySignedAttributes("Failed to set verify mode")
         }
 
         // Set our options
@@ -370,7 +367,7 @@ public class OpenSSLUtils {
 
         for (key,val) in opts {
             if EVP_PKEY_CTX_ctrl_str(ctx, key, val) <= 0 {
-                throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Error setting parameter")
+                throw OpenSSLError.VerifySignedAttributes("Error setting parameter")
             }
         }
 
@@ -382,8 +379,9 @@ public class OpenSSLUtils {
             }
         }
         if rv != 1 {
-            Log.info("Signature Verification Failure")
-            throw OpenSSLError.UnableToGetSignedDataFromPKCS7("Signature Verification Failure")
+            let str = OpenSSLUtils.getOpenSSLError()
+            Log.info("Signature Verification Failure - \(str)")
+            throw OpenSSLError.VerifySignedAttributes("Signature Verification Failure - \(str)")
         }
         
         Log.info( "Signature Verified Successfully");
@@ -396,23 +394,18 @@ public class OpenSSLUtils {
     /// - Parameter data: The data to be parsed in ASN1 format
     /// - Returns: The parsed data as A String
     static func ASN1Parse( data: Data ) throws -> String {
-        if ( !loaded ) {
-            loadOpenSSL()
-        }
+        loadOpenSSL()
 
         guard let out = BIO_new(BIO_s_mem()) else { throw OpenSSLError.UnableToParseASN1("Unable to allocate output buffer") }
         defer { BIO_free(out) }
-        
         
         var parsed : String = ""
         let _ = try data.withUnsafeBytes { (ptr) in
             let rc = ASN1_parse_dump(out, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self), data.count, 0, 0)
             if rc == 0 {
-                ERR_print_errors( out )
-                let str = OpenSSLUtils.bioToString( bio:out )
-                
-                print( str )
-                throw OpenSSLError.UnableToParseASN1("Failed to parse ASN1 Data")
+                let str = OpenSSLUtils.getOpenSSLError()
+                Log.debug( str )
+                throw OpenSSLError.UnableToParseASN1("Failed to parse ASN1 Data - \(str)")
             }
         
             parsed = bioToString(bio: out)
@@ -485,9 +478,7 @@ public class OpenSSLUtils {
     /// NOTE THE CALLER IS RESPONSIBLE FOR FREEING THE RETURNED KEY USING
     /// EVP_PKEY_free(pemKey);
     static func readECPublicKey( data : [UInt8] ) throws -> UnsafeMutablePointer<EVP_PKEY>? {
-        if ( !loaded ) {
-            loadOpenSSL()
-        }
+        loadOpenSSL()
 
         guard let inf = BIO_new(BIO_s_mem()) else { throw OpenSSLError.UnableToReadECPublicKey("Unable to allocate output buffer") }
         defer { BIO_free(inf) }
@@ -514,9 +505,8 @@ public class OpenSSLUtils {
     /// - Parameter data: The data used to generate the signature
     /// - Returns: True if the signature was verified
     static func verifyECDSASignature( publicKey:UnsafeMutablePointer<EVP_PKEY>, signature: [UInt8], data: [UInt8] ) -> Bool {
-        if ( !loaded ) {
-            loadOpenSSL()
-        }
+
+        loadOpenSSL()
 
         // We first need to convert the signature from PLAIN ECDSA to ASN1 DER encoded
         let ecsig = ECDSA_SIG_new()

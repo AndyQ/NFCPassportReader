@@ -46,14 +46,14 @@ class ASN1Item : CustomDebugStringConvertible {
         
         if itemType == "cons" {
             type = rest
-            print( "Extracted [\(itemType)]: [\(type)]" )
+            Log.verbose( "Extracted [\(itemType)]: [\(type)]" )
         } else {
             let items = rest.components(separatedBy: ":" ).filter{ !$0.isEmpty }
             self.type = items[0].trimmingCharacters(in: .whitespacesAndNewlines)
             if ( items.count > 1 ) {
                 self.value = items[1].trimmingCharacters(in: .whitespacesAndNewlines)
             }
-            print( "Extracted [\(itemType)]: [\(type)] - [\(value)]" )
+            Log.verbose( "Extracted [\(itemType)]: [\(type)] - [\(value)]" )
         }
     }
     

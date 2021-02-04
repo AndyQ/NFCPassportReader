@@ -154,7 +154,7 @@ class SOD : DataGroup {
         return signedAttribs
     }
     
-    func getMessageDigest( ) throws -> Data {
+    func getMessageDigestFromSignedAttributes( ) throws -> Data {
         
         // For the SOD, the SignedAttributes consists of:
         // A Content type Object (which has the value of the attributes content type)
