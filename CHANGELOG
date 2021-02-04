@@ -1,7 +1,12 @@
+v1.0.16
+    Fix to SampleApp - to actually use the padded fields rather than using them for the checksum calculation only!
+
 v1.0.15
     Reverted previous TagReader change and dropped MaxReadData back  back to 160 (A0) as this causes issues with older passports
         not supporting arbitrary amounts and failing to re-establish connection. Means a slightly longer read time but better 
         reliability (I hope)
+    Added ability to customise the MaxDataRead field - Use PassportReader :: overrideNFCDataAmountToRead(). This is useful for development only
+    Now supports SHA384 and SHA512 Datagroup Hashes
     Added better error messages (fixes the TagError 11 message) and debug messages
     Locked OpenSSL version to 1.0.2.20 - (OpenSSL 1.0.2u).  There are currently issues upgrading to latest OpenSSL due to underlying
         c-struct changes.
