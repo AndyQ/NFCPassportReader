@@ -15,23 +15,26 @@ public enum OpenSSLError: Error {
     case UnableToReadECPublicKey(String)
     case UnableToExtractSignedDataFromPKCS7(String)
     case UnableToParseASN1(String)
+    case UnableToDecryptRSASignature(String)
 }
 
 extension OpenSSLError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case .UnableToGetX509CertificateFromPKCS7(let reason):
-            return NSLocalizedString("Unable to read the SOD PKCS7 Certificate. \(reason)", comment: "UnableToGetPKCS7CertificateForSOD")
-        case .UnableToVerifyX509CertificateForSOD(let reason):
-            return NSLocalizedString("Unable to verify the SOD X509 certificate. \(reason)", comment: "UnableToVerifyX509CertificateForSOD")
-        case .UnableToGetSignedDataFromPKCS7(let reason):
-            return NSLocalizedString("Unable to parse the SOD Datagroup hashes. \(reason)", comment: "UnableToGetSignedDataFromPKCS7")
-        case .UnableToReadECPublicKey(let reason):
-            return NSLocalizedString("Unable to read ECDSA Public key  \(reason)!", comment: "UnableToReadECPublicKey")
-        case .UnableToExtractSignedDataFromPKCS7(let reason):
-            return NSLocalizedString("Unable to extract Signer data from PKCS7  \(reason)!", comment: "UnableToExtractSignedDataFromPKCS7")
-        case .UnableToParseASN1(let reason):
-            return NSLocalizedString("DatUnable to parse ANS1  \(reason)!", comment: "UnableToParseASN1")
+            case .UnableToGetX509CertificateFromPKCS7(let reason):
+                return NSLocalizedString("Unable to read the SOD PKCS7 Certificate. \(reason)", comment: "UnableToGetPKCS7CertificateForSOD")
+            case .UnableToVerifyX509CertificateForSOD(let reason):
+                return NSLocalizedString("Unable to verify the SOD X509 certificate. \(reason)", comment: "UnableToVerifyX509CertificateForSOD")
+            case .UnableToGetSignedDataFromPKCS7(let reason):
+                return NSLocalizedString("Unable to parse the SOD Datagroup hashes. \(reason)", comment: "UnableToGetSignedDataFromPKCS7")
+            case .UnableToReadECPublicKey(let reason):
+                return NSLocalizedString("Unable to read ECDSA Public key  \(reason)!", comment: "UnableToReadECPublicKey")
+            case .UnableToExtractSignedDataFromPKCS7(let reason):
+                return NSLocalizedString("Unable to extract Signer data from PKCS7  \(reason)!", comment: "UnableToExtractSignedDataFromPKCS7")
+            case .UnableToParseASN1(let reason):
+                return NSLocalizedString("DatUnable to parse ANS1  \(reason)!", comment: "UnableToParseASN1")
+            case .UnableToDecryptRSASignature(let reason):
+                return NSLocalizedString("DatUnable to decrypt RSA Signature \(reason)!", comment: "UnableToDecryptRSSignature")
         }
     }
 }
@@ -57,6 +60,19 @@ public class OpenSSLUtils {
         ERR_free_strings()
     }
     
+    /// Returns any OpenSSL Error as a String
+    static func getOpenSSLError() -> String {
+        loadOpenSSL()
+        
+        guard let out = BIO_new(BIO_s_mem()) else { return "Unknown" }
+        defer { BIO_free(out) }
+        
+        ERR_print_errors( out )
+        let str = OpenSSLUtils.bioToString( bio:out )
+        
+        return str
+    }
+
     static func X509ToPEM( x509: UnsafeMutablePointer<X509> ) -> String {
         let out = BIO_new(BIO_s_mem())!
         defer { BIO_free( out) }
@@ -285,6 +301,63 @@ public class OpenSSLUtils {
         return parsed
     }
     
+    
+    /// Reads an RSA Public Key  in DER  format and converts it to an OpenSSL EVP_PKEY value for use whilst decrypting or verifying an RSA signature
+    /// - Parameter data: The RSA key in DER format
+    /// - Returns: The EVP_PKEY value
+    /// NOTE THE CALLER IS RESPONSIBLE FOR FREEING THE RETURNED KEY USING
+    /// EVP_PKEY_free(pemKey);
+    static func readRSAPublicKey( data : [UInt8] ) throws -> UnsafeMutablePointer<EVP_PKEY>? {
+        loadOpenSSL()
+        
+        guard let inf = BIO_new(BIO_s_mem()) else { throw OpenSSLError.UnableToReadECPublicKey("Unable to allocate output buffer") }
+        defer { BIO_free(inf) }
+        
+        let _ = data.withUnsafeBytes { (ptr) in
+            BIO_write(inf, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self), Int32(data.count))
+        }
+        
+        guard let rsakey = d2i_RSA_PUBKEY_bio(inf, nil) else { throw OpenSSLError.UnableToReadECPublicKey("Failed to load") }
+        defer{ RSA_free(rsakey) }
+        
+        let key = EVP_PKEY_new()
+        if EVP_PKEY_set1_RSA(key, rsakey) != 1 {
+            EVP_PKEY_free(key)
+            throw OpenSSLError.UnableToReadECPublicKey("Failed to load")
+        }
+        return key
+    }
+    
+    /// This code is taken pretty much from rsautl.c - to decrypt a signature with a public key
+    /// NOTE: Current no padding is used! - This seems to be the default for Active Authentication RSA signatures (guess)
+    /// - Parameter signature: The RSA encrypted signature to decrypt
+    /// - Parameter pubKey: The RSA Public Key
+    /// - Returns: The decrypted signature data
+    static func decryptRSASignature( signature : Data, pubKey : UnsafeMutablePointer<EVP_PKEY> ) throws -> [UInt8] {
+        loadOpenSSL()
+        
+        let pad = RSA_NO_PADDING
+        let rsa = EVP_PKEY_get1_RSA( pubKey )
+        
+        let keysize = RSA_size(rsa);
+        var outputBuf = [UInt8](repeating: 0, count: Int(keysize))
+        
+        // Decrypt signature
+        var outlen : Int32 = 0
+        let _ = signature.withUnsafeBytes { (sigPtr) in
+            let _ = outputBuf.withUnsafeMutableBytes { (outPtr) in
+                outlen = RSA_public_decrypt(Int32(signature.count), sigPtr.baseAddress?.assumingMemoryBound(to: UInt8.self), outPtr.baseAddress?.assumingMemoryBound(to: UInt8.self), rsa, pad)
+            }
+        }
+        
+        if outlen == 0 {
+            let error = OpenSSLUtils.getOpenSSLError()
+            throw OpenSSLError.UnableToDecryptRSASignature( "RSA_public_decrypt failed - \(error)" )
+        }
+        
+        return outputBuf
+    }
+    
     /// Reads an ECDSA Public Key  in DER  format and converts it to an OpenSSL EVP_PKEY value for use whilst verifying a ECDSA signature
     /// - Parameter data: The ECDSA key in DER forma
     /// - Returns: The EVP_PKEY value
@@ -309,7 +382,8 @@ public class OpenSSLUtils {
         return pemKey
     }
     
-    /// Verifies aa data valid against an ECDSA signature and ECDSA Public Key - used in Active Authentication
+    
+    /// Verifies Active Authentication data valid against an ECDSA signature and ECDSA Public Key - used in Active Authentication
     /// - Parameter publicKey: The OpenSSL EVP_PKEY ECDSA key
     /// - Parameter signature: The ECDSA signature to verify
     /// - Parameter data: The data used to generate the signature

@@ -244,6 +244,31 @@ public func toAsn1Length(_ data : Int) throws -> [UInt8] {
 }
         
 
+
+/// This function calculates a  Hash of the input data based on the input algorithm
+/// @param data: a byte array of data
+/// @param hashAlgorithm: the hash algorithm to be used - supported ones are SHA1, SHA256, SHA384 and SHA512
+///        Currently specifying any others return empty array
+/// @return: A hash of the data
+@available(iOS 13, *)
+public func calcHash( data: [UInt8], hashAlgorithm: String ) -> [UInt8] {
+    var ret : [UInt8] = []
+    if hashAlgorithm == "SHA1" {
+        ret = calcSHA1Hash(data)
+    } else if hashAlgorithm == "SHA256" {
+        ret = calcSHA256Hash(data)
+    } else if hashAlgorithm == "SHA384" {
+        ret = calcSHA384Hash(data)
+    } else if hashAlgorithm == "SHA512" {
+        ret = calcSHA512Hash(data)
+    }
+    
+    // TODO: Should throw an error here - will do when I consolidate the errors!
+    
+    return ret
+}
+
+
 /// This function calculates a SHA1 Hash of the input data
 /// @param data: a byte array of data
 /// @return: A SHA1 hash of the data

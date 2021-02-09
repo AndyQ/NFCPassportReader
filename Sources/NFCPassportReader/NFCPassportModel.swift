@@ -216,11 +216,60 @@ public class NFCPassportModel {
         // Get AA Public key
         self.activeAuthenticationPassed = false
         guard  let dg15 = self.dataGroupsRead[.DG15] as? DataGroup15 else { return }
-        if let _ = dg15.rsaPublicKey {
-            // TODO
-        } else if let ecdsaPublicKey = dg15.ecdsaPublicKey {
+        if let rsaKey = dg15.rsaPublicKey {
+            do {
+                let decryptedSig = try OpenSSLUtils.decryptRSASignature(signature: Data(signature), pubKey: rsaKey)
+                
+                // First byte is the message length
+                // Next msgLength bytes is the message
+                // remaining is digest (inc trailing hash type identifier)
+                let len = Int(decryptedSig[0])
+                let message = [UInt8](decryptedSig[1...len])
+                var digest = [UInt8](decryptedSig[(len+1)...])
+                
+                // if the last byte of the digest is 0xBC, then this uses dedicated hash function 3 (SHA-1),
+                // If the last byte is 0xCC, then the preceding byte tells you which hash function
+                // should be used (currently not yet implemented!)
+                // See ISO/IEC9796-2 for details on the verificatin and ISO/IEC 10118-3 for the dedicated hash functions!
+                var hashTypeByte = digest.popLast() ?? 0x00
+                if hashTypeByte == 0xCC {
+                    hashTypeByte = digest.popLast() ?? 0x00
+                }
+                var hashType : String = ""
+                switch hashTypeByte {
+                    case 0xBC, 0x33:
+                        hashType = "SHA1"
+                    case 0x34:
+                        hashType = "SHA254"
+                    case 0x35:
+                        hashType = "SHA512"
+                    case 0x36:
+                        hashType = "SHA384"
+                    default:
+                        break
+                }
+                
+                // Concatenate the challenge to the end of the message
+                let fullMsg = message + challenge
+                
+                // Then generate the hash
+                let msgHash : [UInt8] = calcHash(data: fullMsg, hashAlgorithm: hashType)
+                
+                // Check hashes match
+                if msgHash == digest {
+                    self.activeAuthenticationPassed = true
+                } else {
+                    Log.error( "Error verifying Active Authentication RSA signature - Hash doesn't match" )
+                    
+                }
+            } catch {
+                Log.error( "Error verifying Active Authentication RSA signature - \(error)" )
+            }        } else if let ecdsaPublicKey = dg15.ecdsaPublicKey {
             if OpenSSLUtils.verifyECDSASignature( publicKey:ecdsaPublicKey, signature: signature, data: challenge ) {
                 self.activeAuthenticationPassed = true
+            } else {
+                Log.error( "Error verifying Active Authentication ECDSA signature" )
+
             }
         }
     }
