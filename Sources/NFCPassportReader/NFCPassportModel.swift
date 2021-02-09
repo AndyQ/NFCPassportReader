@@ -218,37 +218,43 @@ public class NFCPassportModel {
         guard  let dg15 = self.dataGroupsRead[.DG15] as? DataGroup15 else { return }
         if let rsaKey = dg15.rsaPublicKey {
             do {
-                let decryptedSig = try OpenSSLUtils.decryptRSASignature(signature: Data(signature), pubKey: rsaKey)
+                var decryptedSig = try OpenSSLUtils.decryptRSASignature(signature: Data(signature), pubKey: rsaKey)
                 
-                // First byte is the message length
-                // Next msgLength bytes is the message
-                // remaining is digest (inc trailing hash type identifier)
-                let len = Int(decryptedSig[0])
-                let message = [UInt8](decryptedSig[1...len])
-                var digest = [UInt8](decryptedSig[(len+1)...])
+                // Decrypted signature compromises of header (6A), Message, Digest hash, Trailer
+                // Trailer can be 1 byte (BC - SHA-1 hash) or 2 bytes (xxCC) - where xx identifies the hash algorithm used
                 
                 // if the last byte of the digest is 0xBC, then this uses dedicated hash function 3 (SHA-1),
                 // If the last byte is 0xCC, then the preceding byte tells you which hash function
                 // should be used (currently not yet implemented!)
                 // See ISO/IEC9796-2 for details on the verificatin and ISO/IEC 10118-3 for the dedicated hash functions!
-                var hashTypeByte = digest.popLast() ?? 0x00
+                var hashTypeByte = decryptedSig.popLast() ?? 0x00
                 if hashTypeByte == 0xCC {
-                    hashTypeByte = digest.popLast() ?? 0x00
+                    hashTypeByte = decryptedSig.popLast() ?? 0x00
                 }
                 var hashType : String = ""
+                var hashLength = 0
+
                 switch hashTypeByte {
                     case 0xBC, 0x33:
                         hashType = "SHA1"
+                        hashLength = 20  // 160 bits for SHA-1 -> 20 bytes
                     case 0x34:
-                        hashType = "SHA254"
+                        hashType = "SHA256"
+                        hashLength = 32  // 256 bits for SHA-256 -> 32 bytes
                     case 0x35:
                         hashType = "SHA512"
+                        hashLength = 64  // 512 bits for SHA-512 -> 64 bytes
                     case 0x36:
                         hashType = "SHA384"
+                        hashLength = 48  // 384 bits for SHA-384 -> 48 bytes
                     default:
-                        break
+                        Log.error( "Error identifying Active Authentication RSA message digest hash algorithm" )
+                        return
                 }
                 
+                let message = [UInt8](decryptedSig[1 ..< (decryptedSig.count-hashLength)])
+                let digest = [UInt8](decryptedSig[(decryptedSig.count-hashLength)...])
+
                 // Concatenate the challenge to the end of the message
                 let fullMsg = message + challenge
                 
