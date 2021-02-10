@@ -280,6 +280,7 @@ public class DataGroup1 : DataGroup {
 
 }
 
+import UIKit
 @available(iOS 13, *)
 public class DataGroup2 : DataGroup {
     public private(set) var nrImages : Int = 0
