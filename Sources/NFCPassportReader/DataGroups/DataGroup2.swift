@@ -46,35 +46,35 @@ public class DataGroup2 : DataGroup {
     override func parse(_ data: [UInt8]) throws {
         var tag = try getNextTag()
         if tag != 0x7F61 {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         _ = try getNextLength()
         
         // Tag should be 0x02
         tag = try getNextTag()
         if  tag != 0x02 {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         nrImages = try Int(getNextValue()[0])
         
         // Next tag is 0x7F60
         tag = try getNextTag()
         if tag != 0x7F60 {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         _ = try getNextLength()
         
         // Next tag is 0xA1 (Biometric Header Template) - don't care about this
         tag = try getNextTag()
         if tag != 0xA1 {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         _ = try getNextValue()
         
         // Now we get to the good stuff - next tag is either 5F2E or 7F2E
         tag = try getNextTag()
         if tag != 0x5F2E && tag != 0x7F2E {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         let value = try getNextValue()
         
@@ -84,7 +84,7 @@ public class DataGroup2 : DataGroup {
     func parseISO19794_5( data : [UInt8] ) throws {
         // Validate header - 'F', 'A' 'C' 0x00 - 0x46414300
         if data[0] != 0x46 && data[1] != 0x41 && data[2] != 0x43 && data[3] != 0x00 {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         
         var offset = 4
@@ -147,7 +147,7 @@ public class DataGroup2 : DataGroup {
         if [UInt8](data[offset..<offset+jpegHeader.count]) != jpegHeader &&
             [UInt8](data[offset..<offset+jpeg2000BitmapHeader.count]) != jpeg2000BitmapHeader &&
             [UInt8](data[offset..<offset+jpeg2000CodestreamBitmapHeader.count]) != jpeg2000CodestreamBitmapHeader {
-            throw TagError.UnknownImageFormat
+            throw NFCPassportReaderError.UnknownImageFormat
         }
         
         imageData = [UInt8](data[offset...])

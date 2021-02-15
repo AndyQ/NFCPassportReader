@@ -18,7 +18,7 @@ public class COM : DataGroup {
     override func parse(_ data: [UInt8]) throws {
         var tag = try getNextTag()
         if tag != 0x5F01 {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         
         // Version is 4 bytes (ascii) - AABB
@@ -34,7 +34,7 @@ public class COM : DataGroup {
         }
         tag = try getNextTag()
         if tag != 0x5F36 {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         
         versionBytes = try getNextValue()
@@ -49,7 +49,7 @@ public class COM : DataGroup {
         
         tag = try getNextTag()
         if tag != 0x5C {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         
         let vals = try getNextValue()

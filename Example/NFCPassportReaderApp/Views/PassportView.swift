@@ -12,53 +12,49 @@ import NFCPassportReader
 
 // Outline view of passport
 struct PassportView : View {
-    @ObservedObject var passportDetails: PassportDetails
+    @EnvironmentObject var settings: SettingsStore
+    
+    var passport: NFCPassportModel!
     
     var body: some View {
-        let passport = passportDetails.passport
         return HStack {
-            if (passport) != nil {
+            ZStack(alignment: .bottomTrailing) {
+                PassportDetailsView(passport: passport)
                 
-                ZStack(alignment: .bottomTrailing) {
-                    PassportDetailsView(passportDetails: passportDetails)
-                    
-                    HStack {
-                        if !passport!.passportDataNotTampered {
-                            VStack {
-                                Image( systemName:"exclamationmark").foregroundColor(.red)
-                                    .font(.system(size: 50))
-                                    .padding(.bottom, 5)
-                                
-                                Text( "Tampered")
-                                    .font(.caption)
-                                    .foregroundColor(.red)
-                            }
+                HStack {
+                    if !passport.passportDataNotTampered {
+                        VStack {
+                            Image( systemName:"exclamationmark").foregroundColor(.red)
+                                .font(.system(size: 50))
+                                .padding(.bottom, 5)
                             
+                            Text( "Tampered")
+                                .font(.caption)
+                                .foregroundColor(.red)
                         }
-                        VStack(alignment: .center) {
-                            if passport!.passportCorrectlySigned && passport!.documentSigningCertificateVerified {
-                                Image( systemName:"checkmark.seal").foregroundColor(.green)
-                                    .font(.system(size: 50))
-                                    .padding(.bottom, 5)
-                                Text( "Genuine")
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                            } else {
-                                Image( systemName:"xmark.seal").foregroundColor(.red)
-                                    .font(.system(size: 50))
-                                    .padding([.leading,.trailing], 15)
-                                    .padding(.bottom, 5)
-                                Text( "Not Genuine")
-                                    .font(.caption)
-                                    .foregroundColor(.red)
-                                    .frame(minWidth: 0, maxWidth: 100, minHeight: 0, maxHeight: 22)
-                            }
+                        
+                    }
+                    VStack(alignment: .center) {
+                        if passport.passportCorrectlySigned && passport.documentSigningCertificateVerified {
+                            Image( systemName:"checkmark.seal").foregroundColor(.green)
+                                .font(.system(size: 50))
+                                .padding(.bottom, 5)
+                            Text( "Genuine")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                        } else {
+                            Image( systemName:"xmark.seal").foregroundColor(.red)
+                                .font(.system(size: 50))
+                                .padding([.leading,.trailing], 15)
+                                .padding(.bottom, 5)
+                            Text( "Not Genuine")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .frame(minWidth: 0, maxWidth: 100, minHeight: 0, maxHeight: 22)
                         }
+                    }
 
-                    }.padding( [.trailing, .bottom], 10)
-                }
-            } else {
-                Text( "No Passport set").padding()
+                }.padding( [.trailing, .bottom], 10)
             }
         }
         .background( Color.primary.colorInvert() )
@@ -68,21 +64,19 @@ struct PassportView : View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(Color.primary, lineWidth: 2)
         )
-
     }
 }
 
 
 // Shows the Pzssport details
 struct PassportDetailsView : View {
-    @ObservedObject var passportDetails: PassportDetails
-    
+    var passport: NFCPassportModel
+
     var body: some View {
-        let passport = passportDetails.passport
         return HStack(alignment: .top) {
             VStack(alignment: .leading) {
                 Spacer()
-                Image(uiImage:passport!.passportImage ?? UIImage(named:"head")!)
+                Image(uiImage:passport.passportImage ?? UIImage(named:"head")!)
                     .resizable()
                     .renderingMode(.original)
                     .aspectRatio(contentMode: .fit)
@@ -93,18 +87,18 @@ struct PassportDetailsView : View {
             VStack(alignment: .leading) {
                 Spacer()
                 HStack {
-                    Text( passport!.documentType)
+                    Text( passport.documentType)
                     Spacer()
-                    Text( passport!.issuingAuthority)
+                    Text( passport.issuingAuthority)
                     Spacer()
-                    Text( passport!.documentNumber)
+                    Text( passport.documentNumber)
                 }
-                Text( passport!.lastName)
-                Text( passport!.firstName)
-                Text( passport!.nationality)
-                Text( passport!.dateOfBirth)
-                Text( passport!.gender)
-                Text( passport!.documentExpiryDate )
+                Text( passport.lastName)
+                Text( passport.firstName)
+                Text( passport.nationality)
+                Text( passport.dateOfBirth)
+                Text( passport.gender)
+                Text( passport.documentExpiryDate )
                 
                 Spacer()
             }.padding([.trailing], 10.0)
@@ -116,21 +110,20 @@ struct PassportDetailsView : View {
  
 #if DEBUG
 struct PassportView_Previews : PreviewProvider {
-    @ObservedObject static var pd = PassportDetails()
     static var previews: some View {
 //        let pptData = "P<GBRTEST<<TEST<TEST<<<<<<<<<<<<<<<<<<<<<<<<1234567891GBR8001019M2106308<<<<<<<<<<<<<<04"
 //        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: false, dataValid: false )
         
+        let settings = SettingsStore()
+        let passport = NFCPassportModel()
         return Group {
-            PassportView(passportDetails: pd)
-//            PassportView(passportDetails: $pd)
+            PassportView(passport:passport)
                 .environment( \.colorScheme, .light)
-            PassportView(passportDetails: pd)
-//            PassportView(passportDetails: $pd)
+            .environmentObject(settings)
+            PassportView(passport:passport)
                 .environment( \.colorScheme, .dark)
-
+                .environmentObject(settings)
         }.frame(width: UIScreen.main.bounds.width-10, height: 220)
-        .environmentObject(pd)
     }
 }
 #endif

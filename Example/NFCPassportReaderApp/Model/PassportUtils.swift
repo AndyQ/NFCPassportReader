@@ -6,37 +6,22 @@
 //  Copyright © 2019 Andy Qua. All rights reserved.
 //
 
-import SwiftUI
-import Combine
 import NFCPassportReader
 
-class PassportDetails : ObservableObject {
-    @Published var passportNumber : String = UserDefaults.standard.string(forKey:"passportNumber" ) ?? ""
-    @Published var dateOfBirth: String = UserDefaults.standard.string(forKey:"dateOfBirth" ) ?? ""
-    @Published var expiryDate: String = UserDefaults.standard.string(forKey:"expiryDate" ) ?? ""
-    @Published var passport : NFCPassportModel?
+class PassportUtils {
     
-    var isValid : Bool {
-        return passportNumber.count >= 8 && dateOfBirth.count == 6 && expiryDate.count == 6
-    }
-    
-    func getMRZKey() -> String {
-        let d = UserDefaults.standard
-        d.set(passportNumber, forKey: "passportNumber")
-        d.set(dateOfBirth, forKey: "dateOfBirth")
-        d.set(expiryDate, forKey: "expiryDate")
+    func getMRZKey(passportNumber: String, dateOfBirth: String, dateOfExpiry: String ) -> String {
         
         // Pad fields if necessary
         let pptNr = pad( passportNumber, fieldLength:9)
         let dob = pad( dateOfBirth, fieldLength:6)
-        let exp = pad( expiryDate, fieldLength:6)
+        let exp = pad( dateOfExpiry, fieldLength:6)
         
         // Calculate checksums
         let passportNrChksum = calcCheckSum(pptNr)
-        let dateOfBirthChksum = calcCheckSum(dateOfBirth)
-        let expiryDateChksum = calcCheckSum(expiryDate)
+        let dateOfBirthChksum = calcCheckSum(dob)
+        let expiryDateChksum = calcCheckSum(exp)
 
-        
         let mrzKey = "\(pptNr)\(passportNrChksum)\(dob)\(dateOfBirthChksum)\(exp)\(expiryDateChksum)"
         
         return mrzKey

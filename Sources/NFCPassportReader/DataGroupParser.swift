@@ -31,7 +31,7 @@ class DataGroupParser {
     
     
     func tagToDG( _ tag : UInt8 ) throws -> DataGroup.Type {
-        guard let index = DataGroupParser.tags.firstIndex(of: tag) else { throw TagError.UnknownTag}
+        guard let index = DataGroupParser.tags.firstIndex(of: tag) else { throw NFCPassportReaderError.UnknownTag}
         return DataGroupParser.classes[index]
     }
 }

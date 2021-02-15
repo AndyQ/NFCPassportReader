@@ -28,7 +28,7 @@ public class DataGroup {
     }
     
     func parse( _ data:[UInt8] ) throws {
-        throw TagError.NotImplemented
+        throw NFCPassportReaderError.NotImplemented
     }
     
     func getNextTag() throws -> Int {

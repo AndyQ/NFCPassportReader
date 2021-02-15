@@ -216,7 +216,7 @@ public func asn1Length(_ data : [UInt8]) throws -> (Int, Int)  {
         return (Int(val), 3)
     }
     
-    throw TagError.CannotDecodeASN1Length
+    throw NFCPassportReaderError.CannotDecodeASN1Length
     
 }
 
@@ -240,7 +240,7 @@ public func toAsn1Length(_ data : Int) throws -> [UInt8] {
         return [0x82] + hexRepToBin( String(format:"%04x",data))
     }
     
-    throw TagError.InvalidASN1Value
+    throw NFCPassportReaderError.InvalidASN1Value
 }
         
 
@@ -251,7 +251,7 @@ public func toAsn1Length(_ data : Int) throws -> [UInt8] {
 ///        Currently specifying any others return empty array
 /// @return: A hash of the data
 @available(iOS 13, *)
-public func calcHash( data: [UInt8], hashAlgorithm: String ) -> [UInt8] {
+public func calcHash( data: [UInt8], hashAlgorithm: String ) throws -> [UInt8] {
     var ret : [UInt8] = []
     if hashAlgorithm == "SHA1" {
         ret = calcSHA1Hash(data)
@@ -261,10 +261,10 @@ public func calcHash( data: [UInt8], hashAlgorithm: String ) -> [UInt8] {
         ret = calcSHA384Hash(data)
     } else if hashAlgorithm == "SHA512" {
         ret = calcSHA512Hash(data)
+    } else {
+        throw NFCPassportReaderError.InvalidHashAlgorithmSpecified
     }
-    
-    // TODO: Should throw an error here - will do when I consolidate the errors!
-    
+        
     return ret
 }
 

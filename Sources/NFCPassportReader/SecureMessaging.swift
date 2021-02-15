@@ -102,7 +102,7 @@ public class SecureMessaging {
             offset = 1 + o
             
             if rapduBin[offset] != 0x1 {
-                throw TagError.D087Malformed
+                throw NFCPassportReaderError.D087Malformed
 //                raise SecureMessagingException("DO87 malformed, must be 87 L 01 <encdata> : " + binToHexRep(rapdu))
             }
             
@@ -160,12 +160,12 @@ public class SecureMessaging {
             Log.debug("\t\t\(binToHexRep(CC))  == \(binToHexRep(CCb)) ? \(res)")
             
             if !res {
-                throw TagError.InvalidResponseChecksum
+                throw NFCPassportReaderError.InvalidResponseChecksum
                 //raise SecureMessagingException("Invalid checksum for the rapdu : " + str(binToHex(rapdu)))
             }
         }
         else if needCC {
-            throw TagError.MissingMandatoryFields
+            throw NFCPassportReaderError.MissingMandatoryFields
             //raise SecureMessagingException("Mandatory id DO'87' and/or DO'99' is present")
         }
         

@@ -31,9 +31,9 @@ public class BACHandler {
         self.tagReader = tagReader
     }
 
-    public func performBACAndGetSessionKeys( mrzKey : String, completed: @escaping (_ error : TagError?)->() ) {
+    public func performBACAndGetSessionKeys( mrzKey : String, completed: @escaping (_ error : NFCPassportReaderError?)->() ) {
         guard let tagReader = self.tagReader else {
-            completed( TagError.NoConnectedTag)
+            completed( NFCPassportReaderError.NoConnectedTag)
             return
         }
         

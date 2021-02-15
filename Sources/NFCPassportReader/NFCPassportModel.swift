@@ -8,14 +8,6 @@
 import UIKit
 
 @available(iOS 13, *)
-public struct DataGroupHash {
-    public var id: String
-    public var sodHash: String
-    public var computedHash : String
-    public var match : Bool
-}
-
-@available(iOS 13, *)
 public class NFCPassportModel {
     
     public private(set) lazy var documentType : String = { return String( passportDataElements?["5F03"]?.first ?? "?" ) }()
@@ -73,7 +65,7 @@ public class NFCPassportModel {
     public private(set) lazy var countrySigningCertificate : X509Wrapper? = {
         return certificateSigningGroups[.issuerSigningCertificate]
     }()
-
+    
     // Extract data from COM
     public private(set) lazy var LDSVersion : String = {
         guard let com = dataGroupsRead[.COM] as? COM else { return "Unknown" }
@@ -95,6 +87,8 @@ public class NFCPassportModel {
     public private(set) var documentSigningCertificateVerified : Bool = false
     public private(set) var passportDataNotTampered : Bool = false
     public private(set) var activeAuthenticationPassed : Bool = false
+    public private(set) var activeAuthenticationChallenge : [UInt8] = []
+    public private(set) var activeAuthenticationSignature : [UInt8] = []
     public private(set) var verificationErrors : [Error] = []
 
     public var passportImage : UIImage? {
@@ -158,16 +152,23 @@ public class NFCPassportModel {
         return dataGroupsRead[id]
     }
 
-    /// Dumps the passport data 
+    /// Dumps the passport data
+    /// - Parameters:
+    ///    selectedDataGroups - the Data Groups to be exported (if they are present in the passport)
+    ///    includeActiveAutheticationData - Whether to include the Active Authentication challenge and response (if supported and retrieved)
     /// - Returns: dictionary of DataGroup ids and Base64 encoded data
-    public func dumpPassportData() -> [String:String] {
+    public func dumpPassportData( selectedDataGroups : [DataGroupId], includeActiveAuthenticationData : Bool = false) -> [String:String] {
         var ret = [String:String]()
-        for dg in [.SOD, .COM] + self.dataGroupsAvailable {
+        for dg in selectedDataGroups {
             if let dataGroup = self.dataGroupsRead[dg] {
                 let val = Data(dataGroup.data)
                 let base64 = val.base64EncodedString()
                 ret[dg.getName()] = base64
             }
+        }
+        if includeActiveAuthenticationData && self.activeAuthenticationSupported {
+            ret["AAChallenge"] = Data(activeAuthenticationChallenge).base64EncodedString()
+            ret["AASignature"] = Data(activeAuthenticationSignature).base64EncodedString()
         }
         return ret
     }
@@ -218,6 +219,8 @@ public class NFCPassportModel {
     }
     
     public func verifyActiveAuthentication( challenge: [UInt8], signature: [UInt8] ) {
+        self.activeAuthenticationChallenge = challenge
+        self.activeAuthenticationSignature = signature
         
         // Get AA Public key
         self.activeAuthenticationPassed = false
@@ -265,23 +268,22 @@ public class NFCPassportModel {
                 let fullMsg = message + challenge
                 
                 // Then generate the hash
-                let msgHash : [UInt8] = calcHash(data: fullMsg, hashAlgorithm: hashType)
+                let msgHash : [UInt8] = try calcHash(data: fullMsg, hashAlgorithm: hashType)
                 
                 // Check hashes match
                 if msgHash == digest {
                     self.activeAuthenticationPassed = true
                 } else {
                     Log.error( "Error verifying Active Authentication RSA signature - Hash doesn't match" )
-                    
                 }
             } catch {
                 Log.error( "Error verifying Active Authentication RSA signature - \(error)" )
-            }        } else if let ecdsaPublicKey = dg15.ecdsaPublicKey {
+            }
+        } else if let ecdsaPublicKey = dg15.ecdsaPublicKey {
             if OpenSSLUtils.verifyECDSASignature( publicKey:ecdsaPublicKey, signature: signature, data: challenge ) {
                 self.activeAuthenticationPassed = true
             } else {
                 Log.error( "Error verifying Active Authentication ECDSA signature" )
-
             }
         }
     }

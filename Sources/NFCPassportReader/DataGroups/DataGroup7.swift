@@ -27,13 +27,13 @@ public class DataGroup7 : DataGroup {
     override func parse(_ data: [UInt8]) throws {
         var tag = try getNextTag()
         if tag != 0x02 {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         _ = try getNextValue()
         
         tag = try getNextTag()
         if tag != 0x5F43 {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         
         imageData = try getNextValue()

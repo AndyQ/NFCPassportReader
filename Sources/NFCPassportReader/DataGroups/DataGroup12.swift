@@ -25,7 +25,7 @@ public class DataGroup12 : DataGroup {
     override func parse(_ data: [UInt8]) throws {
         var tag = try getNextTag()
         if tag != 0x5C {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         
         // Skip the taglist - ideally we would check this but...

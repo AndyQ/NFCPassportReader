@@ -17,21 +17,25 @@ struct Item : Identifiable {
 
 
 struct DetailsView : View {
-    @ObservedObject var passportDetails: PassportDetails
+    @EnvironmentObject var settings: SettingsStore
     
+    var passport: NFCPassportModel!
+
+    init(passport: NFCPassportModel) {
+        self.passport = passport
+        
+        sections.append(getChipInfoSection(self.passport))
+        sections.append(getVerificationDetailsSection(self.passport))
+        sections.append(getCertificateSigningCertDetails(certItems:self.passport.documentSigningCertificate?.getItemsAsDict()))
+        sections.append(getCertificateSigningCertDetails(certItems:self.passport.countrySigningCertificate?.getItemsAsDict()))
+        sections.append(getDataGroupHashesSection(self.passport))
+    }
     private var sectionNames = ["Chip information", "Verification information", "Document signing certificate", "Country signing certificate", "Datagroup Hashes"]
     private var sections = [[Item]]()
 
     var body: some View {
         GeometryReader { geometry in
             VStack {
-                HStack {
-                    Spacer()
-                    Button( "Export passport" ) {
-                        sharePassport()
-
-                    } .padding()
-                }
                 List {
                     ForEach( 0 ..< self.sectionNames.count ) { i in
                         SectionGroup(sectionTitle: self.sectionNames[i], items: self.sections[i], itemWidth: (geometry.size.width / 2)-10)
@@ -41,35 +45,6 @@ struct DetailsView : View {
         }
     }
     
-    func sharePassport() {
-        do {
-            if let dict = passportDetails.passport?.dumpPassportData() {
-                let data = try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
-                
-                let temporaryURL = URL(fileURLWithPath: NSTemporaryDirectory() + "passport.json")
-                try data.write(to: temporaryURL)
-                
-                let av = UIActivityViewController(activityItems: [temporaryURL], applicationActivities: nil)
-                UIApplication.shared.windows.first?.rootViewController?.present(av, animated: true, completion: nil)
-            }
-        } catch {
-            print( "ERROR - \(error)" )
-        }
-    }
-
-    
-    init(passportDetails: PassportDetails) {
-        self.passportDetails = passportDetails
-        if let passport = passportDetails.passport {
-
-            sections.append(getChipInfoSection(passport))
-            sections.append(getVerificationDetailsSection(passport))
-            sections.append(getCertificateSigningCertDetails(certItems:passport.documentSigningCertificate?.getItemsAsDict()))
-            sections.append(getCertificateSigningCertDetails(certItems:passport.countrySigningCertificate?.getItemsAsDict()))
-            sections.append(getDataGroupHashesSection(passport))
-        }
-    }
-
     func getChipInfoSection(_ passport: NFCPassportModel) -> [Item] {
         // Build Chip info section
         let chipInfo = [Item(title:"LDS Version", value: passport.LDSVersion),
@@ -166,12 +141,12 @@ struct ItemRow : View {
 
 
 struct DetailsView_Previews: PreviewProvider {
-    @ObservedObject static var pd = PassportDetails()
 
     static var previews: some View {
+        let settings = SettingsStore()
         let passport = NFCPassportModel()
-        pd.passport = passport
-        return DetailsView(passportDetails:pd )
+        return DetailsView(passport:passport)
+            .environmentObject(settings)
             .environment( \.colorScheme, .light)
     }
 }

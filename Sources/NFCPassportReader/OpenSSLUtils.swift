@@ -9,42 +9,6 @@ import Foundation
 import OpenSSL
 
 @available(iOS 13, *)
-public enum OpenSSLError: Error {
-    case UnableToGetX509CertificateFromPKCS7(String)
-    case UnableToVerifyX509CertificateForSOD(String)
-    case VerifyAndReturnSODEncapsulatedData(String)
-    case UnableToReadECPublicKey(String)
-    case UnableToExtractSignedDataFromPKCS7(String)
-    case VerifySignedAttributes(String)
-    case UnableToParseASN1(String)
-    case UnableToDecryptRSASignature(String)
-}
-
-@available(iOS 13, *)
-extension OpenSSLError: LocalizedError {
-    public var errorDescription: String? {
-        switch self {
-            case .UnableToGetX509CertificateFromPKCS7(let reason):
-                return NSLocalizedString("Unable to read the SOD PKCS7 Certificate. \(reason)", comment: "UnableToGetPKCS7CertificateForSOD")
-            case .UnableToVerifyX509CertificateForSOD(let reason):
-                return NSLocalizedString("Unable to verify the SOD X509 certificate. \(reason)", comment: "UnableToVerifyX509CertificateForSOD")
-            case .VerifyAndReturnSODEncapsulatedData(let reason):
-                return NSLocalizedString("Unable to verify the SOD Datagroup hashes. \(reason)", comment: "UnableToGetSignedDataFromPKCS7")
-            case .UnableToReadECPublicKey(let reason):
-                return NSLocalizedString("Unable to read ECDSA Public key  \(reason)!", comment: "UnableToReadECPublicKey")
-            case .UnableToExtractSignedDataFromPKCS7(let reason):
-                return NSLocalizedString("Unable to extract Signer data from PKCS7  \(reason)!", comment: "UnableToExtractSignedDataFromPKCS7")
-            case .VerifySignedAttributes(let reason):
-                return NSLocalizedString("Unable to Verify the SOD SignedAttributes  \(reason)!", comment: "UnableToExtractSignedDataFromPKCS7")
-            case .UnableToParseASN1(let reason):
-                return NSLocalizedString("DatUnable to parse ANS1  \(reason)!", comment: "UnableToParseASN1")
-            case .UnableToDecryptRSASignature(let reason):
-                return NSLocalizedString("DatUnable to decrypt RSA Signature \(reason)!", comment: "UnableToDecryptRSSignature")
-        }
-    }
-}
-
-@available(iOS 13, *)
 public class OpenSSLUtils {
     
     private static var loaded = false

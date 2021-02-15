@@ -1,5 +1,5 @@
 PODS:
-  - NFCPassportReader (1.0.16):
+  - NFCPassportReader (1.0.17):
     - OpenSSL-Universal/Framework (= 1.0.2.20)
   - OpenSSL-Universal/Framework (1.0.2.20)
 
@@ -15,7 +15,7 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  NFCPassportReader: 844ffe3414fb2f702e4238ec08497c6e42e4e9f6
+  NFCPassportReader: 41baadba2282b5112f0dbc72590d780d8c333790
   OpenSSL-Universal: ff34003318d5e1163e9529b08470708e389ffcdd
 
 PODFILE CHECKSUM: b1fb46f7c23b13823580f688f906afe9bdc55af2

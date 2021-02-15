@@ -2,10 +2,11 @@ tmp
 old
 working
 .vscode
-scripts/*.pem
+scripts
 test_sod.der
 passport.json
 passport*.json
+Example/Pods
 
 # Xcode
 #

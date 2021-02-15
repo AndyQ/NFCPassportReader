@@ -30,7 +30,7 @@ public class DataGroup1 : DataGroup {
     override func parse(_ data: [UInt8]) throws {
         let tag = try getNextTag()
         if tag != 0x5F1F {
-            throw TagError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse
         }
         let body = try getNextValue()
         let docType = getMRZType(length:body.count)
