@@ -1,14 +1,22 @@
 v1.1.0
     This release contains the following minor breaking changes:
         TagError has been renamed to NFCPassportReaderError
-        
-    Implemented SOD Verification as per RFC 5652 - this is currently the default but can be switched back
-        to OpenSSL CMSVerification if desired. This fixes the case where the datagroup hashes are hases use SHA512 but the
+    Upgraded to OpenSSL 1.1.1i
+        This moved from typed pointers (e.g. UnsafeMutablePointer<X509>) to OpaquePointers (due to OpenSSL changes)
+        No longer accessing OpenSSL structures directly - now using OpenSSL methods (as we should)
+    Implemented SOD Verification as per RFC 5652 - this is set as the default behaviour but can be switched back
+        to OpenSSL CMS Verification if desired. This fixes the issue where the datagroup hashes are hashed using SHA512 but the
         SOD signed digest is hashed with SHA256.
     Added SimpleASN1DumpParser to parse ASN1 data - bit of a cheat as we just parse the OpenSSL ASN1Dump output rather
         then parsing the ASN1 directly (no time yet to write an ASN1 parser)
-    Restructured code - split DataGroups out into own files, moved other structs into own file
-    
+    Restructured code:
+       split DataGroups out into own files
+       moved other structs into own file
+    Sample app is a little more feature rich - redesign to make it a little more friendly and usable
+        Can export raw passport data (as JSON with Base64 encoded binary fields for each datagroup)
+            Select which DataGroups are included in the export
+            Can also export the Active Authentication challenge and signature for later verification testing
+        Can import previously exported passports (through the Files app)
 
 v1.0.17
     Active Authentication now supports RSA Keys (thanks to @himtim for testing and sharing data)

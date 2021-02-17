@@ -54,7 +54,8 @@ struct MRZEntryView : View {
                 .textContentType(.name)
                 .foregroundColor(Color.primary)
                 .padding([.leading, .trailing])
-            
+                .ignoresSafeArea(.keyboard, edges: .all)
+
             Divider()
 
             // Replace with DatePicker once it works correctly
@@ -84,8 +85,8 @@ struct MRZEntryView : View {
                 .padding([.leading, .trailing])
 
             Divider()
-
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .onAppear() {
             if editDateType == "DOB" {
                 settings.dateOfBirth = tmpDate

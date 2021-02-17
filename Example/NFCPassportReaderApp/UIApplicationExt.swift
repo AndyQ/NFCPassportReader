@@ -1,5 +1,5 @@
 //
-//  BundleExt.swift
+//  UIApplicationExt.swift
 //  NFCPassportReaderApp
 //
 //  Created by Andy Qua on 20/01/2021.

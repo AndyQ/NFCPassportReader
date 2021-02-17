@@ -16,30 +16,25 @@ struct Item : Identifiable {
 }
 
 
-struct DetailsView : View {
-    @EnvironmentObject var settings: SettingsStore
-    
-    var passport: NFCPassportModel!
+struct DetailsView : View {    
+    private var passport: NFCPassportModel
+    private var sectionNames = ["Chip information", "Verification information", "Document signing certificate", "Country signing certificate", "Datagroup Hashes"]
+    private var sections = [[Item]]()
 
-    init(passport: NFCPassportModel) {
+    init( passport : NFCPassportModel ) {
         self.passport = passport
-        
         sections.append(getChipInfoSection(self.passport))
         sections.append(getVerificationDetailsSection(self.passport))
         sections.append(getCertificateSigningCertDetails(certItems:self.passport.documentSigningCertificate?.getItemsAsDict()))
         sections.append(getCertificateSigningCertDetails(certItems:self.passport.countrySigningCertificate?.getItemsAsDict()))
         sections.append(getDataGroupHashesSection(self.passport))
     }
-    private var sectionNames = ["Chip information", "Verification information", "Document signing certificate", "Country signing certificate", "Datagroup Hashes"]
-    private var sections = [[Item]]()
-
+    
     var body: some View {
-        GeometryReader { geometry in
-            VStack {
-                List {
-                    ForEach( 0 ..< self.sectionNames.count ) { i in
-                        SectionGroup(sectionTitle: self.sectionNames[i], items: self.sections[i], itemWidth: (geometry.size.width / 2)-10)
-                    }
+        VStack {
+            List {
+                ForEach( 0 ..< self.sectionNames.count ) { i in
+                    SectionGroup(sectionTitle: self.sectionNames[i], items: self.sections[i])
                 }
             }
         }
@@ -104,38 +99,18 @@ struct DetailsView : View {
 struct SectionGroup : View {
     var sectionTitle : String
     var items : [Item]
-    var itemWidth: CGFloat
     
     var body: some View {
         Section(header: Text(sectionTitle)) {
             ForEach(self.items) { item in
-                ItemRow(title: item.title, value: item.value, width: self.itemWidth)
+                VStack(alignment:.leading, spacing:0) {
+                    Text(item.title)
+                        .font(.headline)
+                    Text(item.value)
+                        .lineLimit(nil)
+                }
             }
         }
-    }
-}
-
-struct ItemRow : View {
-    var width: CGFloat
-    var title : String
-    var value : String
-    
-    init( title: String, value: String, width: CGFloat ) {
-        self.title = title
-        self.value = value
-        self.width = width
-    }
-    
-    var body: some View {
-        HStack(alignment:.top, spacing:0) {
-            Text(self.title).frame(width: width, height: .none, alignment: .leading)
-            Divider()
-            Text(self.value)
-                .lineLimit(nil)
-                .frame(width: width, height: .none, alignment: .leading)
-
-        }
-
     }
 }
 

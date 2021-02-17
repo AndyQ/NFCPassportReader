@@ -12,7 +12,7 @@ public enum CertificateType {
     case documentSigningCertificate
     case issuerSigningCertificate
 }
-        
+
 @available(iOS 13, *)
 public enum CertificateItem : String {
     case fingerprint = "Certificate fingerprint"
@@ -27,9 +27,9 @@ public enum CertificateItem : String {
 
 @available(iOS 13, *)
 public class X509Wrapper {
-    public let cert : UnsafeMutablePointer<X509>
+    public let cert : OpaquePointer
     
-    public init?( with cert: UnsafeMutablePointer<X509>? ) {
+    public init?( with cert: OpaquePointer? ) {
         guard let cert = cert else { return nil }
         
         self.cert = X509_dup(cert)
@@ -42,7 +42,7 @@ public class X509Wrapper {
         }
         if let issuerName = self.getIssuerName() {
             item[.issuerName] = issuerName
-
+            
         }
         if let subjectName = self.getSubjectName() {
             item[.subjectName] = subjectName
@@ -75,20 +75,26 @@ public class X509Wrapper {
         var n : UInt32 = 0
         let md = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(EVP_MAX_MD_SIZE))
         defer { md.deinitialize(count: Int(EVP_MAX_MD_SIZE)); md.deallocate() }
-
+        
         X509_digest(cert, fdig, md, &n)
         let arr = UnsafeMutableBufferPointer(start: md, count: Int(n)).map({ binToHexRep($0) }).joined(separator: ":")
         return arr
     }
     
     public func getNotBeforeDate() -> String? {
-        let notBefore = ASN1TimeToString( cert.pointee.cert_info.pointee.validity.pointee.notBefore )
+        var notBefore : String?
+        if let val = X509_get0_notBefore(cert) {
+            notBefore = ASN1TimeToString( val )
+        }
         return notBefore
-
+        
     }
     
     public func getNotAfterDate() -> String? {
-        let notAfter = ASN1TimeToString( cert.pointee.cert_info.pointee.validity.pointee.notAfter )
+        var notAfter : String?
+        if let val = X509_get0_notAfter(cert) {
+            notAfter = ASN1TimeToString( val )
+        }
         return notAfter
     }
     
@@ -98,15 +104,19 @@ public class X509Wrapper {
     }
     
     public func getSignatureAlgorithm() -> String? {
-        let algo = getAlgorithm( cert.pointee.sig_alg.pointee.algorithm )
+        let algor = X509_get0_tbs_sigalg(cert);
+        let algo = getAlgorithm( algor?.pointee.algorithm )
         return algo
     }
     
     public func getPublicKeyAlgorithm() -> String? {
-        let algo = getAlgorithm( cert.pointee.cert_info.pointee.key?.pointee.algor.pointee.algorithm )
+        let pubKey = X509_get_X509_PUBKEY(cert)
+        var ptr : OpaquePointer?
+        X509_PUBKEY_get0_param(&ptr, nil, nil, nil, pubKey)
+        let algo = getAlgorithm(ptr)
         return algo
     }
-        
+    
     public func getIssuerName() -> String? {
         return getName(for: X509_get_issuer_name(cert))
     }
@@ -115,29 +125,29 @@ public class X509Wrapper {
         return getName(for: X509_get_subject_name(cert))
     }
     
-    private func getName( for name: UnsafeMutablePointer<X509_NAME>? ) -> String? {
+    private func getName( for name: OpaquePointer? ) -> String? {
         guard let name = name else { return nil }
         
         var issuer: String = ""
         
         guard let out = BIO_new( BIO_s_mem()) else { return nil }
         defer { BIO_free(out) }
-
+        
         X509_NAME_print_ex(out, name, 0, UInt(ASN1_STRFLGS_ESC_2253 |
-                        ASN1_STRFLGS_ESC_CTRL |
-                        ASN1_STRFLGS_ESC_MSB |
-                        ASN1_STRFLGS_UTF8_CONVERT |
-                        ASN1_STRFLGS_DUMP_UNKNOWN |
-                        ASN1_STRFLGS_DUMP_DER | XN_FLAG_SEP_COMMA_PLUS |
-                        XN_FLAG_DN_REV |
-                        XN_FLAG_FN_SN |
-                        XN_FLAG_DUMP_UNKNOWN_FIELDS))
+                                                ASN1_STRFLGS_ESC_CTRL |
+                                                ASN1_STRFLGS_ESC_MSB |
+                                                ASN1_STRFLGS_UTF8_CONVERT |
+                                                ASN1_STRFLGS_DUMP_UNKNOWN |
+                                                ASN1_STRFLGS_DUMP_DER | XN_FLAG_SEP_COMMA_PLUS |
+                                                XN_FLAG_DN_REV |
+                                                XN_FLAG_FN_SN |
+                                                XN_FLAG_DUMP_UNKNOWN_FIELDS))
         issuer = OpenSSLUtils.bioToString(bio: out)
         
         return issuer
     }
-
-    private func getAlgorithm( _ algo:  UnsafeMutablePointer<ASN1_OBJECT>? ) -> String? {
+    
+    private func getAlgorithm( _ algo:  OpaquePointer? ) -> String? {
         guard let algo = algo else { return nil }
         let len = OBJ_obj2nid(algo)
         var algoString : String? = nil
@@ -146,11 +156,11 @@ public class X509Wrapper {
         }
         return algoString
     }
-
-    private func ASN1TimeToString( _ date: UnsafeMutablePointer<ASN1_TIME> ) -> String? {
+    
+    private func ASN1TimeToString( _ date: UnsafePointer<ASN1_TIME> ) -> String? {
         guard let b = BIO_new(BIO_s_mem()) else { return nil }
         defer { BIO_free(b) }
-
+        
         ASN1_TIME_print(b, date)
         return OpenSSLUtils.bioToString(bio: b)
     }

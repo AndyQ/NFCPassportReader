@@ -1,5 +1,5 @@
 //
-//  ClearButton.swift
+//  ViewModifiers.swift
 //  NFCPassportReaderApp
 //
 //  Created by Andy Qua on 10/02/2021.
@@ -21,6 +21,20 @@ struct ClearButton: ViewModifier {
                             .foregroundColor(Color(UIColor.opaqueSeparator))
                        }
                 )
+            }
+        }
+    }
+}
+
+struct VisibilityStyle: ViewModifier {
+    
+    @Binding var hidden: Bool
+    func body(content: Content) -> some View {
+        Group {
+            if hidden {
+                content.hidden()
+            } else {
+                content
             }
         }
     }

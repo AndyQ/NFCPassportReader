@@ -63,7 +63,7 @@ class SOD : DataGroup {
     
     public private(set) var pkcs7CertificateData : [UInt8] = []
     private var asn1 : ASN1Item!
-    private var pubKey : UnsafeMutablePointer<EVP_PKEY>?
+    private var pubKey : OpaquePointer?
     
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
@@ -85,7 +85,7 @@ class SOD : DataGroup {
     /// Returns the public key from the embedded X509 certificate
     ///
     /// - Returns pointer to the public key
-    func getPublicKey( ) throws -> UnsafeMutablePointer<EVP_PKEY> {
+    func getPublicKey( ) throws -> OpaquePointer {
         
         if let key = pubKey {
             return key
@@ -219,9 +219,7 @@ class SOD : DataGroup {
         // Vals I've seen are:
         // sha1WithRSAEncryption => default pkcs1
         // sha256WithRSAEncryption => default pkcs1
-        // rsassaPss => pss
-        print( "SignatureAlgo - \(signatureAlgo.value)" )
-        
+        // rsassaPss => pss        
         return signatureAlgo.value
     }
 }

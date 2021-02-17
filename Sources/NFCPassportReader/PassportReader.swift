@@ -101,21 +101,27 @@ extension PassportReader : NFCTagReaderSessionDelegate {
     public func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
         // If necessary, you may handle the error. Note session is no longer valid.
         // You must create a new session to restart RF polling.
-        Log.debug( "tagReaderSession:didInvalidateWithError - \(error)" )
+        Log.debug( "tagReaderSession:didInvalidateWithError - \(error.localizedDescription)" )
         self.readerSession = nil
 
         if let readerError = error as? NFCReaderError, readerError.code == NFCReaderError.readerSessionInvalidationErrorUserCanceled
             && self.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled {
+            
             self.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = false
         } else {
             var userError = NFCPassportReaderError.UnexpectedError
             if let readerError = error as? NFCReaderError {
+                Log.error( "tagReaderSession:didInvalidateWithError - Got NFCReaderError - \(readerError.localizedDescription)" )
                 switch (readerError.code) {
                 case NFCReaderError.readerSessionInvalidationErrorUserCanceled:
+                    Log.error( "     - User cancelled session" )
                     userError = NFCPassportReaderError.UserCanceled
                 default:
+                    Log.error( "     - some other error - \(readerError.localizedDescription)" )
                     userError = NFCPassportReaderError.UnexpectedError
                 }
+            } else {
+                Log.error( "tagReaderSession:didInvalidateWithError - Received error - \(error.localizedDescription)" )
             }
             self.scanCompletedHandler(nil, userError)
         }

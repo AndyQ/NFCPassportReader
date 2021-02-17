@@ -10,120 +10,75 @@
 import SwiftUI
 import NFCPassportReader
 
-// Outline view of passport
 struct PassportView : View {
     @EnvironmentObject var settings: SettingsStore
-    
-    var passport: NFCPassportModel!
+    @State private var showExportPassport : Bool = false
     
     var body: some View {
-        return HStack {
-            ZStack(alignment: .bottomTrailing) {
-                PassportDetailsView(passport: passport)
-                
-                HStack {
-                    if !passport.passportDataNotTampered {
-                        VStack {
-                            Image( systemName:"exclamationmark").foregroundColor(.red)
-                                .font(.system(size: 50))
-                                .padding(.bottom, 5)
-                            
-                            Text( "Tampered")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
-                        
-                    }
-                    VStack(alignment: .center) {
-                        if passport.passportCorrectlySigned && passport.documentSigningCertificateVerified {
-                            Image( systemName:"checkmark.seal").foregroundColor(.green)
-                                .font(.system(size: 50))
-                                .padding(.bottom, 5)
-                            Text( "Genuine")
-                                .font(.caption)
-                                .foregroundColor(.green)
-                        } else {
-                            Image( systemName:"xmark.seal").foregroundColor(.red)
-                                .font(.system(size: 50))
-                                .padding([.leading,.trailing], 15)
-                                .padding(.bottom, 5)
-                            Text( "Not Genuine")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .frame(minWidth: 0, maxWidth: 100, minHeight: 0, maxHeight: 22)
-                        }
-                    }
+        VStack {
+            NavigationLink( destination: ExportPassportView(), isActive: $showExportPassport) { Text("") }
 
-                }.padding( [.trailing, .bottom], 10)
-            }
-        }
-        .background( Color.primary.colorInvert() )
-        .cornerRadius(10)
-        .shadow(radius: 20)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.primary, lineWidth: 2)
-        )
-    }
-}
+            PassportSummaryView(passport:settings.passport!)
+            HStack {
 
-
-// Shows the Pzssport details
-struct PassportDetailsView : View {
-    var passport: NFCPassportModel
-
-    var body: some View {
-        return HStack(alignment: .top) {
-            VStack(alignment: .leading) {
-                Spacer()
-                Image(uiImage:passport.passportImage ?? UIImage(named:"head")!)
-                    .resizable()
-                    .renderingMode(.original)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 120, height: 180)
-                    .padding([.leading], 10.0)
-                Spacer()
-            }
-            VStack(alignment: .leading) {
-                Spacer()
-                HStack {
-                    Text( passport.documentType)
-                    Spacer()
-                    Text( passport.issuingAuthority)
-                    Spacer()
-                    Text( passport.documentNumber)
+                Button(action: {showExportPassport.toggle()}) {
+                    Label("Export passport", systemImage: "square.and.arrow.up")
                 }
-                Text( passport.lastName)
-                Text( passport.firstName)
-                Text( passport.nationality)
-                Text( passport.dateOfBirth)
-                Text( passport.gender)
-                Text( passport.documentExpiryDate )
-                
+                .padding()
                 Spacer()
-            }.padding([.trailing], 10.0)
-        }.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: Alignment.topLeading)
-            
+                Button(action: {shareLogs()}) {
+                    Label("Share logs", systemImage: "square.and.arrow.up")
+                }
+                .padding()
+            }
+            DetailsView(passport:settings.passport!)
+        }
+        .navigationTitle("Passport Details")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
- 
+extension PassportView {
+    func shareLogs() {
+        hideKeyboard()
+        do {
+            let arr = Log.logData
+            let data = try JSONSerialization.data(withJSONObject: arr, options: .prettyPrinted)
+            
+            let temporaryURL = URL(fileURLWithPath: NSTemporaryDirectory() + "passportreader.log")
+            try data.write(to: temporaryURL)
+            
+            let av = UIActivityViewController(activityItems: [temporaryURL], applicationActivities: nil)
+            UIApplication.shared.windows.first?.rootViewController?.present(av, animated: true, completion: nil)
+        } catch {
+            print( "ERROR - \(error)" )
+        }
+    }
+}
+
 #if DEBUG
 struct PassportView_Previews : PreviewProvider {
     static var previews: some View {
-//        let pptData = "P<GBRTEST<<TEST<TEST<<<<<<<<<<<<<<<<<<<<<<<<1234567891GBR8001019M2106308<<<<<<<<<<<<<<04"
-//        let passport = Passport( passportMRZData: pptData, image:UIImage(named: "head")!, signed: false, dataValid: false )
         
+        let passport : NFCPassportModel
+        if let file = Bundle.main.url(forResource: "passport", withExtension: "json"),
+           let data = try? Data(contentsOf: file),
+           let json = try? JSONSerialization.jsonObject(with: data, options: []),
+           let arr = json as? [String:String] {
+            passport = NFCPassportModel(from: arr)
+        } else {
+            passport = NFCPassportModel()
+        }
         let settings = SettingsStore()
-        let passport = NFCPassportModel()
-        return Group {
-            PassportView(passport:passport)
-                .environment( \.colorScheme, .light)
-            .environmentObject(settings)
-            PassportView(passport:passport)
-                .environment( \.colorScheme, .dark)
+        settings.passport = passport
+        
+        return NavigationView {
+            PassportView()
                 .environmentObject(settings)
-        }.frame(width: UIScreen.main.bounds.width-10, height: 220)
+                .environment( \.colorScheme, .light)
+                .navigationTitle("WEEE")
+                .navigationBarTitleDisplayMode(.inline)
+        }
     }
 }
 #endif

@@ -1,6 +1,6 @@
 //
 //  SceneDelegate.swift
-//  NFCTest
+//  NFCPassportReaderApp
 //
 //  Created by Andy Qua on 06/06/2019.
 //  Copyright © 2019 Andy Qua. All rights reserved.

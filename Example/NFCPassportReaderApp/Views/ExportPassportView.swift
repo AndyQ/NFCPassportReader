@@ -67,8 +67,15 @@ struct ExportPassportView: View {
         .navigationTitle("Export passport")
         .onAppear() {
             if let passport = settings.passport {
-                items = [.SOD, .COM] + passport.dataGroupsAvailable
+                items = [.SOD, .COM]
+                items.append(contentsOf: DataGroupId.allCases.filter { passport.dataGroupsAvailable.contains($0) } )
+                
+                // Default select only the DGs that contain no personal info.
+                selections = [.SOD, .COM, .DG14, .DG15]
                 isAASupported = passport.activeAuthenticationSupported
+                if isAASupported {
+                    includeAA = true
+                }
             } 
         }
     }
@@ -77,7 +84,7 @@ struct ExportPassportView: View {
 extension ExportPassportView {
     func sharePassport() {
         do {
-            let dict = settings.passport!.dumpPassportData( selectedDataGroups:selections)
+            let dict = settings.passport!.dumpPassportData( selectedDataGroups:selections,includeActiveAuthenticationData: includeAA)
             let data = try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
             
             let temporaryURL = URL(fileURLWithPath: NSTemporaryDirectory() + "passport.json")

@@ -9,8 +9,8 @@ import OpenSSL
 @available(iOS 13, *)
 public class DataGroup15 : DataGroup {
     
-    public private(set) var rsaPublicKey : UnsafeMutablePointer<EVP_PKEY>?
-    public private(set) var ecdsaPublicKey : UnsafeMutablePointer<EVP_PKEY>?
+    public private(set) var rsaPublicKey : OpaquePointer?
+    public private(set) var ecdsaPublicKey : OpaquePointer?
     
     deinit {
         if ( ecdsaPublicKey != nil ) {

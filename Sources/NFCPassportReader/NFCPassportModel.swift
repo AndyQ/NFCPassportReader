@@ -136,9 +136,13 @@ public class NFCPassportModel {
                     Log.error("Failed to import Datagroup - \(key) from dump - \(error)" )
                 }
             }
-
         }
 
+        // See if we have Active Auth info in the dump
+        if let challenge = Data(base64Encoded: dump["AAChallenge"] ?? ""),
+           let signature = Data(base64Encoded: dump["AASignature"] ?? "") {
+            verifyActiveAuthentication(challenge: [UInt8](challenge), signature: [UInt8](signature))
+        }
     }
     
     public func addDataGroup(_ id : DataGroupId, dataGroup: DataGroup ) {
@@ -273,6 +277,7 @@ public class NFCPassportModel {
                 // Check hashes match
                 if msgHash == digest {
                     self.activeAuthenticationPassed = true
+                    Log.info( "Active Authentication (RSA) successful" )
                 } else {
                     Log.error( "Error verifying Active Authentication RSA signature - Hash doesn't match" )
                 }
@@ -282,6 +287,7 @@ public class NFCPassportModel {
         } else if let ecdsaPublicKey = dg15.ecdsaPublicKey {
             if OpenSSLUtils.verifyECDSASignature( publicKey:ecdsaPublicKey, signature: signature, data: challenge ) {
                 self.activeAuthenticationPassed = true
+                Log.info( "Active Authentication (ECDSA) successful" )
             } else {
                 Log.error( "Error verifying Active Authentication ECDSA signature" )
             }
