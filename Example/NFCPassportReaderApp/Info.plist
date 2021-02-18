@@ -24,6 +24,8 @@
 	<true/>
 	<key>NFCReaderUsageDescription</key>
 	<string>This app uses NFC to scan passports</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses the camera to read passports</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

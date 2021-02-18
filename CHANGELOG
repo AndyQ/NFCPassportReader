@@ -17,6 +17,9 @@ v1.1.0
             Select which DataGroups are included in the export
             Can also export the Active Authentication challenge and signature for later verification testing
         Can import previously exported passports (through the Files app)
+        Passports can be saved on scan or import (default is off). Saved passports are stored in caches folder (not backed up)
+           and stored with .complete file protection (encrypted while device locked)
+        Can scan MRZ from passport (Currently using the QKMRZScanner component)
 
 v1.0.17
     Active Authentication now supports RSA Keys (thanks to @himtim for testing and sharing data)

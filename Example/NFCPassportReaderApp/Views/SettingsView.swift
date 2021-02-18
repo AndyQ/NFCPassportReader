@@ -18,7 +18,7 @@ struct SettingsView: View {
         Form {
             Section(header: Text("Logging settings")) {
                 Toggle(isOn: $settings.shouldCaptureLogs) {
-                    Text("Should capture logs:")
+                    Text("Should capture logs")
                 }
                 
                 Picker(
@@ -34,7 +34,18 @@ struct SettingsView: View {
             
             Section(header: Text("Passport reading settings")) {
                 Toggle(isOn: $settings.useNewVerificationMethod) {
-                    Text("Use new Passive Authentication:")
+                    Text("Use new Passive Authentication")
+                }
+                .padding(.bottom)
+                VStack {
+                    Toggle(isOn: $settings.savePassportOnScan) {
+                        Text("Save passport on scan & import")
+                    }
+                    HStack {
+                        Text( "Note - currently stored as JSON on device\nWill not be backed up to iCloud" )
+                            .font(.footnote)
+                        Spacer()
+                    }
                 }
             }
 

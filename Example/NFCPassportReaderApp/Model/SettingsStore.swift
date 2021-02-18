@@ -16,6 +16,7 @@ final class SettingsStore: ObservableObject {
         static let captureLog = "captureLog"
         static let logLevel = "logLevel"
         static let useNewVerification = "useNewVerification"
+        static let savePassportOnScan = "savePassportOnScan"
         static let passportNumber = "passportNumber"
         static let dateOfBirth = "dateOfBirth"
         static let dateOfExpiry = "dateOfExpiry"
@@ -36,6 +37,7 @@ final class SettingsStore: ObservableObject {
             Keys.captureLog: true,
             Keys.logLevel: 1,
             Keys.useNewVerification: true,
+            Keys.savePassportOnScan: false,
             Keys.passportNumber: "",
             Keys.dateOfBirth: Date().timeIntervalSince1970,
             Keys.dateOfExpiry: Date().timeIntervalSince1970,
@@ -72,6 +74,11 @@ final class SettingsStore: ObservableObject {
         get { defaults.bool(forKey: Keys.useNewVerification) }
     }
     
+    var savePassportOnScan: Bool {
+        set { defaults.set(newValue, forKey: Keys.savePassportOnScan) }
+        get { defaults.bool(forKey: Keys.savePassportOnScan) }
+    }
+    
     var passportNumber: String {
         set { defaults.set(newValue, forKey: Keys.passportNumber) }
         get { defaults.string(forKey: Keys.passportNumber) ?? "" }
@@ -82,17 +89,16 @@ final class SettingsStore: ObservableObject {
             defaults.set(newValue.timeIntervalSince1970, forKey: Keys.dateOfBirth)
         }
         get {
-            return Date(timeIntervalSince1970: defaults.double(forKey: Keys.dateOfBirth))
+            let d = Date(timeIntervalSince1970: defaults.double(forKey: Keys.dateOfBirth))
+            return d
         }
     }
     
     var dateOfExpiry: Date {
         set {
-            print( "SET - \(newValue)" )
             defaults.set(newValue.timeIntervalSince1970, forKey: Keys.dateOfExpiry) }
         get {
             let d = Date(timeIntervalSince1970: defaults.double(forKey: Keys.dateOfExpiry))
-            print( "GET - \(d)" )
             return d
         }
     }

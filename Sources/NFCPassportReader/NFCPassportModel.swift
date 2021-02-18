@@ -125,23 +125,30 @@ public class NFCPassportModel {
     }
     
     public init( from dump: [String:String] ) {
+        var AAChallenge : [UInt8]?
+        var AASignature : [UInt8]?
         for (key,value) in dump {
             if let data = Data(base64Encoded: value) {
                 let bin = [UInt8](data)
-                do {
-                    let dg = try DataGroupParser().parseDG(data: bin)
-                    let dgId = DataGroupId.getIDFromName(name:key)
-                    self.addDataGroup( dgId, dataGroup:dg )
-                } catch {
-                    Log.error("Failed to import Datagroup - \(key) from dump - \(error)" )
+                if key == "AASignature" {
+                    AASignature = bin
+                } else if key == "AAChallenge" {
+                    AAChallenge = bin
+                } else {
+                    do {
+                        let dg = try DataGroupParser().parseDG(data: bin)
+                        let dgId = DataGroupId.getIDFromName(name:key)
+                        self.addDataGroup( dgId, dataGroup:dg )
+                    } catch {
+                        Log.error("Failed to import Datagroup - \(key) from dump - \(error)" )
+                    }
                 }
             }
         }
 
         // See if we have Active Auth info in the dump
-        if let challenge = Data(base64Encoded: dump["AAChallenge"] ?? ""),
-           let signature = Data(base64Encoded: dump["AASignature"] ?? "") {
-            verifyActiveAuthentication(challenge: [UInt8](challenge), signature: [UInt8](signature))
+        if let challenge = AAChallenge, let signature = AASignature {
+            verifyActiveAuthentication(challenge: challenge, signature: signature)
         }
     }
     

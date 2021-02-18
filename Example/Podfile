@@ -12,6 +12,7 @@ target 'NFCPassportReaderApp' do
 
   # Pods for NFCPassportReaderApp
   pod 'NFCPassportReader', :path => '../'
+  pod 'QKMRZScanner'
 
   target 'NFCPassportReaderAppTests' do
     inherit! :search_paths

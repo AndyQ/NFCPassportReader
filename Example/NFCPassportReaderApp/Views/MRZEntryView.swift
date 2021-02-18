@@ -34,9 +34,8 @@ struct MRZEntryView : View {
     @EnvironmentObject var settings: SettingsStore
     
     // These will be removed once DatePicker inline works correctly
-    @State private var isLinkActive = false
-    @State private var tmpDate : Date = Date()
-    @State private var editDateType : String = ""
+    @State private var editDOB = false
+    @State private var editDOE = false
     @State private var editDateTitle : String = ""
 
     var body : some View {
@@ -46,7 +45,8 @@ struct MRZEntryView : View {
             settings.passportNumber = $0.uppercased()
         })
         VStack {
-            NavigationLink( destination: DateView(date:$tmpDate, title:editDateTitle), isActive: $isLinkActive) { Text("") }
+            NavigationLink( destination: DateView(date:$settings.dateOfBirth, title:editDateTitle), isActive: $editDOB) { Text("") }
+            NavigationLink( destination: DateView(date:$settings.dateOfExpiry, title:editDateTitle), isActive: $editDOE) { Text("") }
 
             TextField("Passport number", text: passportNrBinding)
                 .textCase(.uppercase)
@@ -63,7 +63,8 @@ struct MRZEntryView : View {
                 VStack {
                     Text( "Date of birth" )
                     Button(formatDate(settings.dateOfBirth)) {
-                        selectDate( type:"DOB" )
+                        editDateTitle = "Select date of birth"
+                        editDOB = true
                     }
                     .padding(.horizontal, 15)
                     .padding(.vertical, 8)
@@ -74,7 +75,8 @@ struct MRZEntryView : View {
                 VStack {
                     Text( "Passport expiry date" )
                     Button(formatDate(settings.dateOfExpiry)) {
-                        selectDate( type:"DOE" )
+                        editDateTitle = "Select passport expiry date"
+                        editDOE = true
                     }
                     .padding(.horizontal, 15)
                     .padding(.vertical, 8)
@@ -87,34 +89,17 @@ struct MRZEntryView : View {
             Divider()
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .onAppear() {
-            if editDateType == "DOB" {
-                settings.dateOfBirth = tmpDate
-            } else if editDateType == "DOE" {
-                settings.dateOfExpiry = tmpDate
-            }
-        }
     }
 }
 
 // This will be removed once DatePicker inline works correctly
 extension MRZEntryView {
-    func selectDate( type: String ) {
-        editDateType = type
-        if editDateType == "DOB" {
-            tmpDate = settings.dateOfBirth
-            editDateTitle = "Select date of birth"
-        } else if editDateType == "DOE" {
-            tmpDate = settings.dateOfExpiry
-            editDateTitle = "Select passport expiry date"
-        }
-        isLinkActive = true
-    }
     
     func formatDate( _ date : Date ) -> String {
         let df = DateFormatter()
         df.dateFormat = "dd MMM yyyy"
-        return df.string(from:date)
+        let dateStr = df.string(from:date)
+        return dateStr
     }
 }
 

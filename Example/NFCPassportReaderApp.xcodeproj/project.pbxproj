@@ -20,6 +20,9 @@
 		A1769DF725D3E318006002D1 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1769DF625D3E318006002D1 /* SettingsStore.swift */; };
 		A1816E9C22C9059F00F546A0 /* PassportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1816E9B22C9059F00F546A0 /* PassportView.swift */; };
 		A18248C22369D17300581384 /* DetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18248C12369D17300581384 /* DetailsView.swift */; };
+		A182DE6125DD6F1300341204 /* StoredPassportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A182DE6025DD6F1300341204 /* StoredPassportView.swift */; };
+		A182DE6325DD730D00341204 /* FileManagerExt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A182DE6225DD730D00341204 /* FileManagerExt.swift */; };
+		A182DE6825DD7EA600341204 /* MRZScannerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A182DE6725DD7EA600341204 /* MRZScannerViewController.swift */; };
 		A1A13B9525B8A29E0026074C /* UIApplicationExt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A13B9425B8A29E0026074C /* UIApplicationExt.swift */; };
 		A1A4C0F725B5E4D70070908B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1A4C0F625B5E4D70070908B /* Foundation.framework */; };
 		A1C234C225DD19DE003FFD79 /* PassportSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C234C125DD19DE003FFD79 /* PassportSummaryView.swift */; };
@@ -63,6 +66,9 @@
 		A1769DF625D3E318006002D1 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		A1816E9B22C9059F00F546A0 /* PassportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassportView.swift; sourceTree = "<group>"; };
 		A18248C12369D17300581384 /* DetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailsView.swift; sourceTree = "<group>"; };
+		A182DE6025DD6F1300341204 /* StoredPassportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredPassportView.swift; sourceTree = "<group>"; };
+		A182DE6225DD730D00341204 /* FileManagerExt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileManagerExt.swift; sourceTree = "<group>"; };
+		A182DE6725DD7EA600341204 /* MRZScannerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MRZScannerViewController.swift; sourceTree = "<group>"; };
 		A1A13B9425B8A29E0026074C /* UIApplicationExt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIApplicationExt.swift; sourceTree = "<group>"; };
 		A1A4C0F625B5E4D70070908B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		A1C234C125DD19DE003FFD79 /* PassportSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassportSummaryView.swift; sourceTree = "<group>"; };
@@ -102,15 +108,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		A1298C9B25D539CD00F5713E /* ChildViews */ = {
+		A1298C9B25D539CD00F5713E /* HelperViews */ = {
 			isa = PBXGroup;
 			children = (
 				A1FDC53325D3F1DE00D22FF4 /* CheckBoxView.swift */,
-				A1FDC53525D43AB400D22FF4 /* MRZEntryView.swift */,
 				A1298C9E25D53A5C00F5713E /* ViewExt.swift */,
 				A1FDC53125D3F19E00D22FF4 /* ViewModifiers.swift */,
 			);
-			path = ChildViews;
+			path = HelperViews;
 			sourceTree = "<group>";
 		};
 		A16EB22422A9E9E10008F53F = {
@@ -138,11 +143,10 @@
 			children = (
 				A16EB24422A9EA000008F53F /* NFCPassportReader.entitlements */,
 				A1CE83AF22C91DB600E3EACF /* Model */,
+				A182DE6425DD731900341204 /* Extensions */,
 				A1CE83B022C91DF100E3EACF /* Views */,
 				A16EB23022A9E9E10008F53F /* AppDelegate.swift */,
 				A16EB23222A9E9E10008F53F /* SceneDelegate.swift */,
-				A1CE83AB22C91D1300E3EACF /* StringExt.swift */,
-				A1A13B9425B8A29E0026074C /* UIApplicationExt.swift */,
 				A16EB23922A9E9E20008F53F /* Assets.xcassets */,
 				A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */,
 				A16EB23E22A9E9E20008F53F /* Info.plist */,
@@ -151,6 +155,16 @@
 				A1095E9B2589032D00D2A46A /* readme.md */,
 			);
 			path = NFCPassportReaderApp;
+			sourceTree = "<group>";
+		};
+		A182DE6425DD731900341204 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				A1CE83AB22C91D1300E3EACF /* StringExt.swift */,
+				A182DE6225DD730D00341204 /* FileManagerExt.swift */,
+				A1A13B9425B8A29E0026074C /* UIApplicationExt.swift */,
+			);
+			path = Extensions;
 			sourceTree = "<group>";
 		};
 		A1A4C0E325B5D3370070908B /* Frameworks */ = {
@@ -175,13 +189,16 @@
 		A1CE83B022C91DF100E3EACF /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				A1298C9B25D539CD00F5713E /* ChildViews */,
+				A1298C9B25D539CD00F5713E /* HelperViews */,
 				A17134BD22C8EF7100C457C3 /* MainView.swift */,
+				A1FDC53525D43AB400D22FF4 /* MRZEntryView.swift */,
 				A1FDC52D25D3F15D00D22FF4 /* SettingsView.swift */,
 				A1816E9B22C9059F00F546A0 /* PassportView.swift */,
 				A1C234C125DD19DE003FFD79 /* PassportSummaryView.swift */,
 				A18248C12369D17300581384 /* DetailsView.swift */,
+				A182DE6025DD6F1300341204 /* StoredPassportView.swift */,
 				A1614B9125D5856600191749 /* ExportPassportView.swift */,
+				A182DE6725DD7EA600341204 /* MRZScannerViewController.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -376,6 +393,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A182DE6825DD7EA600341204 /* MRZScannerViewController.swift in Sources */,
 				A1CE83AC22C91D1300E3EACF /* StringExt.swift in Sources */,
 				A1FDC53625D43AB400D22FF4 /* MRZEntryView.swift in Sources */,
 				A17134BE22C8EF7200C457C3 /* MainView.swift in Sources */,
@@ -383,7 +401,9 @@
 				A1816E9C22C9059F00F546A0 /* PassportView.swift in Sources */,
 				A1769DF725D3E318006002D1 /* SettingsStore.swift in Sources */,
 				A1298C9F25D53A5C00F5713E /* ViewExt.swift in Sources */,
+				A182DE6325DD730D00341204 /* FileManagerExt.swift in Sources */,
 				A1FDC52E25D3F15D00D22FF4 /* SettingsView.swift in Sources */,
+				A182DE6125DD6F1300341204 /* StoredPassportView.swift in Sources */,
 				A1FDC53225D3F19E00D22FF4 /* ViewModifiers.swift in Sources */,
 				A1C234C225DD19DE003FFD79 /* PassportSummaryView.swift in Sources */,
 				A1614B9225D5856600191749 /* ExportPassportView.swift in Sources */,
@@ -551,7 +571,7 @@
 				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 3FGHH7FLK4;
 				INFOPLIST_FILE = NFCPassportReaderApp/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 14.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -575,7 +595,7 @@
 				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = 3FGHH7FLK4;
 				INFOPLIST_FILE = NFCPassportReaderApp/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 14.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

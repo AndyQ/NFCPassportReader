@@ -22,7 +22,8 @@ struct MainView : View {
     @State private var alertTitle : String = ""
     @State private var alertMessage : String = ""
     @State private var showSettings : Bool = false
-    @State private var showImport : Bool = false
+    @State private var showScanMRZ : Bool = false
+    @State private var showSavedPassports : Bool = false
 
     @State var page = 0
     
@@ -35,19 +36,23 @@ struct MainView : View {
             ZStack {
                 NavigationLink( destination: SettingsView(), isActive: $showSettings) { Text("") }
                 NavigationLink( destination: PassportView(), isActive: $showDetails) { Text("") }
+                NavigationLink( destination: StoredPassportView(), isActive: $showSavedPassports) { Text("") }
+                NavigationLink( destination: MRZScanner(completionHandler:{ (nr,dob,doe) in
+                    settings.passportNumber = nr
+                    settings.dateOfBirth = dob
+                    settings.dateOfExpiry = doe
+                    showScanMRZ = false
+                }).navigationTitle("Scan MRZ"), isActive: $showScanMRZ){ Text("") }
 
                 VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: {self.showScanMRZ.toggle()}) {
+                            Label("Scan MRZ", systemImage:"camera")
+                        }.padding([.top, .trailing])
+                    }
                     MRZEntryView()
                     
-                    Button(action: {
-                        self.showImport.toggle()
-                    }) {
-                        Text("Import Passport")
-                            .font(.largeTitle)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.bottom, 20)
-
                     Button(action: {
                         self.scanPassport()
                     }) {
@@ -67,54 +72,26 @@ struct MainView : View {
                 }
             }
             .navigationBarTitle("Passport details", displayMode: .automatic)
-            .navigationBarItems(trailing:
-                Button(action: {showSettings.toggle()}) {
-                    Label("", systemImage: "gear")
-                        .foregroundColor(Color.secondary)
-                        .font(.title2)
-            })
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button(action: {showSettings.toggle()}) {
+                            Label("Settings", systemImage: "gear")
+                        }
+                        Button(action: {self.showSavedPassports.toggle()}) {
+                            Label("Show saved passports", systemImage: "doc")
+                        }
+                    } label: {
+                        Image(systemName: "gear")
+                            .foregroundColor(Color.secondary)
+                    }
+                }
+            }
             .alert(isPresented: $showingAlert) {
                     Alert(title: Text(alertTitle), message:
                         Text(alertMessage), dismissButton: .default(Text("Got it!")))
             }
             .background(colorScheme == .dark ? Color.black : Color.white)
-        }
-        .fileImporter(
-            isPresented: $showImport, allowedContentTypes: [.json],
-            allowsMultipleSelection: false
-        ) { result in
-            do {
-                guard let selectedFile: URL = try result.get().first else { return }
-                if selectedFile.startAccessingSecurityScopedResource() {
-                    let data = try Data(contentsOf: selectedFile)
-                    defer { selectedFile.stopAccessingSecurityScopedResource() }
-                    
-                    let json = try JSONSerialization.jsonObject(with: data, options: [])
-                    if let arr = json as? [String:String] {
-                        hideKeyboard()
-                        Log.logLevel = settings.logLevel
-                        Log.storeLogs = settings.shouldCaptureLogs
-                        Log.clearStoredLogs()
-                        
-
-                        let passport = NFCPassportModel(from: arr)
-                        
-                        let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem")!
-                        
-                        passport.verifyPassport(masterListURL: masterListURL)
-                        
-                        self.settings.passport = passport
-                        self.showDetails = true
-                    }
-
-                } else {
-                    print("Unable to read file contents - denied")
-                }
-            } catch {
-                // Handle failure.
-                print("Unable to read file contents")
-                print(error.localizedDescription)
-            }
         }
     }
 }
@@ -172,7 +149,18 @@ extension MainView {
         }, completed: { (passport, error) in
             if let passport = passport {
                 // All good, we got a passport
-
+                
+                if settings.savePassportOnScan {
+                    // Save passport
+                    let dict = passport.dumpPassportData(selectedDataGroups: DataGroupId.allCases, includeActiveAuthenticationData: true)
+                    if let data = try? JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted) {
+            
+                        let savedPath = FileManager.cachesFolder.appendingPathComponent("\(passport.documentNumber).json")
+                                            
+                        try? data.write(to: savedPath, options: .completeFileProtection)
+                    }
+                }
+                
                 DispatchQueue.main.async {
                     self.settings.passport = passport
                     self.showDetails = true
