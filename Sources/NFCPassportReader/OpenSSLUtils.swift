@@ -8,7 +8,7 @@
 import Foundation
 import OpenSSL
 
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 public class OpenSSLUtils {
     private static var loaded = false
     
@@ -310,7 +310,7 @@ public class OpenSSLUtils {
             throw OpenSSLError.VerifySignedAttributes("Signature Verification Failure - \(str)")
         }
         
-        Log.error( "Signature Verified Successfully");
+        Log.debug( "Signed atttributes Signature Verified Successfully");
     }
     
     

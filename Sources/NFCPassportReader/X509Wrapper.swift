@@ -7,13 +7,13 @@
 
 import OpenSSL
 
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 public enum CertificateType {
     case documentSigningCertificate
     case issuerSigningCertificate
 }
 
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 public enum CertificateItem : String {
     case fingerprint = "Certificate fingerprint"
     case issuerName = "Issuer"
@@ -25,7 +25,7 @@ public enum CertificateItem : String {
     case notAfter = "Valid to"
 }
 
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 public class X509Wrapper {
     public let cert : OpaquePointer
     

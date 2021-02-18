@@ -7,6 +7,8 @@
 //
 
 import Foundation
+
+#if !os(macOS)
 import CoreNFC
 
 @available(iOS 13, *)
@@ -267,3 +269,4 @@ public class TagReader {
     }
 }
 
+#endif

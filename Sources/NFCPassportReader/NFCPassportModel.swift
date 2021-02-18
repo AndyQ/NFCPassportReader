@@ -5,9 +5,14 @@
 //  Created by Andy Qua on 29/10/2019.
 //
 
-import UIKit
 
-@available(iOS 13, *)
+import Foundation
+
+#if os(iOS)
+import UIKit
+#endif
+
+@available(iOS 13, macOS 10.15, *)
 public class NFCPassportModel {
     
     public private(set) lazy var documentType : String = { return String( passportDataElements?["5F03"]?.first ?? "?" ) }()
@@ -91,18 +96,20 @@ public class NFCPassportModel {
     public private(set) var activeAuthenticationSignature : [UInt8] = []
     public private(set) var verificationErrors : [Error] = []
 
+#if os(iOS)
     public var passportImage : UIImage? {
         guard let dg2 = dataGroupsRead[.DG2] as? DataGroup2 else { return nil }
         
         return dg2.getImage()
     }
-    
+
     public var signatureImage : UIImage? {
         guard let dg7 = dataGroupsRead[.DG7] as? DataGroup7 else { return nil }
         
         return dg7.getImage()
     }
-    
+#endif
+
     public var activeAuthenticationSupported : Bool {
         guard let dg15 = dataGroupsRead[.DG15] as? DataGroup15 else { return false }
         if dg15.ecdsaPublicKey != nil || dg15.rsaPublicKey != nil {

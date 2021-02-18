@@ -4,6 +4,9 @@ v1.1.0
     Upgraded to OpenSSL 1.1.1i
         This moved from typed pointers (e.g. UnsafeMutablePointer<X509>) to OpaquePointers (due to OpenSSL changes)
         No longer accessing OpenSSL structures directly - now using OpenSSL methods (as we should)
+    Can use most of it under macOS (not the NFC reading bits though part yet as thats not supported)
+        Also, currently can't get images out under Mac as not done the NSImage/UIImage conversion
+       Should support macOS 10.15+
     Implemented SOD Verification as per RFC 5652 - this is set as the default behaviour but can be switched back
         to OpenSSL CMS Verification if desired. This fixes the issue where the datagroup hashes are hashed using SHA512 but the
         SOD signed digest is hashed with SHA256.

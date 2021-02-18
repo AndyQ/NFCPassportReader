@@ -6,7 +6,9 @@
 //  Copyright © 2021 Andy Qua. All rights reserved.
 //
 
-@available(iOS 13, *)
+import Foundation
+
+@available(iOS 13, macOS 10.15, *)
 public enum DataGroupId : Int, CaseIterable {
     case COM = 0x60
     case DG1 = 0x61

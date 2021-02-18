@@ -6,10 +6,11 @@
 //  Copyright © 2019 Andy Qua. All rights reserved.
 //
 
+import Foundation
+
+#if !os(macOS)
 import UIKit
 import CoreNFC
-
-
 
 @available(iOS 13, *)
 public class PassportReader : NSObject {
@@ -355,3 +356,4 @@ extension PassportReader {
         }
     }
 }
+#endif

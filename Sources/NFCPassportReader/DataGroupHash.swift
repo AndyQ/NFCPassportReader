@@ -6,7 +6,7 @@
 //  Copyright © 2021 Andy Qua. All rights reserved.
 //
 
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 public struct DataGroupHash {
     public var id: String
     public var sodHash: String

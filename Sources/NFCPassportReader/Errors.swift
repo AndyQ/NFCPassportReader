@@ -9,7 +9,7 @@
 import Foundation
 
 // MARK: TagError
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 public enum NFCPassportReaderError: Error {
     case ResponseError(String, UInt8, UInt8)
     case InvalidResponse
@@ -64,7 +64,7 @@ public enum NFCPassportReaderError: Error {
     }
 }
 
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 extension NFCPassportReaderError: LocalizedError {
     public var errorDescription: String? {
         return NSLocalizedString(value, comment: "My error")
@@ -73,7 +73,7 @@ extension NFCPassportReaderError: LocalizedError {
 
 
 // MARK: OpenSSLError
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 public enum OpenSSLError: Error {
     case UnableToGetX509CertificateFromPKCS7(String)
     case UnableToVerifyX509CertificateForSOD(String)
@@ -85,7 +85,7 @@ public enum OpenSSLError: Error {
     case UnableToDecryptRSASignature(String)
 }
 
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 extension OpenSSLError: LocalizedError {
     public var errorDescription: String? {
         switch self {

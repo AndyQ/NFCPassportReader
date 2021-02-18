@@ -6,6 +6,8 @@
 //  Copyright © 2021 Andy Qua. All rights reserved.
 //
 
+#if !os(macOS)
+
 @available(iOS 13, *)
 public struct ResponseAPDU {
     
@@ -20,3 +22,4 @@ public struct ResponseAPDU {
     }
 }
 
+#endif

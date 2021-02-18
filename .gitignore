@@ -7,6 +7,9 @@ test_sod.der
 passport.json
 passport*.json
 Example/Pods
+*.pem
+*.pem_
+.swiftpm
 
 # Xcode
 #

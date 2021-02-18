@@ -4,7 +4,9 @@
 //  Created by Andy Qua on 01/02/2021.
 //
 
-@available(iOS 13, *)
+import Foundation
+
+@available(iOS 13, macOS 10.15, *)
 public enum DocTypeEnum: String {
     case TD1
     case TD2
@@ -17,7 +19,7 @@ public enum DocTypeEnum: String {
     }
 }
 
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 public class DataGroup1 : DataGroup {
     
     public private(set) var elements : [String:String] = [:]

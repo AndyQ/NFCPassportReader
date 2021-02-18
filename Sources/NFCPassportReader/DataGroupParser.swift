@@ -4,10 +4,9 @@
 //  Created by Andy Qua on 14/06/2019.
 //
 
-import UIKit
 import OpenSSL
 
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 class DataGroupParser {
     
     static let dataGroupNames = ["Common", "DG1", "DG2", "DG3", "DG4", "DG5", "DG6", "DG7", "DG8", "DG9", "DG10", "DG11", "DG12", "DG13", "DG14", "DG15", "DG16", "SecurityData"]

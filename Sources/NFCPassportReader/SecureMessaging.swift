@@ -7,6 +7,8 @@
 //
 
 import Foundation
+
+#if !os(macOS)
 import CoreNFC
 
 /// This class implements the secure messaging protocol.
@@ -239,3 +241,4 @@ public class SecureMessaging {
     }
     
 }
+#endif

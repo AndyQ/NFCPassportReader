@@ -4,9 +4,10 @@
 //  Created by Andy Qua on 01/02/2021.
 //
 
+import Foundation
 import OpenSSL
 
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 public class DataGroup15 : DataGroup {
     
     public private(set) var rsaPublicKey : OpaquePointer?

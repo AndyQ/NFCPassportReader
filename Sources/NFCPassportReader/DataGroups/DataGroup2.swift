@@ -4,7 +4,13 @@
 //  Created by Andy Qua on 01/02/2021.
 //
 
-@available(iOS 13, *)
+import Foundation
+
+#if !os(macOS)
+import UIKit
+#endif
+
+@available(iOS 13, macOS 10.15, *)
 public class DataGroup2 : DataGroup {
     public private(set) var nrImages : Int = 0
     public private(set) var versionNumber : Int = 0
@@ -29,7 +35,9 @@ public class DataGroup2 : DataGroup {
     public private(set) var quality : Int = 0
     public private(set) var imageData : [UInt8] = []
     
-    func getImage() -> UIImage? {
+    
+#if !os(macOS)
+func getImage() -> UIImage? {
         if imageData.count == 0 {
             return nil
         }
@@ -37,7 +45,8 @@ public class DataGroup2 : DataGroup {
         let image = UIImage(data:Data(imageData) )
         return image
     }
-    
+#endif
+
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
         datagroupType = .DG2

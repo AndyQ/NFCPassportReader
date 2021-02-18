@@ -4,7 +4,13 @@
 //  Created by Andy Qua on 01/02/2021.
 //
 
-@available(iOS 13, *)
+import Foundation
+
+#if !os(macOS)
+import UIKit
+#endif
+
+@available(iOS 13, macOS 10.15, *)
 public class DataGroup7 : DataGroup {
     
     public private(set) var imageData : [UInt8] = []
@@ -14,6 +20,7 @@ public class DataGroup7 : DataGroup {
         datagroupType = .DG7
     }
     
+#if !os(macOS)
     func getImage() -> UIImage? {
         if imageData.count == 0 {
             return nil
@@ -22,6 +29,7 @@ public class DataGroup7 : DataGroup {
         let image = UIImage(data:Data(imageData) )
         return image
     }
+#endif
     
     
     override func parse(_ data: [UInt8]) throws {
