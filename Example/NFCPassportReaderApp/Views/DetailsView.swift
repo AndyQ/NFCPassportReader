@@ -13,6 +13,10 @@ struct Item : Identifiable {
     var id = UUID()
     var title : String
     var value : String
+    
+    var textColor : Color {
+        return value.hasPrefix("FAILED") ? Color.red : Color.black
+    }
 }
 
 
@@ -107,6 +111,7 @@ struct SectionGroup : View {
                     Text(item.title)
                         .font(.headline)
                     Text(item.value)
+                        .foregroundColor(item.textColor)
                         .lineLimit(nil)
                 }
             }

@@ -254,13 +254,15 @@ public func toAsn1Length(_ data : Int) throws -> [UInt8] {
 @available(iOS 13, macOS 10.15, *)
 public func calcHash( data: [UInt8], hashAlgorithm: String ) throws -> [UInt8] {
     var ret : [UInt8] = []
-    if hashAlgorithm == "SHA1" {
+    
+    let hashAlgorithm = hashAlgorithm.lowercased()
+    if hashAlgorithm == "sha1" {
         ret = calcSHA1Hash(data)
-    } else if hashAlgorithm == "SHA256" {
+    } else if hashAlgorithm == "sha256" {
         ret = calcSHA256Hash(data)
-    } else if hashAlgorithm == "SHA384" {
+    } else if hashAlgorithm == "sha384" {
         ret = calcSHA384Hash(data)
-    } else if hashAlgorithm == "SHA512" {
+    } else if hashAlgorithm == "sha512" {
         ret = calcSHA512Hash(data)
     } else {
         throw NFCPassportReaderError.InvalidHashAlgorithmSpecified

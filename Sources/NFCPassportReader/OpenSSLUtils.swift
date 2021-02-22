@@ -50,6 +50,17 @@ public class OpenSSLUtils {
         return str
     }
     
+    static func pubKeyToPEM( pubKey: OpaquePointer ) -> String {
+        
+        let out = BIO_new(BIO_s_mem())!
+        defer { BIO_free( out) }
+        
+        PEM_write_bio_PUBKEY(out, pubKey);
+        let str = OpenSSLUtils.bioToString( bio:out )
+        
+        return str
+    }
+    
     static func pkcs7DataToPEM( pkcs7: Data ) -> String {
         
         let inf = BIO_new(BIO_s_mem())!
@@ -236,16 +247,7 @@ public class OpenSSLUtils {
         
         let pubKey = try sod.getPublicKey()
         
-        var mdHash : Data
-        if signedAttribsHashAlgo == "sha1" {
-            mdHash = Data(calcSHA1Hash( [UInt8](encapsulatedContent) ))
-        } else if signedAttribsHashAlgo == "sha256" {
-            mdHash = Data(calcSHA256Hash( [UInt8](encapsulatedContent) ))
-        } else if signedAttribsHashAlgo == "sha512" {
-            mdHash = Data(calcSHA512Hash( [UInt8](encapsulatedContent) ))
-        } else {
-            throw OpenSSLError.VerifyAndReturnSODEncapsulatedData("Unsupported hash algorithm - \(signedAttribsHashAlgo)")
-        }
+        let mdHash : Data = try Data(calcHash(data: [UInt8](encapsulatedContent), hashAlgorithm: signedAttribsHashAlgo))
         
         // Make sure that hash equals the messageDigest
         if messageDigest != mdHash {
@@ -254,67 +256,13 @@ public class OpenSSLUtils {
         }
         
         // Verify signed attributes
-        try verifySignedAttributes( signedAttributes: signedAttributes, signature: signature, pubKey: pubKey, signatureType: sigType )
+        if  !verifySignature( data : [UInt8](signedAttributes), signature : [UInt8](signature), pubKey : pubKey, digestType: sigType ) {
+            
+            throw OpenSSLError.VerifyAndReturnSODEncapsulatedData("Unable to verify signature for signed attributes")
+        }
         
         return encapsulatedContent
     }
-    
-    /// This code is taken pretty much from pkeyutl.c - to verify a signature with a public key extract
-    static func verifySignedAttributes( signedAttributes : Data, signature : Data, pubKey : OpaquePointer, signatureType: String ) throws {
-        
-        // Create EVP_PKEY_CTX
-        guard let ctx = EVP_PKEY_CTX_new(pubKey, nil) else {
-            throw OpenSSLError.VerifySignedAttributes("Failed to extract public key from pkcs7")
-        }
-        defer { EVP_PKEY_CTX_free(ctx) }
-        
-        var rv = EVP_PKEY_verify_init(ctx);
-        if (rv <= 0) {
-            throw OpenSSLError.VerifySignedAttributes("Failed to set verify mode")
-        }
-        
-        // Set our options (Note order is important - e.g padding mode pss must be set BEFORE saltlen!)
-        let saHash : [UInt8]
-        switch( signatureType ) {
-            case "sha1WithRSAEncryption":
-                EVP_PKEY_CTX_ctrl_str(ctx, "digest", "sha1" )
-                EVP_PKEY_CTX_ctrl_str(ctx, "rsa_padding_mode", "pkcs1" )
-                saHash = calcSHA1Hash(  [UInt8](signedAttributes) )
-            case "sha512WithRSAEncryption":
-                EVP_PKEY_CTX_ctrl_str(ctx, "digest", "sha512" )
-                EVP_PKEY_CTX_ctrl_str(ctx, "rsa_padding_mode", "pkcs1" )
-                saHash = calcSHA512Hash(  [UInt8](signedAttributes) )
-            case "rsassaPss":
-                EVP_PKEY_CTX_ctrl_str(ctx, "digest", "sha256" )
-                EVP_PKEY_CTX_ctrl_str(ctx, "rsa_padding_mode", "pss" )
-                EVP_PKEY_CTX_ctrl_str(ctx, "rsa_pss_saltlen", "auto" )
-                saHash = calcSHA256Hash(  [UInt8](signedAttributes) )
-            case "sha256WithRSAEncryption":
-                fallthrough
-            default:
-                EVP_PKEY_CTX_ctrl_str(ctx, "digest", "sha256" )
-                EVP_PKEY_CTX_ctrl_str(ctx, "rsa_padding_mode", "pkcs1" )
-                saHash = calcSHA256Hash(  [UInt8](signedAttributes) )
-        }
-                
-        // Verify signature against hash
-        let _ = signature.withUnsafeBytes { (sigPtr) in
-            let _ = saHash.withUnsafeBytes{ (saHashPtr) in
-                rv = EVP_PKEY_verify(ctx, sigPtr.baseAddress?.assumingMemoryBound(to: UInt8.self), signature.count,
-                                     saHashPtr.baseAddress?.assumingMemoryBound(to: UInt8.self), saHash.count);
-            }
-        }
-        if rv != 1 {
-            let str = OpenSSLUtils.getOpenSSLError()
-            Log.error("Signature Verification Failure - \(str)")
-            throw OpenSSLError.VerifySignedAttributes("Signature Verification Failure - \(str)")
-        }
-        
-        Log.debug( "Signed atttributes Signature Verified Successfully");
-    }
-    
-    
-    
     
     /// Parses a signed data structures encoded in ASN1 format and returns the structure in text format
     /// - Parameter data: The data to be parsed in ASN1 format
@@ -444,33 +392,58 @@ public class OpenSSLUtils {
             var unsafePointer = unsafeBufPtr.baseAddress
             let _ = i2d_ECDSA_SIG(ecsig, &unsafePointer)
         }
-        var nRes : Int32 = -1
-        // check if ECDSA signature and then verify
-        let type = EVP_PKEY_base_id(publicKey);
-        if (type == EVP_PKEY_EC)
-        {
-            let ctx = EVP_MD_CTX_new()
-            defer{ EVP_MD_CTX_free( ctx) }
-
-            nRes = EVP_DigestVerifyInit(ctx, nil, nil, nil, publicKey);
-            if ( nRes != 1 ) {
-                return false;
-            }
-            
-            nRes = EVP_DigestUpdate(ctx, data, data.count);
-            if ( nRes != 1 ) {
-                return false;
-            }
-            
-            nRes = EVP_DigestVerifyFinal(ctx, derBytes, derBytes.count);
-            if (nRes != 1) {
-                return false;
-            }
+        
+        let rc = verifySignature(data: data, signature: derBytes, pubKey: publicKey, digestType: "")
+        return rc
+    }
+    
+    /// Verifies that a signature is valid for some data and a Public Key
+    /// - Parameter data: The data used to generate the signature
+    /// - Parameter signature: The signature to verify
+    /// - Parameter publicKey: The OpenSSL EVP_PKEY  key
+    /// - Parameter digestType: the type of hash to use (empty string to use no digest type)
+    /// - Returns: True if the signature was verified
+    static func verifySignature( data : [UInt8], signature : [UInt8], pubKey : OpaquePointer, digestType: String ) -> Bool {
+        
+        var digest = "sha256"
+        let digestType = digestType.lowercased()
+        if digestType.contains( "sha1" ) {
+            digest = "sha1"
+        } else if digestType.contains( "sha256" ) || digestType.contains( "rsassapss" ) {
+            digest = "sha256"
+        } else if digestType.contains( "sha384" ) {
+            digest = "sha384"
+        } else if digestType.contains( "sha512" ) {
+            digest = "sha512"
         }
-        else {
+        
+        let md = EVP_get_digestbyname(digest)
+        
+        let ctx = EVP_MD_CTX_new()
+        var pkey_ctx : OpaquePointer?
+
+        defer{ EVP_MD_CTX_free( ctx) }
+        
+        var nRes = EVP_DigestVerifyInit(ctx, &pkey_ctx, md, nil, pubKey)
+        if ( nRes != 1 ) {
             return false;
         }
         
-        return nRes == 1
+        if digestType.contains( "rsassapss" ) {
+            EVP_PKEY_CTX_ctrl_str(pkey_ctx, "rsa_padding_mode", "pss" )
+            EVP_PKEY_CTX_ctrl_str(pkey_ctx, "rsa_pss_saltlen", "auto" )
+        }
+        
+        nRes = EVP_DigestUpdate(ctx, data, data.count);
+        if ( nRes != 1 ) {
+            return false;
+        }
+        
+        nRes = EVP_DigestVerifyFinal(ctx, signature, signature.count);
+        if (nRes != 1) {
+            return false;
+        }
+        
+        return true
     }
 }
