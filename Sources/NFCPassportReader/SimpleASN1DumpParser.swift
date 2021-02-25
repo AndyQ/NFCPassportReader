@@ -9,7 +9,7 @@ import Foundation
 import OpenSSL
 
 @available(iOS 13, macOS 10.15, *)
-class ASN1Item : CustomDebugStringConvertible {
+public class ASN1Item : CustomDebugStringConvertible {
     var pos : Int = -1
     var depth : Int = -1
     var headerLen : Int = -1
@@ -22,8 +22,7 @@ class ASN1Item : CustomDebugStringConvertible {
     
     private var children = [ASN1Item] ()
     
-    init( line : String, parent : ASN1Item? = nil ) {
-        self.parent = parent
+    public init( line : String) {
         self.line = line
         
         let scanner = Scanner(string: line)
@@ -57,10 +56,11 @@ class ASN1Item : CustomDebugStringConvertible {
     }
     
     func addChild( _ child : ASN1Item ) {
+        child.parent = self
         self.children.append( child )
     }
     
-    func getChild( _ child : Int ) -> ASN1Item? {
+    public func getChild( _ child : Int ) -> ASN1Item? {
         if ( child < children.count ) {
             return children[child]
         } else {
@@ -68,11 +68,11 @@ class ASN1Item : CustomDebugStringConvertible {
         }
     }
     
-    func getNumberOfChildren() -> Int {
+    public func getNumberOfChildren() -> Int {
         return children.count
     }
     
-    var debugDescription: String {
+    public var debugDescription: String {
         var ret = "pos:\(pos), d=\(depth), hl=\(headerLen), l=\(length): \(itemType): \(type) \(value)\n"
         children.forEach { ret += $0.debugDescription }
         return ret
@@ -82,12 +82,14 @@ class ASN1Item : CustomDebugStringConvertible {
 /// Very very basic ASN1 parser class - uses OpenSSL to dump an ASN1 structure to a string, and then parses that out into
 /// a tree based hieracy of ASN1Item structures - depth based
 @available(iOS 13, macOS 10.15, *)
-class SimpleASN1DumpParser {
+public class SimpleASN1DumpParser {
+    public init() {
+        
+    }
     
-    func parse( data: Data ) throws -> ASN1Item {
+    public func parse( data: Data ) throws -> ASN1Item {
         var parsed : String = ""
         
-        var topItem : ASN1Item?
 
         let _ = try data.withUnsafeBytes { (ptr) in
             guard let out = BIO_new(BIO_s_mem()) else { throw OpenSSLError.UnableToParseASN1("Unable to allocate output buffer") }
@@ -102,12 +104,24 @@ class SimpleASN1DumpParser {
         }
         
         let lines = parsed.components(separatedBy: "\n")
+        let topItem : ASN1Item? = parseLines( lines:lines)
+        
+        guard let ret = topItem else {
+            throw OpenSSLError.UnableToParseASN1("Failed to format ASN1 Data")
+        }
+        
+        return ret
+    }
+    
+    func parseLines( lines : [String] ) -> ASN1Item? {
+        var topItem : ASN1Item?
+
         var currentParent : ASN1Item?
         for line in lines {
             if line.trimmingCharacters(in: .whitespacesAndNewlines) == "" {
                 continue
             }
-            let item = ASN1Item(line: line, parent: currentParent)
+            let item = ASN1Item(line: line)
             if item.depth == 0 {
                 topItem = item
             } else if item.depth == currentParent!.depth {
@@ -125,10 +139,35 @@ class SimpleASN1DumpParser {
             currentParent = item
         }
         
-        guard let ret = topItem else {
-            throw OpenSSLError.UnableToParseASN1("Failed to format ASN1 Data")
-        }
+        return topItem
+    }
+    
+    public func test() {
+        let lines = [
+            "    0:d=0  hl=4 l= 758 cons: SET               ",
+            "  662:d=1  hl=2 l=  18 cons: SEQUENCE          ",
+            "  664:d=2  hl=2 l=  10 prim: OBJECT            :0.4.0.127.0.7.2.2.3.2.4",
+            "  676:d=2  hl=2 l=   1 prim: INTEGER           :01",
+            "  679:d=2  hl=2 l=   1 prim: INTEGER           :01",
+            "  682:d=1  hl=2 l=  18 cons: SEQUENCE          ",
+            "  684:d=2  hl=2 l=  10 prim: OBJECT            :0.4.0.127.0.7.2.2.3.2.1",
+            "  696:d=2  hl=2 l=   1 prim: INTEGER           :01",
+            "  699:d=2  hl=2 l=   1 prim: INTEGER           :02",
+            "  702:d=1  hl=2 l=  13 cons: SEQUENCE          ",
+            "  704:d=2  hl=2 l=   8 prim: OBJECT            :0.4.0.127.0.7.2.2.2",
+            "  714:d=2  hl=2 l=   1 prim: INTEGER           :01",
+            "  717:d=1  hl=2 l=  18 cons: SEQUENCE          ",
+            "  719:d=2  hl=2 l=  10 prim: OBJECT            :0.4.0.127.0.7.2.2.4.2.4",
+            "  731:d=2  hl=2 l=   1 prim: INTEGER           :02",
+            "  734:d=2  hl=2 l=   1 prim: INTEGER           :0D",
+            "  737:d=1  hl=2 l=  23 cons: SEQUENCE          ",
+            "  739:d=2  hl=2 l=   6 prim: OBJECT            :2.23.136.1.1.5",
+            "  747:d=2  hl=2 l=   1 prim: INTEGER           :01",
+            "  750:d=2  hl=2 l=  10 prim: OBJECT            :0.4.0.127.0.7.1.1.4.1.3",
+            ""
+        ]
         
-        return ret
+        let topItem = parseLines( lines:lines )
+        print( topItem?.debugDescription ?? "" )
     }
 }

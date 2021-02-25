@@ -34,6 +34,7 @@ public enum NFCPassportReaderError: Error {
     case InvalidMRZKey
     case MoreThanOneTagFound
     case InvalidHashAlgorithmSpecified
+    case InvalidDataPassed(String)
 
     var value: String {
         switch self {
@@ -60,6 +61,7 @@ public enum NFCPassportReaderError: Error {
             case .InvalidMRZKey: return "InvalidMRZKey"
             case .MoreThanOneTagFound: return "MoreThanOneTagFound"
             case .InvalidHashAlgorithmSpecified: return "InvalidHashAlgorithmSpecified"
+            case .InvalidDataPassed(let reason) : return "Invalid data passed - \(reason)"
         }
     }
 }

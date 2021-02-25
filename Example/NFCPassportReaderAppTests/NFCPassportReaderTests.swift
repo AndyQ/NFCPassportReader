@@ -220,13 +220,18 @@ final class NFCPassportReaderTests: XCTestCase {
     
         func testConvertECDSAPlainTODer() {
             let sigText = "67e147aac644325792dfa0b1615956dc4ed54e8cd859341571db98003431936e0651e9a3cdbcea3c8accd75a6f6bf07eb6bcf9ad1728e21aa854049e634e6fbf"
-            var sig = hexRepToBin(sigText)
+            let sig = hexRepToBin(sigText)
             
             let ecsig = ECDSA_SIG_new()
-            BN_bin2bn(&sig, 32, ecsig?.pointee.r)
-            BN_bin2bn(&sig + 32, 32, ecsig?.pointee.s)
+            defer { ECDSA_SIG_free(ecsig) }
+            sig.withUnsafeBufferPointer { (unsafeBufPtr) in
+                let unsafePointer = unsafeBufPtr.baseAddress!
+                let r = BN_bin2bn(unsafePointer, 32, nil)
+                let s = BN_bin2bn(unsafePointer + 32, 32, nil)
+                ECDSA_SIG_set0(ecsig, r, s)
+            }
             
-            print( "Sig - ecsig" )
+            //print( "Sig - \(ecsig)" )
             
             var derEncodedSignature: UnsafeMutablePointer<UInt8>? = nil
             let derLength = i2d_ECDSA_SIG(ecsig, &derEncodedSignature)

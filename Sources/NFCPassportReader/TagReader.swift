@@ -63,6 +63,18 @@ public class TagReader {
         send( cmd: cmd, completed: completed )
     }
     
+    func sendMSEKAT( keyData : Data, idData: Data?, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+        
+        var data = keyData
+        if let idData = idData {
+            data += idData
+        }
+        
+        let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x22, p1Parameter: 0x41, p2Parameter: 0xA6, data: data, expectedResponseLength: 256)
+
+        send( cmd: cmd, completed: completed )
+    }
+    
     
     var header = [UInt8]()
     func selectFileAndRead( tag: [UInt8], completed: @escaping ([UInt8]?, NFCPassportReaderError?)->() ) {

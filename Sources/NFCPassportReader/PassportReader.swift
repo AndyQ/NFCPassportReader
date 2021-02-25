@@ -14,7 +14,6 @@ import CoreNFC
 
 @available(iOS 13, *)
 public class PassportReader : NSObject {
-    
     private var passport : NFCPassportModel = NFCPassportModel()
     private var readerSession: NFCTagReaderSession?
     private var elementReadAttempts = 0
@@ -26,6 +25,7 @@ public class PassportReader : NSObject {
 
     private var tagReader : TagReader?
     private var bacHandler : BACHandler?
+    private var caHandler : ChipAuthenticationHandler?
     private var mrzKey : String = ""
     private var dataAmountToReadOverride : Int? = nil
     
@@ -211,18 +211,16 @@ extension PassportReader {
                             self?.invalidateSession(errorMessage:NFCViewDisplayMessage.error(error), error: error)
                         } else {
                             self?.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.successfulRead)
+                            
+                            // Do Chip Auth if we can
+                            guard let dg14 = self?.passport.getDataGroup(.DG14) as? DataGroup14 else {
+                                self?.doActiveAuthentication()
+                                return
+                            }
 
-                            // Before we finish, check if we should do active authentication
-                            self?.doActiveAuthenticationIfNeccessary() {
-                                // We succesfully read the passport, now we're about to invalidate the session. Before
-                                // doing so, we want to be sure that the 'user cancelled' error that we're causing by
-                                // calling 'invalidate' will not be reported back to the user
-                                self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
-                                self?.readerSession?.invalidate()
-
-                                // If we have a masterlist url set then use that and verify the passport now
-                                self?.passport.verifyPassport(masterListURL: self?.masterListURL, useCMSVerification: self?.passiveAuthenticationUsesOpenSSL ?? false)
-                                self?.scanCompletedHandler( self?.passport, nil )
+                            self?.caHandler = ChipAuthenticationHandler(dg14: dg14, tagReader: (self?.tagReader)!)
+                            self?.caHandler?.doChipAuthentication() { (success) in
+                                self?.doActiveAuthentication()
                             }
                         }
                     }
@@ -234,6 +232,22 @@ extension PassportReader {
             }
         })
     }
+    
+    func doActiveAuthentication() {
+        // Before we finish, check if we should do active authentication
+        self.doActiveAuthenticationIfNeccessary() { [weak self] in
+            // We succesfully read the passport, now we're about to invalidate the session. Before
+            // doing so, we want to be sure that the 'user cancelled' error that we're causing by
+            // calling 'invalidate' will not be reported back to the user
+            self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
+            self?.readerSession?.invalidate()
+            
+            // If we have a masterlist url set then use that and verify the passport now
+            self?.passport.verifyPassport(masterListURL: self?.masterListURL, useCMSVerification: self?.passiveAuthenticationUsesOpenSSL ?? false)
+            self?.scanCompletedHandler( self?.passport, nil )
+        }
+
+    }
 
     func invalidateSession(errorMessage: NFCViewDisplayMessage, error: NFCPassportReaderError) {
         // Mark the next 'invalid session' error as not reportable (we're about to cause it by invalidating the
@@ -242,7 +256,7 @@ extension PassportReader {
         self.readerSession?.invalidate(errorMessage: self.nfcViewDisplayMessageHandler?(errorMessage) ?? errorMessage.description)
         self.scanCompletedHandler(nil, error)
     }
-    
+
     func doActiveAuthenticationIfNeccessary( completed: @escaping ()->() ) {
         guard self.passport.activeAuthenticationSupported else {
             completed()

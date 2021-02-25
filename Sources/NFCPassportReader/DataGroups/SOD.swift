@@ -84,7 +84,6 @@ class SOD : DataGroup {
     }
     
     /// Returns the public key from the embedded X509 certificate
-    ///
     /// - Returns pointer to the public key
     func getPublicKey( ) throws -> OpaquePointer {
         
@@ -122,6 +121,9 @@ class SOD : DataGroup {
         return ret
     }
     
+    /// Gets the digest algorithm used to hash the encapsulated content in the signed data section (if present)
+    /// - Returns: The digest algorithm used to hash the encapsulated content in the signed data section
+    /// - Throws: Error if we can't find or read the digest algorithm
     func getEncapsulatedContentDigestAlgorithm() throws -> String {
         guard let signedData = asn1.getChild(1)?.getChild(0),
               let digestAlgo = signedData.getChild(1)?.getChild(0)?.getChild(0) else {
@@ -131,6 +133,9 @@ class SOD : DataGroup {
         return String(digestAlgo.value)
     }
     
+    /// Gets the signed attributes section (if present)
+    /// - Returns: the signed attributes section
+    /// - Throws: Error if we can't find or read the signed attributes
     func getSignedAttributes( ) throws -> Data {
         
         // Get the SignedAttributes section.
@@ -155,11 +160,14 @@ class SOD : DataGroup {
         return signedAttribs
     }
     
+/// Gets the message digest from the signed attributes section (if present)
+/// - Returns: the message digest
+/// - Throws: Error if we can't find or read the message digest
     func getMessageDigestFromSignedAttributes( ) throws -> Data {
         
         // For the SOD, the SignedAttributes consists of:
         // A Content type Object (which has the value of the attributes content type)
-        // A messageDigest Object which has its values as the messageDigest value
+        // A messageDigest Object which has the message digest as it value
         // We want the messageDigest value
         
         guard let signedData = asn1.getChild(1)?.getChild(0),
@@ -189,6 +197,9 @@ class SOD : DataGroup {
         return messageDigest
     }
     
+    /// Gets the signature data (if present)
+    /// - Returns: the signature
+    /// - Throws: Error if we can't find or read the signature
     func getSignature( ) throws -> Data {
         
         guard let signedData = asn1.getChild(1)?.getChild(0),
@@ -207,7 +218,9 @@ class SOD : DataGroup {
         return ret
     }
     
-    //
+    /// Gets the signature algorithm used (if present)
+    /// - Returns: the signature algorithm used
+    /// - Throws: Error if we can't find or read the signature algorithm
     func getSignatureAlgorithm( ) throws -> String {
         
         guard let signedData = asn1.getChild(1)?.getChild(0),

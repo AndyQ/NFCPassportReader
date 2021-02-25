@@ -61,6 +61,17 @@ public class OpenSSLUtils {
         return str
     }
     
+    static func privKeyToPEM( privKey: OpaquePointer ) -> String {
+        
+        let out = BIO_new(BIO_s_mem())!
+        defer { BIO_free( out) }
+
+        PEM_write_bio_PrivateKey(out, privKey, nil, nil, 0, nil, nil)
+        let str = OpenSSLUtils.bioToString( bio:out )
+        
+        return str
+    }
+    
     static func pkcs7DataToPEM( pkcs7: Data ) -> String {
         
         let inf = BIO_new(BIO_s_mem())!
@@ -162,12 +173,12 @@ public class OpenSSLUtils {
         }
         defer { X509_STORE_CTX_free(store) }
         
-        X509_STORE_set_flags(cert_ctx, 0);
+        X509_STORE_set_flags(cert_ctx, 0)
         rc = X509_STORE_CTX_init(store, cert_ctx, x509.cert, nil)
         if rc == 0 {
             return .failure(OpenSSLError.UnableToVerifyX509CertificateForSOD("Unable to initialise X509_STORE_CTX"))
         }
-        
+
         // discover and verify X509 certificte chain
         let i = X509_verify_cert(store);
         if i != 1 {

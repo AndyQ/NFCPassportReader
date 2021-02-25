@@ -73,8 +73,6 @@ public class SecureMessaging {
         Log.debug("Construct and send protected APDU")
         Log.debug("\tProtectedAPDU: " + binToHexRep(protectedAPDU))
         
-//        let data = Data(do87 + do97 + do8e)
-//        let newAPDUData : [UInt8] = [UInt8](cmdHeader[0..<4]) + intToBin(data.count) + data + [0x00]
         let newAPDU = NFCISO7816APDU(data:Data(protectedAPDU))!
         return newAPDU
     }
@@ -105,7 +103,6 @@ public class SecureMessaging {
             
             if rapduBin[offset] != 0x1 {
                 throw NFCPassportReaderError.D087Malformed
-//                raise SecureMessagingException("DO87 malformed, must be 87 L 01 <encdata> : " + binToHexRep(rapdu))
             }
             
             do87 = [UInt8](rapduBin[0 ..< offset + Int(encDataLength)])
@@ -163,12 +160,10 @@ public class SecureMessaging {
             
             if !res {
                 throw NFCPassportReaderError.InvalidResponseChecksum
-                //raise SecureMessagingException("Invalid checksum for the rapdu : " + str(binToHex(rapdu)))
             }
         }
         else if needCC {
             throw NFCPassportReaderError.MissingMandatoryFields
-            //raise SecureMessagingException("Mandatory id DO'87' and/or DO'99' is present")
         }
         
         var data : [UInt8] = []
@@ -213,11 +208,10 @@ public class SecureMessaging {
     
     func incSSC() -> [UInt8] {
         let val = binToHex(self.ssc) + 1
-        return hexToBin( val )
-
-//        out = binToHex(self.ssc) + 1
-//        res = hexToBin(out)
-//        return res
+        
+        // This needs to be fully zero padded - to 8 bytes = i.e. if SSC is 1 it should return [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1]
+        // NOT [0x1]
+        return withUnsafeBytes(of: val.bigEndian, Array.init)
     }
     
     func buildD08E(mac : [UInt8]) -> [UInt8] {

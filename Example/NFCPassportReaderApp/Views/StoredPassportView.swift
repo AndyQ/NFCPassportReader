@@ -60,7 +60,7 @@ struct StoredPassportView: View {
             }
         }
         .fileImporter(
-            isPresented: $showImport, allowedContentTypes: [.json],
+            isPresented: $showImport, allowedContentTypes: [.json,.text],
             allowsMultipleSelection: false
         ) { result in
             
