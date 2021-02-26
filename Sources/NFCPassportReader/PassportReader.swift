@@ -194,6 +194,8 @@ extension PassportReader {
     func startReading() {
         elementReadAttempts = 0
         self.currentlyReadingDataGroup = nil
+        // Set Chip authentication to be unsuccessful - either we haven't done it yet or we have done it but it failed for some reason
+        passport.chipAuthenticationSuccessful = false
         self.handleBAC(completed: { [weak self] error in
             if error == nil {
                 Log.info( "BAC Successful" )
@@ -212,15 +214,17 @@ extension PassportReader {
                         } else {
                             self?.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.successfulRead)
                             
-                            // Do Chip Auth if we can
-                            guard let dg14 = self?.passport.getDataGroup(.DG14) as? DataGroup14 else {
-                                self?.doActiveAuthentication()
-                                return
-                            }
-
-                            self?.caHandler = ChipAuthenticationHandler(dg14: dg14, tagReader: (self?.tagReader)!)
-                            self?.caHandler?.doChipAuthentication() { (success) in
-                                self?.doActiveAuthentication()
+                            // Before we finish, check if we should do active authentication
+                            self?.doActiveAuthenticationIfNeccessary() { [weak self] in
+                                // We succesfully read the passport, now we're about to invalidate the session. Before
+                                // doing so, we want to be sure that the 'user cancelled' error that we're causing by
+                                // calling 'invalidate' will not be reported back to the user
+                                self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
+                                self?.readerSession?.invalidate()
+                                
+                                // If we have a masterlist url set then use that and verify the passport now
+                                self?.passport.verifyPassport(masterListURL: self?.masterListURL, useCMSVerification: self?.passiveAuthenticationUsesOpenSSL ?? false)
+                                self?.scanCompletedHandler( self?.passport, nil )
                             }
                         }
                     }
@@ -233,22 +237,6 @@ extension PassportReader {
         })
     }
     
-    func doActiveAuthentication() {
-        // Before we finish, check if we should do active authentication
-        self.doActiveAuthenticationIfNeccessary() { [weak self] in
-            // We succesfully read the passport, now we're about to invalidate the session. Before
-            // doing so, we want to be sure that the 'user cancelled' error that we're causing by
-            // calling 'invalidate' will not be reported back to the user
-            self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
-            self?.readerSession?.invalidate()
-            
-            // If we have a masterlist url set then use that and verify the passport now
-            self?.passport.verifyPassport(masterListURL: self?.masterListURL, useCMSVerification: self?.passiveAuthenticationUsesOpenSSL ?? false)
-            self?.scanCompletedHandler( self?.passport, nil )
-        }
-
-    }
-
     func invalidateSession(errorMessage: NFCViewDisplayMessage, error: NFCPassportReaderError) {
         // Mark the next 'invalid session' error as not reportable (we're about to cause it by invalidating the
         // session). The real error is reported back with the call to the completed handler
@@ -307,12 +295,21 @@ extension PassportReader {
         tagReader.readDataGroup(dataGroup:dgId) { [unowned self] (response, err) in
             self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.readingDataGroupProgress(dgId, 100) )
             if let response = response {
+                
+                var readNextDG = true
                 do {
                     let dg = try DataGroupParser().parseDG(data: response)
                     self.passport.addDataGroup( dgId, dataGroup:dg )
                     
                     if let com = dg as? COM {
-                        let foundDGs = [.COM, .SOD] + com.dataGroupsPresent.map { DataGroupId.getIDFromName(name:$0) }
+                        var dgsPresent = com.dataGroupsPresent.map { DataGroupId.getIDFromName(name:$0) }
+                        var foundDGs : [DataGroupId] = [.COM, .SOD]
+                        if dgsPresent.contains( .DG14 ) {
+                            foundDGs.append( .DG14 )
+                            
+                            dgsPresent.removeAll { $0 == .DG14 }
+                        }
+                        foundDGs += dgsPresent
                         if self.readAllDatagroups == true {
                             self.dataGroupsToRead = foundDGs
                         } else {
@@ -323,6 +320,19 @@ extension PassportReader {
                         // If we are skipping secure elements then remove .DG3 and .DG4
                         if self.skipSecureElements {
                             self.dataGroupsToRead = self.dataGroupsToRead.filter { $0 != .DG3 && $0 != .DG4 }
+                        }
+                    } else if let dg14 = dg as? DataGroup14 {
+                        self.caHandler = ChipAuthenticationHandler(dg14: dg14, tagReader: (self.tagReader)!)
+                        
+                        if caHandler?.isChipAuthenticationSupported ?? false {
+                            
+                            // Do Chip authentication and then continue reading datagroups
+                            readNextDG = false
+                            self.passport.chipAuthenticationSupported = true
+                            self.caHandler?.doChipAuthentication() { [unowned self] (success) in
+                                self.passport.chipAuthenticationSuccessful = success
+                                self.readNextDataGroup(completedReadingGroups: completed)
+                            }
                         }
                     }
 
@@ -335,7 +345,9 @@ extension PassportReader {
                 // Remove it and read the next tag
                 self.dataGroupsToRead.removeFirst()
                 self.elementReadAttempts = 0
-                self.readNextDataGroup(completedReadingGroups: completed)
+                if readNextDG {
+                    self.readNextDataGroup(completedReadingGroups: completed)
+                }
                 
             } else {
                 
@@ -344,14 +356,20 @@ extension PassportReader {
                 let errMsg = err?.value ?? "Unknown  error"
                 Log.error( "ERROR - \(errMsg)" )
                 if errMsg == "Session invalidated" || errMsg == "Class not supported" || errMsg == "Tag connection lost"  {
-                    // Can't go any more!
-                    self.dataGroupsToRead.removeAll()
-                    completed( err )
+                    // Check if we have done Chip Authentication, if so, set it to nil and try to redo BAC
+                    if self.caHandler != nil {
+                        self.caHandler = nil
+                        completed(nil)
+                    } else {
+                        // Can't go any more!
+                        self.dataGroupsToRead.removeAll()
+                        completed( err )
+                    }
                 } else if errMsg == "Security status not satisfied" || errMsg == "File not found" {
                     // Can't read this element as we aren't allowed - remove it and return out so we re-do BAC
                     self.dataGroupsToRead.removeFirst()
                     completed(nil)
-                } else if errMsg == "SM data objects incorrect" {
+                } else if errMsg == "SM data objects incorrect" || errMsg == "Class not supported" {
                     // Can't read this element security objects now invalid - and return out so we re-do BAC
                     completed(nil)
                 } else if errMsg.hasPrefix( "Wrong length" ) || errMsg.hasPrefix( "End of file" ) {  // Should now handle errors 0x6C xx, and 0x67 0x00

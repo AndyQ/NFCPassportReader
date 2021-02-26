@@ -88,6 +88,8 @@ public class NFCPassportModel {
     public private(set) var dataGroupsRead : [DataGroupId:DataGroup] = [:]
     public private(set) var dataGroupHashes = [DataGroupId: DataGroupHash]()
 
+    public internal(set) var chipAuthenticationSupported : Bool = false
+    public internal(set) var chipAuthenticationSuccessful : Bool = false
     public private(set) var passportCorrectlySigned : Bool = false
     public private(set) var documentSigningCertificateVerified : Bool = false
     public private(set) var passportDataNotTampered : Bool = false
@@ -455,7 +457,7 @@ public class NFCPassportModel {
             throw PassiveAuthenticationError.UnableToParseSODHashes("Unable to extract hashes" )
         }
 
-        Log.debug( "Parse - Using Algo - \(sodHashAlgo)" )
+        Log.debug( "Parse SOD - Using Algo - \(sodHashAlgo)" )
         Log.debug( "      - Hashes     - \(sodHashes)" )
         
         return (sodHashAlgo, sodHashes)

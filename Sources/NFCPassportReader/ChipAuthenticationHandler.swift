@@ -27,10 +27,7 @@ class ChipAuthenticationHandler {
     
     var completedHandler : ((Bool)->())?
 
-    var caAvailable : Bool = false
-    public init() {
-        // For testing only
-    }
+    var isChipAuthenticationSupported : Bool = false
     
     public init(dg14 : DataGroup14, tagReader: TagReader) {
         self.tagReader = tagReader
@@ -44,24 +41,24 @@ class ChipAuthenticationHandler {
         }
         
         if chipAuthInfo != nil && chipAuthPublicKeyInfos.count > 0 {
-            caAvailable = true
+            isChipAuthenticationSupported = true
         }
     }
 
-    func doChipAuthentication( completed: @escaping (Bool)->() ) {
+    public func doChipAuthentication( completed: @escaping (Bool)->() ) {
         
         self.completedHandler = completed
         
         Log.info( "Performing Chip Authentication" )
-        guard caAvailable else {
+        guard isChipAuthenticationSupported else {
             completed( false )
             return
         }
         
-        doCA( )
+        doChipAuthenticationForNextPublicKey( )
     }
     
-    func doCA( ) {
+    private func doChipAuthenticationForNextPublicKey( ) {
         guard chipAuthPublicKeyInfos.count > 0, let chipAuthInfo = chipAuthInfo else {
             completedHandler?( true )
             return
@@ -75,17 +72,17 @@ class ChipAuthenticationHandler {
             try self.doCA( keyId: chipAuthInfo.keyId, oid: chipAuthInfo.oid, publicKeyOID: chipAuthPublicKeyInfo.oid, publicKey: chipAuthPublicKeyInfo.pubKey, completed: { [unowned self] (success) in
                 
                 print("Finished chip CA!")
-                self.doCA()
+                self.doChipAuthenticationForNextPublicKey()
             })
         } catch {
             print( "ERROR! - \(error)" )
-            doCA()
+            doChipAuthenticationForNextPublicKey()
 
         }
     }
     
     
-    func doCA( keyId: Int?, oid: String, publicKeyOID: String, publicKey: OpaquePointer, completed: @escaping (Bool)->() ) throws {
+    private func doCA( keyId: Int?, oid: String, publicKeyOID: String, publicKey: OpaquePointer, completed: @escaping (Bool)->() ) throws {
         
         // Generate Ephemeral Keypair from parameters from DG14 Public key
         // This should work for both EC and DH keys
@@ -119,7 +116,7 @@ class ChipAuthenticationHandler {
         })
     }
     
-    func sendPublicKey(oid : String, keyId : Int?, pcdPublicKey : OpaquePointer, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->()) throws {
+    private func sendPublicKey(oid : String, keyId : Int?, pcdPublicKey : OpaquePointer, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->()) throws {
         let agreementAlg = try ChipAuthenticationInfo.toKeyAgreementAlgorithm(oid: oid);
         let cipherAlg = try ChipAuthenticationInfo.toCipherAlgorithm(oid: oid);
         let keyData = getKeyData(agreementAlg: agreementAlg, key: pcdPublicKey);
@@ -163,14 +160,14 @@ class ChipAuthenticationHandler {
         }
     }
     
-    func wrapDO( b : UInt8, arr : [UInt8] ) -> [UInt8] {
+    private func wrapDO( b : UInt8, arr : [UInt8] ) -> [UInt8] {
         let new : [UInt8] = [b, UInt8(arr.count)] + arr
         
         return new;
     }
     
     
-    func getKeyData( agreementAlg : String, key : OpaquePointer ) -> [UInt8] {
+    private func getKeyData( agreementAlg : String, key : OpaquePointer ) -> [UInt8] {
         
         var data : [UInt8] = []
         // Testing
@@ -209,7 +206,7 @@ class ChipAuthenticationHandler {
         return data
     }
     
-    func computeSharedSecret( piccPubKey : OpaquePointer, pcdKey: OpaquePointer ) -> [UInt8]{
+    private func computeSharedSecret( piccPubKey : OpaquePointer, pcdKey: OpaquePointer ) -> [UInt8]{
         let ctx = EVP_PKEY_CTX_new(pcdKey, nil);
         
         if EVP_PKEY_derive_init(ctx) != 1 {
@@ -241,13 +238,15 @@ class ChipAuthenticationHandler {
         return secret
     }
     
-    func restartSecureMessaging( oid : String, sharedSecret : [UInt8], maxTranceiveLength : Int, shouldCheckMAC : Bool) throws  {
+    private func restartSecureMessaging( oid : String, sharedSecret : [UInt8], maxTranceiveLength : Int, shouldCheckMAC : Bool) throws  {
         let cipherAlg = try ChipAuthenticationInfo.toCipherAlgorithm(oid: oid);
         let keyLength = try ChipAuthenticationInfo.toKeyLength(oid: oid);
         
-        /* Start secure messaging. */
-        let ksEnc = try deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: ChipAuthenticationHandler.ENC_MODE);
-        let ksMac = try deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: ChipAuthenticationHandler.MAC_MODE);
+        // Start secure messaging.
+        let smskg = SecureMessagingSessionKeyGenerator()
+        let ksEnc = try smskg.deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: .ENC_MODE);
+        let ksMac = try smskg.deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: .MAC_MODE);
+        
         let ssc = withUnsafeBytes(of: 0.bigEndian, Array.init)
         if (cipherAlg.hasPrefix("DESede")) {
             let sm = SecureMessaging(ksenc: ksEnc, ksmac: ksMac, ssc: ssc)
@@ -261,150 +260,6 @@ class ChipAuthenticationHandler {
         }
     }
     
-    /// Derives the ENC or MAC key for BAC from the keySeed.
-    ///
-    /// @Parameters keySeed the key seed.
-    /// @param mode either <code>ENC_MODE</code> or <code>MAC_MODE</code>
-    ///
-    /// @return the key
-    ///
-    /// @throws GeneralSecurityException on security error
-    ////
-    func deriveKey( keySeed : [UInt8], mode : UInt8) throws -> [UInt8] {
-        return try deriveKey(keySeed: keySeed, cipherAlgName: "DESede", keyLength: 128, mode: mode);
-    }
-    
-    ///
-    /// Derives the ENC or MAC key for BAC or PACE or CA.
-    ///
-    /// @param keySeed the key seed.
-    /// @param cipherAlgName either AES or DESede
-    /// @param keyLength key length in bits
-    /// @param mode either {@code ENC_MODE}, {@code MAC_MODE}, or {@code PACE_MODE}
-    ///
-    /// @return the key.
-    ///
-    /// @throws GeneralSecurityException on security error
-    ///
-    func deriveKey(keySeed : [UInt8], cipherAlgName :String, keyLength : Int, mode : UInt8) throws  -> [UInt8] {
-        return try deriveKey(keySeed: keySeed, cipherAlgName: cipherAlgName, keyLength: keyLength, nonce: nil, mode: mode);
-    }
-    
-    /**
-     * Derives a shared key.
-     *
-     * @param keySeed the shared secret, as octets
-     * @param cipherAlg in Java mnemonic notation (for example "DESede", "AES")
-     * @param keyLength length in bits
-     * @param nonce optional nonce or <code>null</code>
-     * @param mode the mode either {@code ENC}, {@code MAC}, or {@code PACE} mode
-     *
-     * @return the derived key
-     *
-     * @throws GeneralSecurityException if something went wrong
-     */
-    func deriveKey(keySeed : [UInt8], cipherAlgName :String, keyLength : Int, nonce : [UInt8]?, mode : UInt8) throws -> [UInt8]  {
-        return try deriveKey(keySeed: keySeed, cipherAlgName: cipherAlgName, keyLength: keyLength, nonce: nonce, mode: mode, paceKeyReference: ChipAuthenticationHandler.NO_PACE_KEY_REFERENCE);
-    }
-    
-    /**
-     * Derives a shared key.
-     *
-     * @param keySeed the shared secret, as octets
-     * @param cipherAlg in Java mnemonic notation (for example "DESede", "AES")
-     * @param keyLength length in bits
-     * @param nonce optional nonce or <code>null</code>
-     * @param mode the mode either {@code ENC}, {@code MAC}, or {@code PACE} mode
-     * @param paceKeyReference Key Reference For Pace Protocol
-     *
-     * @return the derived key
-     *
-     * @throws GeneralSecurityException if something went wrong
-     */
-    func deriveKey(keySeed : [UInt8], cipherAlgName :String, keyLength : Int, nonce : [UInt8]?, mode : UInt8, paceKeyReference : UInt8) throws ->  [UInt8] {
-        let digestAlgo = try inferDigestAlgorithmFromCipherAlgorithmForKeyDerivation(cipherAlg: cipherAlgName, keyLength: keyLength);
-        
-        let mode : [UInt8] = [0x00, 0x00, 0x00, mode]
-        var dataEls = [Data(keySeed)]
-        if let nonce = nonce {
-            dataEls.append( Data(nonce) )
-        }
-        dataEls.append( Data(mode) )
-        let hashResult = try getHash(algo: digestAlgo, dataElements: dataEls)
-        
-        var keyBytes : [UInt8]
-        if cipherAlgName == "DESede" || cipherAlgName == "3DES" {
-            /* TR-SAC 1.01, 4.2.1. */
-            switch(keyLength) {
-                case 112, 128:
-                    keyBytes = [UInt8](hashResult[0..<16] + hashResult[0..<8])
-                    //                    System.arraycopy(hashResult, 0, keyBytes, 0, 8); /* E  (octets 1 to 8) */
-                    //                    System.arraycopy(hashResult, 8, keyBytes, 8, 8); /* D  (octets 9 to 16) */
-                    //                    System.arraycopy(hashResult, 0, keyBytes, 16, 8); /* E (again octets 1 to 8, i.e. 112-bit 3DES key) */
-                    break;
-                default:
-                    throw NFCPassportReaderError.UnexpectedError // IllegalArgumentException("KDF can only use DESede with 128-bit key length");
-            }
-        } else if cipherAlgName.lowercased() == "aes" || cipherAlgName.lowercased().hasPrefix("aes") {
-            /* TR-SAC 1.01, 4.2.2. */
-            switch(keyLength) {
-                case 128:
-                    keyBytes = [UInt8](hashResult[0..<16]) // NOTE: 128 = 16 * 8
-                case 192:
-                    keyBytes = [UInt8](hashResult[0..<24]) // NOTE: 192 = 24 * 8
-                case 256:
-                    keyBytes = [UInt8](hashResult[0..<32]) // NOTE: 256 = 32 * 8
-                default:
-                    throw NFCPassportReaderError.UnexpectedError // new IllegalArgumentException("KDF can only use AES with 128-bit, 192-bit key or 256-bit length, found: " + keyLength + "-bit key length");
-            }
-        } else {
-            throw NFCPassportReaderError.UnexpectedError
-        }
-        
-        if (paceKeyReference == ChipAuthenticationHandler.NO_PACE_KEY_REFERENCE) {
-            return keyBytes
-            //            return new SecretKeySpec(keyBytes, cipherAlg);
-        } else {
-            ///            return new PACESecretKeySpec(keyBytes, cipherAlg, paceKeyReference);
-            return []
-        }
-    }
-    
-    func  getHash(algo: String, dataElements:[Data] ) throws -> [UInt8] {
-        var hash : [UInt8]
-        
-        let algo = algo.lowercased()
-        if algo == "sha1" {
-            var hasher = Insecure.SHA1()
-            for d in dataElements {
-                hasher.update( data:d )
-            }
-            hash = Array(hasher.finalize())
-            
-        } else if algo == "sha256" {
-            var hasher = SHA256()
-            for d in dataElements {
-                hasher.update( data:d )
-            }
-            hash = Array(hasher.finalize())
-        } else if algo == "sha384" {
-            var hasher = SHA384()
-            for d in dataElements {
-                hasher.update( data:d )
-            }
-            hash = Array(hasher.finalize())
-        } else if algo == "sha512" {
-            var hasher = SHA512()
-            for d in dataElements {
-                hasher.update( data:d )
-            }
-            hash = Array(hasher.finalize())
-        } else {
-            throw NFCPassportReaderError.InvalidHashAlgorithmSpecified
-        }
-        
-        return hash
-    }
     
     func inferDigestAlgorithmFromCipherAlgorithmForKeyDerivation( cipherAlg : String, keyLength : Int) throws -> String {
         if cipherAlg == "DESede" || cipherAlg == "AES-128" {
@@ -420,7 +275,7 @@ class ChipAuthenticationHandler {
             return "SHA256";
         }
         
-        throw NFCPassportReaderError.UnexpectedError //new IllegalArgumentException("Unsupported cipher algorithm or key length \"" + cipherAlg + "\", " + keyLength);
+        throw NFCPassportReaderError.InvalidDataPassed("Unsupported cipher algorithm or key length")
     }
 }
 

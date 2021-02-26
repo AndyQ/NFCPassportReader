@@ -148,7 +148,6 @@ public class OpenSSLUtils {
         defer { X509_STORE_free(cert_ctx) }
         
         X509_STORE_set_verify_cb(cert_ctx) { (ok, ctx) -> Int32 in
-            Log.debug( "IN CALLBACK" )
             let cert_error = X509_STORE_CTX_get_error(ctx)
             
             if ok == 0 {
@@ -288,7 +287,7 @@ public class OpenSSLUtils {
             let rc = ASN1_parse_dump(out, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self), data.count, 0, 0)
             if rc == 0 {
                 let str = OpenSSLUtils.getOpenSSLError()
-                Log.debug( str )
+                Log.debug( "Failed to parse ASN1 Data - \(str)" )
                 throw OpenSSLError.UnableToParseASN1("Failed to parse ASN1 Data - \(str)")
             }
             

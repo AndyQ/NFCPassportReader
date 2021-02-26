@@ -30,7 +30,6 @@ public class DataGroup {
     }
     
     func parse( _ data:[UInt8] ) throws {
-        throw NFCPassportReaderError.NotImplemented
     }
     
     func getNextTag() throws -> Int {

@@ -105,8 +105,7 @@ public class TagReader {
                 //print( "Got \(binToHexRep(response.data)) which is \(leftToRead) bytes with offset \(o)" )
                 self.header = [UInt8](response.data[..<offset])//response.data
 
-                
-                Log.debug( "Amount of data to read - \(leftToRead)" )
+                Log.debug( "Number of data bytes to read - \(leftToRead)" )
                 self.readBinaryData(leftToRead: leftToRead, amountRead: offset, completed: completed)
 
             }
@@ -139,18 +138,18 @@ public class TagReader {
             expectedResponseLength: readAmount
         )
 
-        Log.debug( "Expected response length: \(readAmount)" )
+        Log.debug( "TagReader - data bytes remaining: \(leftToRead), will read : \(readAmount)" )
         self.send( cmd: cmd ) { (resp,err) in
             guard let response = resp else {
                 completed( nil, err)
                 return
             }
-            Log.debug( "got resp - \(response)" )
+            Log.verbose( "TagReader - got resp - \(response)" )
             self.header += response.data
             
             let remaining = leftToRead - response.data.count
         //print( "      read \(response.data.count) bytes" )
-            Log.debug( "Amount of data left read - \(remaining)" )
+            Log.verbose( "TagReader - Amount of data left to read - \(remaining)" )
             if remaining > 0 {
                 self.readBinaryData(leftToRead: remaining, amountRead: amountRead + response.data.count, completed: completed )
             } else {
@@ -163,7 +162,7 @@ public class TagReader {
     
     func send( cmd: NFCISO7816APDU, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
         
-        Log.debug( "TagReader - sending \(cmd)" )
+        Log.verbose( "TagReader - sending \(cmd)" )
         var toSend = cmd
         if let sm = secureMessaging {
             do {
@@ -171,7 +170,7 @@ public class TagReader {
             } catch {
                 completed( nil, NFCPassportReaderError.UnableToProtectAPDU )
             }
-            Log.debug("BACHandler: [SM] \(toSend)" )
+            Log.verbose("TagReader - [SM] \(toSend)" )
         }
 
         tag.sendCommand(apdu: toSend) { [unowned self] (data, sw1, sw2, error) in
@@ -179,19 +178,19 @@ public class TagReader {
                 Log.error( "TagReader - Error reading tag - \(error.localizedDescription))" )
                 completed( nil, NFCPassportReaderError.ResponseError( error.localizedDescription, sw1, sw2 ) )
             } else {
-                Log.debug( "TagReader - Received response" )
+                Log.verbose( "TagReader - Received response" )
                 var rep = ResponseAPDU(data: [UInt8](data), sw1: sw1, sw2: sw2)
 
                 if let sm = self.secureMessaging {
                     do {
                         rep = try sm.unprotect(rapdu:rep)
-                        Log.debug(String(format:"TagReader [SM - unprotected] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
+                        Log.verbose(String(format:"TagReader [SM - unprotected] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
                     } catch {
                         completed( nil, NFCPassportReaderError.UnableToUnprotectAPDU )
                         return
                     }
                 } else {
-                    Log.debug(String(format:"TagReader [unprotected] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
+                    Log.verbose(String(format:"TagReader [unprotected] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
 
                 }
                 

@@ -47,22 +47,22 @@ public class SecureMessaging {
         }
         
         let M = cmdHeader + do87 + do97
-        Log.debug(tmp)
-        Log.debug("\tM: " + binToHexRep(M))
+        Log.verbose(tmp)
+        Log.verbose("\tM: " + binToHexRep(M))
         
-        Log.debug("\t\tSSC: " + binToHexRep(self.ssc))
+        Log.verbose("\t\tSSC: " + binToHexRep(self.ssc))
         self.ssc = self.incSSC()
-        Log.debug("Compute MAC of M")
-        Log.debug("\tIncrement SSC with 1")
-        Log.debug("\t\tSSC: " + binToHexRep(self.ssc))
+        Log.verbose("Compute MAC of M")
+        Log.verbose("\tIncrement SSC with 1")
+        Log.verbose("\t\tSSC: " + binToHexRep(self.ssc))
         
         let N = pad(self.ssc + M)
-        Log.debug("\tConcatenate SSC and M and add padding")
-        Log.debug("\t\tN: " + binToHexRep(N))
+        Log.verbose("\tConcatenate SSC and M and add padding")
+        Log.verbose("\t\tN: " + binToHexRep(N))
 
         let CC = mac(key: self.ksmac, msg: N)
-        Log.debug("\tCompute MAC over N with KSmac")
-        Log.debug("\t\tCC: " + binToHexRep(CC))
+        Log.verbose("\tCompute MAC over N with KSmac")
+        Log.verbose("\t\tCC: " + binToHexRep(CC))
         
         let do8e = self.buildD08E(mac: CC)
         
@@ -70,8 +70,8 @@ public class SecureMessaging {
         var protectedAPDU = [UInt8](cmdHeader[0..<4]) + intToBin(size)
         protectedAPDU += do87 + do97 + do8e + [0x00]
         
-        Log.debug("Construct and send protected APDU")
-        Log.debug("\tProtectedAPDU: " + binToHexRep(protectedAPDU))
+        Log.verbose("Construct and send protected APDU")
+        Log.verbose("\tProtectedAPDU: " + binToHexRep(protectedAPDU))
         
         let newAPDU = NFCISO7816APDU(data:Data(protectedAPDU))!
         return newAPDU
@@ -92,8 +92,8 @@ public class SecureMessaging {
         }
         
          let rapduBin = rapdu.data + [rapdu.sw1, rapdu.sw2]
-        Log.debug("Receive response APDU of MRTD's chip")
-        Log.debug("\tRAPDU: " + binToHexRep(rapduBin))
+        Log.verbose("Receive response APDU of MRTD's chip")
+        Log.verbose("\tRAPDU: " + binToHexRep(rapduBin))
         
         // DO'87'
         // Mandatory if data is returned, otherwise absent
@@ -139,24 +139,24 @@ public class SecureMessaging {
             if do99.count > 0 {
                 tmp += " DO'99"
             }
-            Log.debug("Verify RAPDU CC by computing MAC of" + tmp)
+            Log.verbose("Verify RAPDU CC by computing MAC of" + tmp)
             
-            Log.debug("\t\tSSC: " + binToHexRep(self.ssc))
+            Log.verbose("\t\tSSC: " + binToHexRep(self.ssc))
             self.ssc = self.incSSC()
-            Log.debug("\tIncrement SSC with 1")
-            Log.debug("\t\tSSC: " + binToHexRep(self.ssc))
+            Log.verbose("\tIncrement SSC with 1")
+            Log.verbose("\t\tSSC: " + binToHexRep(self.ssc))
             
             let K = pad(self.ssc + do87 + do99)
-            Log.debug("\tConcatenate SSC and" + tmp + " and add padding")
-            Log.debug("\t\tK: " + binToHexRep(K))
+            Log.verbose("\tConcatenate SSC and" + tmp + " and add padding")
+            Log.verbose("\t\tK: " + binToHexRep(K))
             
-            Log.debug("\tCompute MAC with KSmac")
+            Log.verbose("\tCompute MAC with KSmac")
             let CCb = mac(key: self.ksmac, msg: K)
-            Log.debug("\t\tCC: " + binToHexRep(CCb))
+            Log.verbose("\t\tCC: " + binToHexRep(CCb))
             
             let res = (CC == CCb)
-            Log.debug("\tCompare CC with data of DO'8E of RAPDU")
-            Log.debug("\t\t\(binToHexRep(CC))  == \(binToHexRep(CCb)) ? \(res)")
+            Log.verbose("\tCompare CC with data of DO'8E of RAPDU")
+            Log.verbose("\t\t\(binToHexRep(CC))  == \(binToHexRep(CCb)) ? \(res)")
             
             if !res {
                 throw NFCPassportReaderError.InvalidResponseChecksum
@@ -171,26 +171,26 @@ public class SecureMessaging {
             // There is a payload
             let dec = tripleDESDecrypt(key: self.ksenc, message: do87Data, iv: [0,0,0,0,0,0,0,0])
             data = unpad(dec)
-            Log.debug("Decrypt data of DO'87 with KSenc")
-            Log.debug("\tDecryptedData: " + binToHexRep(data))
+            Log.verbose("Decrypt data of DO'87 with KSenc")
+            Log.verbose("\tDecryptedData: " + binToHexRep(data))
         }
         
-        Log.debug("Unprotected APDU: [\(binToHexRep(data))] \(binToHexRep(sw1)) \(binToHexRep(sw2))" )
+        Log.verbose("Unprotected APDU: [\(binToHexRep(data))] \(binToHexRep(sw1)) \(binToHexRep(sw2))" )
         return ResponseAPDU(data: data, sw1: sw1, sw2: sw2)
     }
 
     func maskClassAndPad(apdu : NFCISO7816APDU ) -> [UInt8] {
-        Log.debug("Mask class byte and pad command header")
+        Log.verbose("Mask class byte and pad command header")
         let res = pad([0x0c, apdu.instructionCode, apdu.p1Parameter, apdu.p2Parameter])
-        Log.debug("\tCmdHeader: " + binToHexRep(res))
+        Log.verbose("\tCmdHeader: " + binToHexRep(res))
         return res
     }
     
     func buildD087(apdu : NFCISO7816APDU) throws -> [UInt8] {
         let cipher = [0x01] + self.padAndEncryptData(apdu)
         let res = try [0x87] + toAsn1Length(cipher.count) + cipher
-        Log.debug("Build DO'87")
-        Log.debug("\tDO87: " + binToHexRep(res))
+        Log.verbose("Build DO'87")
+        Log.verbose("\tDO87: " + binToHexRep(res))
         return res
     }
     
@@ -199,10 +199,10 @@ public class SecureMessaging {
         let data = [UInt8](apdu.data!)
         let paddedData = pad( data )
         let enc = tripleDESEncrypt(key: self.ksenc, message: paddedData, iv: [0,0,0,0,0,0,0,0])
-        Log.debug("Pad data")
-        Log.debug("\tData: " + binToHexRep(paddedData))
-        Log.debug("Encrypt data with KSenc")
-        Log.debug("\tEncryptedData: " + binToHexRep(enc))
+        Log.verbose("Pad data")
+        Log.verbose("\tData: " + binToHexRep(paddedData))
+        Log.verbose("Encrypt data with KSenc")
+        Log.verbose("\tEncryptedData: " + binToHexRep(enc))
         return enc
     }
     
@@ -216,8 +216,8 @@ public class SecureMessaging {
     
     func buildD08E(mac : [UInt8]) -> [UInt8] {
         let res : [UInt8] = [0x8E, UInt8(mac.count)] + mac
-        Log.debug("Build DO'8E")
-        Log.debug("\tDO8E: \(binToHexRep(res))" )
+        Log.verbose("Build DO'8E")
+        Log.verbose("\tDO8E: \(binToHexRep(res))" )
         return res
     }
 
@@ -229,8 +229,8 @@ public class SecureMessaging {
         }
         
         let res : [UInt8] = try [0x97] + toAsn1Length(binLe.count) + binLe
-        Log.debug("Build DO'97")
-        Log.debug("\tDO97: \(res)")
+        Log.verbose("Build DO'97")
+        Log.verbose("\tDO97: \(res)")
         return res
     }
     
