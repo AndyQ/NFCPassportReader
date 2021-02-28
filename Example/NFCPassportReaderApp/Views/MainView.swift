@@ -113,6 +113,7 @@ extension MainView {
         self.showDetails = false
         
         let df = DateFormatter()
+        df.timeZone = TimeZone(secondsFromGMT: 0)
         df.dateFormat = "YYMMdd"
         
         let pptNr = settings.passportNumber

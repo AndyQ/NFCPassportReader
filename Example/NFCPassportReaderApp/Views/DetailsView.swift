@@ -15,7 +15,7 @@ struct Item : Identifiable {
     var value : String
     
     var textColor : Color {
-        return value.hasPrefix("FAILED") ? Color.red : Color.black
+        return value.hasPrefix("FAILED") ? Color.red : Color.primary
     }
 }
 
@@ -55,14 +55,19 @@ struct DetailsView : View {
     
     func getVerificationDetailsSection(_ passport: NFCPassportModel) -> [Item] {
         // Build Verification Info section
-        var aa : String = "Not supported"
+        var activeAuth : String = "Not supported"
         if passport.activeAuthenticationSupported {
-            aa = passport.activeAuthenticationPassed ? "SUCCESS\nSignature verified" : "FAILED\nCould not verify signature"
+            activeAuth = passport.activeAuthenticationPassed ? "SUCCESS\nSignature verified" : "FAILED\nCould not verify signature"
+        }
+        var chipAuth : String = "Not supported"
+        if passport.chipAuthenticationSupported {
+            chipAuth = passport.chipAuthenticationSuccessful ? "SUCCESS\nSignature verified" : "FAILED\nCould not verify signature"
         }
 
         let verificationDetails : [Item] = [
             Item(title: "Access Control", value: "BAC"),
-            Item(title: "Active Authentication", value: aa),
+            Item(title: "Active Authentication", value: activeAuth),
+            Item(title: "Chip Authentication", value: chipAuth),
             Item(title: "Document Signing Certificate", value: passport.documentSigningCertificateVerified ? "SUCCESS\nSOD Signature verified" : "FAILED\nCouldn't verify SOD signature"),
             Item(title: "Country signing Certificate", value: passport.passportCorrectlySigned ? "SUCCESS\nmatched to country signing certificate" : "FAILED\nCouldn't build trust chain"),
             Item(title: "Data group hashes", value: passport.passportDataNotTampered ? "SUCCESS\nAll hashes match" : "FAILED\nCouldn't match hashes" )

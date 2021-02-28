@@ -19,6 +19,7 @@ struct DateView : View {
                 .font(.largeTitle)
             Spacer()
             DatePicker("Date of birth", selection:$date, displayedComponents: .date)
+                .environment(\.timeZone, TimeZone(secondsFromGMT: 0)!)
                 .datePickerStyle(WheelDatePickerStyle())
                 .labelsHidden()
             Spacer()
@@ -97,6 +98,7 @@ extension MRZEntryView {
     
     func formatDate( _ date : Date ) -> String {
         let df = DateFormatter()
+        df.timeZone = TimeZone.init(secondsFromGMT: 0)
         df.dateFormat = "dd MMM yyyy"
         let dateStr = df.string(from:date)
         return dateStr
