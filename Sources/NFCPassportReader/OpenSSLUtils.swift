@@ -456,4 +456,40 @@ public class OpenSSLUtils {
         
         return true
     }
+
+
+    @available(iOS 13, macOS 10.15, *)
+    static func generateAESCMAC( key: [UInt8], message : [UInt8] ) -> [UInt8] {
+        let ctx = CMAC_CTX_new();
+        defer { CMAC_CTX_free(ctx) }
+        var key = key
+        
+        var mac = [UInt8](repeating: 0, count: 16)
+        var maclen : Int = 0
+        
+        CMAC_Init(ctx, &key, 16, EVP_aes_128_cbc(), nil)
+        CMAC_Update(ctx, message, message.count);
+        CMAC_Final(ctx, &mac, &maclen);
+        
+        Log.verbose( "aesMac - mac - \(binToHexRep(mac))" )
+        
+        return mac
+    }
+    
+    @available(iOS 13, macOS 10.15, *)
+    static func asn1EncodeOID (oid : String) -> [UInt8] {
+        
+        let obj = OBJ_txt2obj( oid.cString(using: .utf8), 1)
+        let payloadLen = i2d_ASN1_OBJECT(obj, nil)
+        
+        var data  = [UInt8](repeating: 0, count: Int(payloadLen))
+        
+        let _ = data.withUnsafeMutableBytes { (ptr) in
+            var newPtr = ptr.baseAddress?.assumingMemoryBound(to: UInt8.self)
+            _ = i2d_ASN1_OBJECT(obj, &newPtr)
+        }
+        
+        return data
+    }
+
 }

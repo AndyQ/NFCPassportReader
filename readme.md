@@ -7,14 +7,33 @@ Supported features:
 * Basic Access Control (BAC)
 * Secure Messaging
 * Reads DG1 (MRZ data) and DG2 (Image) in both JPEG and JPEG2000 formats
-* Passive Authentication (Uses OpenSSL library)
-* Active Authentication (For ECDSA signatures currently)
+* Passive Authentication
+* Active Authentication
+* Chip Authentication (ECDH DES keys tested, DH DES and all AES keys implemented but currently totally untested)
+* Ability to dump passport stream and read it back in
 
 This is still very early days - the code is by no means perfect and there are still some rough edges  - there ARE most definitely bugs and I'm sure I'm not doing things perfectly. 
 
 It reads and verifies my passport (and others I've been able to test) fine, however your mileage may vary.
 
 ## Installation
+### Swift Package Manager
+
+Install using [CocoaPods](http://cocoapods.org) by adding this line to your Podfile:
+
+```ruby
+use_frameworks!
+pod 'NFCPassportReader', git:'https://github.com/AndyQ/NFCPassportReader.git'  
+```
+
+Then, run the following command:
+
+```bash
+$ pod install
+```
+
+Note - Current Bitcode is disabled as OpenSSL is not correctly found.  Hopefully this will be fixed in a future release.
+
 ### CocoaPods
 
 Install using [CocoaPods](http://cocoapods.org) by adding this line to your Podfile:
@@ -62,7 +81,7 @@ passportReader.readPassport(mrzKey: mrzKey, tags: [.COM, .DG1, .DG2], completed:
 }
 ```
 
-Currently the datagroups supported are: COM, DG1, DG2, DG7, DG11, DG12, DG15, and SOD
+Currently the datagroups supported are: COM, DG1, DG2, DG7, DG11, DG12, DG14 (partial), DG15, and SOD
 
 This will then handle the reading of the passport, and image and will call the completion block either with an TagError error if there was an error of some kind, or nil if successful.
 
@@ -118,7 +137,6 @@ e.g. 12345678<870052332507237 would be the key used.
 
 ## To do
 There are a number of things I'd like to implement in no particular order:
- * Ability to dump passport stream and read it back in
  * Implement PACE authentication
  
 

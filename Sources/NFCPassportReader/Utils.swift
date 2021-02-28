@@ -156,7 +156,16 @@ public func unpad( _ tounpad : [UInt8]) -> [UInt8] {
 }
 
 @available(iOS 13, macOS 10.15, *)
-public func mac(key : [UInt8], msg : [UInt8]) -> [UInt8]{
+public func mac(algoName: SecureMessagingSupportedAlgorithms, key : [UInt8], msg : [UInt8]) -> [UInt8] {
+    if algoName == .DES {
+        return desMAC(key: key, msg: msg)
+    } else {
+        return aesMAC(key: key, msg: msg)
+    }
+}
+
+@available(iOS 13, macOS 10.15, *)
+public func desMAC(key : [UInt8], msg : [UInt8]) -> [UInt8]{
     
     let size = msg.count / 8
     var y : [UInt8] = [0,0,0,0,0,0,0,0]
@@ -180,6 +189,58 @@ public func mac(key : [UInt8], msg : [UInt8]) -> [UInt8]{
     
     return a
 }
+
+@available(iOS 13, macOS 10.15, *)
+public func aesMAC( key: [UInt8], msg : [UInt8] ) -> [UInt8] {
+    let mac = OpenSSLUtils.generateAESCMAC( key: key, message:msg )
+    return mac
+}
+
+@available(iOS 13, macOS 10.15, *)
+func wrapDO( b : UInt8, arr : [UInt8] ) -> [UInt8] {
+    let result : [UInt8] = [b, UInt8(arr.count)] + arr
+    return result;
+}
+
+@available(iOS 13, macOS 10.15, *)
+func unwrapDO( tag : UInt8, wrappedData : [UInt8]) throws -> [UInt8] {
+    let actualTag = wrappedData[0];
+    if actualTag != tag {
+        throw NFCPassportReaderError.InvalidASN1Value
+    }
+    // Check tag?
+    let result = [UInt8](wrappedData[2...])
+    return result;
+}
+
+
+public func intToBytes( val: Int, removePadding:Bool) -> [UInt8] {
+    if val == 0 {
+        return [0]
+    }
+    var data = withUnsafeBytes(of: val.bigEndian, Array.init)
+
+    if removePadding {
+        // Remove initial 0 bytes
+        for i in 0 ..< data.count {
+            if data[i] != 0 {
+                data = [UInt8](data[i...])
+                break
+            }
+        }
+    }
+    return data
+}
+
+@available(iOS 13, *)
+public func oidToBytes(oid : String) -> [UInt8] {
+    var encOID = OpenSSLUtils.asn1EncodeOID(oid: oid)
+    
+    // Replace tag (0x06) with 0x80
+    encOID[0] = 0x80
+    return encOID
+}
+
 
 
 /// Take an asn.1 length, and return a couple with the decoded length in hexa and the total length of the encoding (1,2 or 3 bytes)
@@ -206,7 +267,7 @@ public func asn1Length( _ data: ArraySlice<UInt8> ) throws -> (Int, Int) {
 
 @available(iOS 13, macOS 10.15, *)
 public func asn1Length(_ data : [UInt8]) throws -> (Int, Int)  {
-    if data[0] <= 0x7F {
+    if data[0] < 0x80 {
         return (Int(binToHex(data[0])), 1)
     }
     if data[0] == 0x81 {
@@ -221,9 +282,7 @@ public func asn1Length(_ data : [UInt8]) throws -> (Int, Int)  {
     
 }
 
-/// Take an hexavalue and return the value encoded in the asn.1 format.
-///
-///
+/// Convert a length to asn.1 format
 /// @param data: The value to encode in asn.1
 /// @type data: An integer (hexa)
 /// @return: The asn.1 encoded value
@@ -231,13 +290,13 @@ public func asn1Length(_ data : [UInt8]) throws -> (Int, Int)  {
 /// @raise asn1Exception: If the parameter is too big, must be >= 0 and <= FFFF
 @available(iOS 13, macOS 10.15, *)
 public func toAsn1Length(_ data : Int) throws -> [UInt8] {
-    if data <= 0x7F {
+    if data < 0x80 {
         return hexRepToBin(String(format:"%02x", data))
     }
     if data >= 0x80 && data <= 0xFF {
         return [0x81] + hexRepToBin( String(format:"%02x",data))
     }
-    if data >= 0x0100 && data <= 0xFFFF { //binToHex("\x01\x00") and data <= binToHex("\xFF\xFF") {
+    if data >= 0x0100 && data <= 0xFFFF {
         return [0x82] + hexRepToBin( String(format:"%04x",data))
     }
     

@@ -234,7 +234,7 @@ public class BACHandler {
         Log.verbose("Encrypt S with TDES key Kenc as calculated in Appendix 5.2")
         Log.verbose("\tEifd: \(binToHexRep(eifd))")
         
-        let mifd = mac(key: ksmac, msg: pad(eifd))
+        let mifd = mac(algoName: .DES, key: ksmac, msg: pad(eifd))
 
         Log.verbose("Compute MAC over eifd with TDES key Kmac as calculated in-Appendix 5.2")
         Log.verbose("\tMifd: \(binToHexRep(mifd))")

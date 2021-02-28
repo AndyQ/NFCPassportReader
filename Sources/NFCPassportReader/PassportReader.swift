@@ -179,7 +179,9 @@ extension PassportReader : NFCTagReaderSessionDelegate {
                 }
             }
 
-            self.startReading( )
+            DispatchQueue.global().async {
+                self.startReading( )
+            }
         }
     }
     
@@ -205,7 +207,7 @@ extension PassportReader {
                     if self?.dataGroupsToRead.count != 0 {
                         // OK we've got more datagroups to go - we've probably failed security verification
                         // So lets re-establish BAC and try again
-                        DispatchQueue.main.async {
+                        DispatchQueue.global().async {
                             self?.startReading()
                         }
                     } else {

@@ -11,6 +11,11 @@ import Foundation
 #if !os(macOS)
 import CoreNFC
 
+public enum SecureMessagingSupportedAlgorithms {
+    case DES
+    case AES
+}
+
 /// This class implements the secure messaging protocol.
 /// The class is a new layer that comes between the reader and the iso7816.
 /// It gives a new transmit method that takes an APDU object formed by the iso7816 layer,
@@ -21,12 +26,14 @@ public class SecureMessaging {
     private var ksenc : [UInt8]
     private var ksmac : [UInt8]
     private var ssc : [UInt8]
+    private let algoName : SecureMessagingSupportedAlgorithms
+
     
-    
-    public init(ksenc : [UInt8], ksmac : [UInt8], ssc : [UInt8]) {
+    public init( encryptionAlgorithm : SecureMessagingSupportedAlgorithms = .DES, ksenc : [UInt8], ksmac : [UInt8], ssc : [UInt8]) {
         self.ksenc = ksenc
         self.ksmac = ksmac
         self.ssc = ssc
+        self.algoName = encryptionAlgorithm
     }
 
     /// Protect the apdu following the doc9303 specification
@@ -60,7 +67,7 @@ public class SecureMessaging {
         Log.verbose("\tConcatenate SSC and M and add padding")
         Log.verbose("\t\tN: " + binToHexRep(N))
 
-        let CC = mac(key: self.ksmac, msg: N)
+        let CC = mac(algoName: algoName, key: self.ksmac, msg: N)
         Log.verbose("\tCompute MAC over N with KSmac")
         Log.verbose("\t\tCC: " + binToHexRep(CC))
         
@@ -151,7 +158,7 @@ public class SecureMessaging {
             Log.verbose("\t\tK: " + binToHexRep(K))
             
             Log.verbose("\tCompute MAC with KSmac")
-            let CCb = mac(key: self.ksmac, msg: K)
+            let CCb = mac(algoName: algoName, key: self.ksmac, msg: K)
             Log.verbose("\t\tCC: " + binToHexRep(CCb))
             
             let res = (CC == CCb)
@@ -168,8 +175,18 @@ public class SecureMessaging {
         
         var data : [UInt8] = []
         if do87Data.count > 0 {
+            
+            let dec : [UInt8]
+            if algoName == .DES {
+                dec = tripleDESDecrypt(key: self.ksenc, message: do87Data, iv: [0,0,0,0,0,0,0,0])
+            } else {
+                // for AES the IV is the ssc with AES/EBC/NOPADDING
+                let paddedssc = [UInt8](repeating: 0, count: 8) + ssc
+                let iv = AESECBEncrypt(key: ksenc, message: paddedssc)
+                dec = AESDecrypt(key: self.ksenc, message: do87Data, iv: iv)
+            }
+
             // There is a payload
-            let dec = tripleDESDecrypt(key: self.ksenc, message: do87Data, iv: [0,0,0,0,0,0,0,0])
             data = unpad(dec)
             Log.verbose("Decrypt data of DO'87 with KSenc")
             Log.verbose("\tDecryptedData: " + binToHexRep(data))
@@ -198,7 +215,17 @@ public class SecureMessaging {
         // Pad the data, encrypt data with KSenc and build DO'87
         let data = [UInt8](apdu.data!)
         let paddedData = pad( data )
-        let enc = tripleDESEncrypt(key: self.ksenc, message: paddedData, iv: [0,0,0,0,0,0,0,0])
+        
+        let enc : [UInt8]
+        if algoName == .DES {
+            enc = tripleDESEncrypt(key: self.ksenc, message: paddedData, iv: [0,0,0,0,0,0,0,0])
+        } else {
+            // for AES the IV is the ssc with AES/EBC/NOPADDING
+            let paddedssc = [UInt8](repeating: 0, count: 8) + ssc
+            let iv = AESECBEncrypt(key: ksenc, message: paddedssc)
+            enc = AESEncrypt(key: self.ksenc, message: paddedData, iv: iv)
+        }
+        
         Log.verbose("Pad data")
         Log.verbose("\tData: " + binToHexRep(paddedData))
         Log.verbose("Encrypt data with KSenc")
