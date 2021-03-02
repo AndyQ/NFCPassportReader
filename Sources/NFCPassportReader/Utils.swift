@@ -189,9 +189,6 @@ public func desMAC(key : [UInt8], msg : [UInt8]) -> [UInt8]{
     let a = DESEncrypt(key: [UInt8](key[0..<8]), message: b, iv: iv, options:UInt32(kCCOptionECBMode))
     Log.verbose( "a: \(binToHexRep(a))" )
     
-    let mac = OpenSSLUtils.generateDESCMAC( key: key, message:msg )
-    print( "DESMAC - a == mac \(a == mac)" )
-
     return a
 }
 
