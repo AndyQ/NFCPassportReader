@@ -459,21 +459,45 @@ public class OpenSSLUtils {
 
 
     @available(iOS 13, macOS 10.15, *)
-    static func generateAESCMAC( key: [UInt8], message : [UInt8] ) -> [UInt8] {
+    static func generateDESCMAC( key: [UInt8], message : [UInt8] ) -> [UInt8] {
         let ctx = CMAC_CTX_new();
         defer { CMAC_CTX_free(ctx) }
         var key = key
         
-        var mac = [UInt8](repeating: 0, count: 16)
+        var mac = [UInt8](repeating: 0, count: 32)
         var maclen : Int = 0
         
-        CMAC_Init(ctx, &key, 16, EVP_aes_128_cbc(), nil)
+        CMAC_Init(ctx, &key, key.count, EVP_des_cbc(), nil)
         CMAC_Update(ctx, message, message.count);
         CMAC_Final(ctx, &mac, &maclen);
         
         Log.verbose( "aesMac - mac - \(binToHexRep(mac))" )
         
-        return mac
+        return [UInt8](mac[0..<maclen])
+    }
+    
+    @available(iOS 13, macOS 10.15, *)
+    static func generateAESCMAC( key: [UInt8], message : [UInt8] ) -> [UInt8] {
+        let ctx = CMAC_CTX_new();
+        defer { CMAC_CTX_free(ctx) }
+        var key = key
+        
+        var mac = [UInt8](repeating: 0, count: 32)
+        var maclen : Int = 0
+        
+        if key.count == 16 {
+            CMAC_Init(ctx, &key, key.count, EVP_aes_128_cbc(), nil)
+        } else if key.count == 24 {
+            CMAC_Init(ctx, &key, key.count, EVP_aes_192_cbc(), nil)
+        } else if key.count == 32 {
+            CMAC_Init(ctx, &key, key.count, EVP_aes_256_cbc(), nil)
+        }
+        CMAC_Update(ctx, message, message.count);
+        CMAC_Final(ctx, &mac, &maclen);
+        
+        Log.verbose( "aesMac - mac - \(binToHexRep(mac))" )
+        
+        return [UInt8](mac[0..<maclen])
     }
     
     @available(iOS 13, macOS 10.15, *)

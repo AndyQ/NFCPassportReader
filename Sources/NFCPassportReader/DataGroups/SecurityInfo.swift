@@ -26,6 +26,14 @@ public class SecurityInfo {
     static let ID_CA_ECDH_AES_CBC_CMAC_192_OID = "0.4.0.127.0.7.2.2.3.2.3"
     static let ID_CA_ECDH_AES_CBC_CMAC_256_OID = "0.4.0.127.0.7.2.2.3.2.4"
     
+    public func getObjectIdentifier() -> String {
+        preconditionFailure("This method must be overridden")
+    }
+    
+    public func getProtocolOIDString() -> String {
+        preconditionFailure("This method must be overridden")
+    }
+    
     static func getInstance( object : ASN1Item, body: [UInt8] ) -> SecurityInfo? {
         let oid = object.getChild(0)?.value ?? ""
         let requiredData = object.getChild(1)!

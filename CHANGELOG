@@ -1,7 +1,6 @@
 v1.1.1
-    Implemented ChipAuthentication - currently only ECDH DES based keys are tested.  DH DES keys should work though
-       In addition, whilst AES based keys are implemented - they are totally untested as I don't have a passport that supports this!
-    
+    Implemented ChipAuthentication - currently only ECDH DES and AES based keys are tested.  DH DES & AES keys should work though
+    Demo app now includes the SecurityInfos information
 v1.1.0
     This release contains the following minor breaking changes:
         TagError has been renamed to NFCPassportReaderError

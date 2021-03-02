@@ -31,6 +31,19 @@ public class ChipAuthenticationInfo : SecurityInfo {
         self.keyId = keyId
     }
     
+    public override func getObjectIdentifier() -> String {
+        return oid
+    }
+    
+    public override func getProtocolOIDString() -> String {
+        return ChipAuthenticationInfo.toProtocolOIDString(oid:oid)
+    }
+    
+    // The keyid refers to a specific key if there are multiple otherwise if not set, only one key is present so set to 0
+    public func getKeyId() -> Int {
+        return keyId ?? 0
+    }
+    
     /// Returns the key agreement algorithm - DH or ECDH for the given Chip Authentication oid
     /// - Parameter oid: the object identifier
     /// - Returns: key agreement algorithm
@@ -91,4 +104,32 @@ public class ChipAuthenticationInfo : SecurityInfo {
         throw NFCPassportReaderError.InvalidDataPassed( "Unable to get key length - invalid oid" )
     }
     
+    private static func toProtocolOIDString(oid : String) -> String {
+        if ID_CA_DH_3DES_CBC_CBC_OID == oid {
+            return "id-CA-DH-3DES-CBC-CBC"
+        }
+        if ID_CA_DH_AES_CBC_CMAC_128_OID == oid {
+            return "id-CA-DH-AES-CBC-CMAC-128"
+        }
+        if ID_CA_DH_AES_CBC_CMAC_192_OID == oid {
+            return "id-CA-DH-AES-CBC-CMAC-192"
+        }
+        if ID_CA_DH_AES_CBC_CMAC_256_OID == oid {
+            return "id-CA-DH-AES-CBC-CMAC-256"
+        }
+        if ID_CA_ECDH_3DES_CBC_CBC_OID == oid {
+            return "id-CA-ECDH-3DES-CBC-CBC"
+        }
+        if ID_CA_ECDH_AES_CBC_CMAC_128_OID == oid {
+            return "id-CA-ECDH-AES-CBC-CMAC-128"
+        }
+        if ID_CA_ECDH_AES_CBC_CMAC_192_OID == oid {
+            return "id-CA-ECDH-AES-CBC-CMAC-192"
+        }
+        if ID_CA_ECDH_AES_CBC_CMAC_256_OID == oid {
+            return "id-CA-ECDH-AES-CBC-CMAC-256"
+        }
+        
+        return oid
+    }
 }

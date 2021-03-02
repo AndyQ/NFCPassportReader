@@ -25,8 +25,8 @@ class ChipAuthenticationHandler {
     var tagReader : TagReader?
     var gaSegments = [[UInt8]]()
     
-    var chipAuthInfo : ChipAuthenticationInfo?
-    var chipAuthPublicKeyInfos = [ChipAuthenticationPublicKeyInfo]()
+    var chipAuthInfos = [ChipAuthenticationInfo]()
+    var chipAuthPublicKeyInfos = [Int:ChipAuthenticationPublicKeyInfo]()
     
     var completedHandler : ((Bool)->())?
 
@@ -37,13 +37,14 @@ class ChipAuthenticationHandler {
         
         for secInfo in dg14.securityInfos {
             if let cai = secInfo as? ChipAuthenticationInfo {
-                chipAuthInfo = cai
+                chipAuthInfos.append(cai)
             } else if let capki = secInfo as? ChipAuthenticationPublicKeyInfo {
-                chipAuthPublicKeyInfos.append( capki )
+                let keyId = capki.getKeyId()
+                chipAuthPublicKeyInfos[keyId] = capki
             }
         }
         
-        if chipAuthInfo != nil && chipAuthPublicKeyInfos.count > 0 {
+        if chipAuthInfos.count > 0 && chipAuthPublicKeyInfos.count > 0 {
             isChipAuthenticationSupported = true
         }
     }
@@ -62,19 +63,32 @@ class ChipAuthenticationHandler {
     }
     
     private func doChipAuthenticationForNextPublicKey( ) {
-        guard chipAuthPublicKeyInfos.count > 0, let chipAuthInfo = chipAuthInfo else {
+        guard chipAuthInfos.count > 0 else {
             completedHandler?( true )
             return
         }
-        let chipAuthPublicKeyInfo = chipAuthPublicKeyInfos.removeFirst()
+        
+        // Grab the next ChipAuthInfo, and get the key id
+        // From that, get the associated ChipAuthPublicKeyInfo (contains the publc key) and then do Chip Authentication
+        // If that works, we're done, otherwise go on to the next key  (if available) and try that
+        let chipAuthInfo = chipAuthInfos.removeFirst()
+        let keyId = chipAuthInfo.getKeyId()
+        guard let chipAuthPublicKeyInfo = chipAuthPublicKeyInfos[keyId] else {
+            self.doChipAuthenticationForNextPublicKey()
+            return
+        }
 
         do {
             Log.info("Starting Chip Authentication!")
             // For each public key, do chipauth
-            try self.doCA( keyId: chipAuthInfo.keyId, oid: chipAuthInfo.oid, publicKeyOID: chipAuthPublicKeyInfo.oid, publicKey: chipAuthPublicKeyInfo.pubKey, completed: { [unowned self] (success) in
+            try self.doCA( keyId: chipAuthInfo.keyId, encryptionDetailsOID: chipAuthInfo.oid, publicKey: chipAuthPublicKeyInfo.pubKey, completed: { [unowned self] (success) in
                 
                 Log.info("Finished Chip Authentication - success - \(success)")
-                self.doChipAuthenticationForNextPublicKey()
+                if !success {
+                    self.doChipAuthenticationForNextPublicKey()
+                } else {
+                    completedHandler?( true )
+                }
             })
         } catch {
             Log.error( "ERROR! - \(error)" )
@@ -84,7 +98,7 @@ class ChipAuthenticationHandler {
     }
     
     
-    private func doCA( keyId: Int?, oid: String, publicKeyOID: String, publicKey: OpaquePointer, completed: @escaping (Bool)->() ) throws {
+    private func doCA( keyId: Int?, encryptionDetailsOID oid: String, publicKey: OpaquePointer, completed: @escaping (Bool)->() ) throws {
         
         // Generate Ephemeral Keypair from parameters from DG14 Public key
         // This should work for both EC and DH keys
@@ -94,7 +108,7 @@ class ChipAuthenticationHandler {
         EVP_PKEY_keygen(pctx, &ephemeralKeyPair)
         EVP_PKEY_CTX_free(pctx)
         
-        // Send the public key
+        // Send the public key to the passport
         try sendPublicKey(oid: oid, keyId: keyId, pcdPublicKey: ephemeralKeyPair!, completed: { [unowned self] (response, err) in
             
             if let error = err {
@@ -103,12 +117,14 @@ class ChipAuthenticationHandler {
                 return
             }
             
-            Log.debug( "Public Key sent to passport!" )
+            Log.debug( "Public Key successfully sent to passport!" )
+            
+            // Use our ephemeral private key and the passports public key to generate a shared secret
+            // (the passport with do the same thing with their private key and our public key)
             let sharedSecret = self.computeSharedSecret(piccPubKey:publicKey, pcdKey:ephemeralKeyPair!)
             
-            // Reinit Secure Messaging
+            // Now try to restart Secure Messaging using the new shared secret and
             do {
-                Log.info( "Restarting secure messaging" )
                 try restartSecureMessaging( oid : oid, sharedSecret : sharedSecret, maxTranceiveLength : 1, shouldCheckMAC : true)
                 completed(true)
             } catch {
@@ -133,10 +149,6 @@ class ChipAuthenticationHandler {
             let wrappedKeyData = wrapDO( b:0x91, arr:keyData)
             self.tagReader?.sendMSEKAT(keyData: Data(wrappedKeyData), idData: Data(idData), completed: completed)
         } else if cipherAlg.hasPrefix("AES") {
-            Log.warning("AES Encryption is NOT SUPPORTED YET AND HASN'T BEEN TESTED!" )
-
-            // Not tested but hopefully this is what we need to do!
-            // In addition we still need to handle the AES side of secure messaging!
             self.tagReader?.sendMSESetATIntAuth(oid: oid, keyId: keyId, completed: { [unowned self] response, error in
                 // Handle Error
                 if let error = error {
@@ -162,7 +174,11 @@ class ChipAuthenticationHandler {
             if let error = error {
                 completed( nil, error )
             } else {
-                self.handleGeneralAuthentication( completed: completed )
+                if isLast {
+                    completed( response, error )
+                } else {
+                    self.handleGeneralAuthentication( completed: completed )
+                }
             }
         })
     }
@@ -249,14 +265,16 @@ class ChipAuthenticationHandler {
         
         let ssc = withUnsafeBytes(of: 0.bigEndian, Array.init)
         if (cipherAlg.hasPrefix("DESede")) {
+            Log.info( "Restarting secure messaging using DESede encryption")
             let sm = SecureMessaging(encryptionAlgorithm: .DES, ksenc: ksEnc, ksmac: ksMac, ssc: ssc)
             tagReader?.secureMessaging = sm
         } else if (cipherAlg.hasPrefix("AES")) {
-            // NOT TESTED!
+            Log.info( "Restarting secure messaging using AES encryption")
             let sm = SecureMessaging(encryptionAlgorithm: .AES, ksenc: ksEnc, ksmac: ksMac, ssc: ssc)
             tagReader?.secureMessaging = sm
         } else {
-            throw NFCPassportReaderError.UnexpectedError //new IllegalStateException("Unsupported cipher algorithm " + cipherAlg)
+            Log.error( "Not restarting secure messaging as unsupported cipher algorithm requested - \(cipherAlg)")
+            throw NFCPassportReaderError.InvalidDataPassed("Unsupported cipher algorithm \(cipherAlg)" )
         }
     }
     

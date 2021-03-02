@@ -6,10 +6,10 @@ This package handles reading an NFC Enabled passport using iOS 13 CoreNFC APIS
 Supported features:
 * Basic Access Control (BAC)
 * Secure Messaging
-* Reads DG1 (MRZ data) and DG2 (Image) in both JPEG and JPEG2000 formats
+* Reads DG1 (MRZ data) and DG2 (Image) in both JPEG and JPEG2000 formats, DG7, DG11, DG12, DG14 and DG15 (also SOD and COM datagroups)
 * Passive Authentication
 * Active Authentication
-* Chip Authentication (ECDH DES keys tested, DH DES and all AES keys implemented but currently totally untested)
+* Chip Authentication (ECDH DES and AES keys tested, DH DES AES keys implemented ad should work but currently not tested)
 * Ability to dump passport stream and read it back in
 
 This is still very early days - the code is by no means perfect and there are still some rough edges  - there ARE most definitely bugs and I'm sure I'm not doing things perfectly. 
@@ -19,20 +19,8 @@ It reads and verifies my passport (and others I've been able to test) fine, howe
 ## Installation
 ### Swift Package Manager
 
-Install using [CocoaPods](http://cocoapods.org) by adding this line to your Podfile:
+NFCPassportReader may be installed via Swift Package Manager, by pointing to this repo's URL.
 
-```ruby
-use_frameworks!
-pod 'NFCPassportReader', git:'https://github.com/AndyQ/NFCPassportReader.git'  
-```
-
-Then, run the following command:
-
-```bash
-$ pod install
-```
-
-Note - Current Bitcode is disabled as OpenSSL is not correctly found.  Hopefully this will be fixed in a future release.
 
 ### CocoaPods
 
@@ -119,7 +107,7 @@ Passive Authentication is now part of the main library and can be used to ensure
 
 It requires a set of CSCA certificates in PEM format from a master list (either from a country that publishes their master list, or the ICAO PKD repository). See the scripts folder for details on how to get and create this file.
 
-**The masterList.pem file included in the Sample app is purely there to ensure no compiler warnings and contains only a single PEM file that was self-generated and won't be able to veryify anything!**
+**The masterList.pem file included in the Sample app is purely there to ensure no compiler warnings and contains only a single PEM file that was self-generated and won't be able to verify anything!**
 
 ## Sample app
 There is a sample app included in the repo which demonstrates the functionality.

@@ -21,19 +21,21 @@ public func AESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
     
     let cryptLen = message.count + kCCBlockSizeAES128
     var cryptData = Data(count: cryptLen)
-    
-    let keyLength              = size_t(kCCKeySizeAES128)
+
+    let keyLength              = size_t(key.count)
     let operation: CCOperation = CCOperation(kCCEncrypt)
-    let algorithm:  CCAlgorithm = CCAlgorithm(kCCAlgorithmAES128)
+    let algorithm:  CCAlgorithm = CCAlgorithm(kCCAlgorithmAES)
     let options:   CCOptions   = CCOptions(0)
     
     var numBytesEncrypted = 0
     
-    let cryptStatus = key.withUnsafeBytes {keyBytes in
+    var cryptStatus: CCCryptorStatus = CCCryptorStatus(kCCSuccess)
+    key.withUnsafeBytes {keyBytes in
         message.withUnsafeBytes{ dataBytes in
             iv.withUnsafeBytes{ ivBytes in
                 cryptData.withUnsafeMutableBytes{ cryptBytes in
-                    CCCrypt(operation,
+
+                    cryptStatus = CCCrypt(operation,
                             algorithm,
                             options,
                             keyBytes.baseAddress,
@@ -44,7 +46,7 @@ public func AESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
                             cryptBytes.bindMemory(to: UInt8.self).baseAddress,
                             cryptLen,
                             &numBytesEncrypted)
-                    
+
                 }
             }
         }
@@ -55,7 +57,7 @@ public func AESEncrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
         
         return [UInt8](cryptData)
     } else {
-        Log.error("Error: \(cryptStatus)")
+        Log.error("AES Encrypt Error: \(cryptStatus)")
     }
     return []
 }
@@ -77,9 +79,9 @@ public func AESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
     let cryptLen = data.count + kCCBlockSizeAES128
     var cryptData = Data(count: cryptLen)
     
-    let keyLength              = size_t(kCCKeySizeAES128)
+    let keyLength              = size_t(key.count)
     let operation: CCOperation = UInt32(kCCDecrypt)
-    let algorithm:  CCAlgorithm = UInt32(kCCAlgorithmAES128)
+    let algorithm:  CCAlgorithm = UInt32(kCCAlgorithmAES)
     let options:   CCOptions   = UInt32(0)
     
     var numBytesEncrypted = 0
@@ -108,7 +110,7 @@ public func AESDecrypt(key:[UInt8], message:[UInt8], iv:[UInt8]) -> [UInt8] {
         
         return [UInt8](cryptData)
     } else {
-        Log.error("Error: \(cryptStatus)")
+        Log.error("AES Decrypt Error: \(cryptStatus)")
     }
     return []
 }
@@ -125,9 +127,9 @@ public func AESECBEncrypt(key:[UInt8], message:[UInt8]) -> [UInt8] {
     let cryptLen = message.count + kCCBlockSizeAES128
     var cryptData = Data(count: cryptLen)
     
-    let keyLength              = size_t(kCCKeySizeAES128)
+    let keyLength              = size_t(key.count)
     let operation: CCOperation = CCOperation(kCCEncrypt)
-    let algorithm:  CCAlgorithm = CCAlgorithm(kCCAlgorithmAES128)
+    let algorithm:  CCAlgorithm = CCAlgorithm(kCCAlgorithmAES)
     let options:   CCOptions   = CCOptions(kCCOptionECBMode)
     
     var numBytesEncrypted = 0
@@ -135,6 +137,7 @@ public func AESECBEncrypt(key:[UInt8], message:[UInt8]) -> [UInt8] {
     let cryptStatus = key.withUnsafeBytes {keyBytes in
         message.withUnsafeBytes{ dataBytes in
             cryptData.withUnsafeMutableBytes{ cryptBytes in
+                
                 CCCrypt(operation,
                         algorithm,
                         options,
@@ -156,7 +159,7 @@ public func AESECBEncrypt(key:[UInt8], message:[UInt8]) -> [UInt8] {
         
         return [UInt8](cryptData)
     } else {
-        Log.error("Error: \(cryptStatus)")
+        Log.error("AESECBEncrypt Error: \(cryptStatus)")
     }
     return []
 }

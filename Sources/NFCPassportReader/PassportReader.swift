@@ -68,7 +68,7 @@ public class PassportReader : NSObject {
         
         // If no tags specified, read all
         if self.dataGroupsToRead.count == 0 {
-            // Start off with .COM and .SOD (always should read those), and then add the others from the COM
+            // Start off with .COM, will always read (and .SOD but we'll add that after), and then add the others from the COM
             self.dataGroupsToRead.append(contentsOf:[.COM, .SOD] )
             self.readAllDatagroups = true
         } else {
@@ -305,18 +305,17 @@ extension PassportReader {
                     
                     if let com = dg as? COM {
                         var dgsPresent = com.dataGroupsPresent.map { DataGroupId.getIDFromName(name:$0) }
-                        var foundDGs : [DataGroupId] = [.COM, .SOD]
+                        var foundDGs : [DataGroupId] = [.COM]
                         if dgsPresent.contains( .DG14 ) {
                             foundDGs.append( .DG14 )
-                            
                             dgsPresent.removeAll { $0 == .DG14 }
                         }
-                        foundDGs += dgsPresent
+                        foundDGs += [.SOD] + dgsPresent
                         if self.readAllDatagroups == true {
                             self.dataGroupsToRead = foundDGs
                         } else {
                             // We are reading specific datagroups but remove all the ones we've requested to be read that aren't actually available
-                            self.dataGroupsToRead = self.dataGroupsToRead.filter { foundDGs.contains($0) }
+                            self.dataGroupsToRead = foundDGs.filter { dataGroupsToRead.contains($0) }
                         }
                         
                         // If we are skipping secure elements then remove .DG3 and .DG4

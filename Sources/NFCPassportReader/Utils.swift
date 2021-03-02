@@ -134,11 +134,13 @@ public func generateRandomUInt8Array( _ size: Int ) -> [UInt8] {
     return ret
 }
 
-public func pad(_ toPad : [UInt8]) -> [UInt8] {
-    let size = 8
-    let padBlock : [UInt8] = [0x80, 0, 0, 0, 0, 0, 0, 0]
-    let left = size - (toPad.count % size)
-    return (toPad + [UInt8](padBlock[0 ..< left]))
+public func pad(_ toPad : [UInt8], blockSize : Int) -> [UInt8] {
+    
+    var ret = toPad + [0x80]
+    while ret.count % blockSize != 0 {
+        ret.append(0x00)
+    }
+    return ret
 }
 
 public func unpad( _ tounpad : [UInt8]) -> [UInt8] {
@@ -187,6 +189,9 @@ public func desMAC(key : [UInt8], msg : [UInt8]) -> [UInt8]{
     let a = DESEncrypt(key: [UInt8](key[0..<8]), message: b, iv: iv, options:UInt32(kCCOptionECBMode))
     Log.verbose( "a: \(binToHexRep(a))" )
     
+    let mac = OpenSSLUtils.generateDESCMAC( key: key, message:msg )
+    print( "DESMAC - a == mac \(a == mac)" )
+
     return a
 }
 

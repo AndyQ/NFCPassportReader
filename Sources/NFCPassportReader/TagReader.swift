@@ -109,13 +109,11 @@ public class TagReader {
     
     /// Sends a General Authenticate command.
     /// This command is the second command that is sent in the "AES" case.
-    ///
-    /// NOTE - this is currently UNTESTED!
     /// - Parameter data data to be sent, without the {@code 0x7C} prefix (this method will add it)
     /// - Parameter lengthExpected the expected length defaults to 256
     /// - Parameter isLast indicates whether this is the last command in the chain
     /// - Parameter completed the complete handler - returns the dynamic authentication data without the {@code 0x7C} prefix (this method will remove it) or an error
-    func sendGeneralAuthenticate( data : [UInt8], lengthExpected : Int = 256, isLast: Bool, completed: @escaping ([UInt8]?, NFCPassportReaderError?)->() ) {
+    func sendGeneralAuthenticate( data : [UInt8], lengthExpected : Int = 256, isLast: Bool, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
 
         let wrappedData = wrapDO(b:0x7C, arr:data)
         let commandData = Data(wrappedData)
@@ -142,10 +140,12 @@ public class TagReader {
                         if let response = response {
                             // Success
                             do {
-                                let data = try unwrapDO( tag:0x7c, wrappedData:response.data)
-                                completed( data, nil)
+                                var retResponse = response
+                                retResponse.data = try unwrapDO( tag:0x7c, wrappedData:retResponse.data)
+
+                                completed( retResponse, nil)
                             } catch {
-                                completed( data, NFCPassportReaderError.InvalidASN1Value)
+                                completed( nil, NFCPassportReaderError.InvalidASN1Value)
                             }
                         } else {
                             completed( nil, error)
@@ -158,10 +158,12 @@ public class TagReader {
                 // Success
                 if let response = response {
                     do {
-                        let data = try unwrapDO( tag:0x7c, wrappedData:response.data)
-                        completed( data, nil)
+                        var retResponse = response
+                        retResponse.data = try unwrapDO( tag:0x7c, wrappedData:retResponse.data)
+                        
+                        completed( retResponse, nil)
                     } catch {
-                        completed( data, NFCPassportReaderError.InvalidASN1Value)
+                        completed( nil, NFCPassportReaderError.InvalidASN1Value)
                     }
                 } else {
                     completed( nil, error)
@@ -200,7 +202,7 @@ public class TagReader {
                 //print( "Got \(binToHexRep(response.data)) which is \(leftToRead) bytes with offset \(o)" )
                 self.header = [UInt8](response.data[..<offset])//response.data
 
-                Log.debug( "Number of data bytes to read - \(leftToRead)" )
+                Log.debug( "TagReader - Number of data bytes to read - \(leftToRead)" )
                 self.readBinaryData(leftToRead: leftToRead, amountRead: offset, completed: completed)
 
             }
@@ -233,7 +235,7 @@ public class TagReader {
             expectedResponseLength: readAmount
         )
 
-        Log.debug( "TagReader - data bytes remaining: \(leftToRead), will read : \(readAmount)" )
+        Log.verbose( "TagReader - data bytes remaining: \(leftToRead), will read : \(readAmount)" )
         self.send( cmd: cmd ) { (resp,err) in
             guard let response = resp else {
                 completed( nil, err)
@@ -243,7 +245,6 @@ public class TagReader {
             self.header += response.data
             
             let remaining = leftToRead - response.data.count
-        //print( "      read \(response.data.count) bytes" )
             Log.verbose( "TagReader - Amount of data left to read - \(remaining)" )
             if remaining > 0 {
                 self.readBinaryData(leftToRead: remaining, amountRead: amountRead + response.data.count, completed: completed )

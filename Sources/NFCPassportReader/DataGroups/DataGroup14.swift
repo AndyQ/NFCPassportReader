@@ -14,7 +14,7 @@ import Foundation
 @available(iOS 13, macOS 10.15, *)
 public class DataGroup14 : DataGroup {
     private var asn1 : ASN1Item!
-    var securityInfos : [SecurityInfo] = [SecurityInfo]()
+    public private(set) var securityInfos : [SecurityInfo] = [SecurityInfo]()
     
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
