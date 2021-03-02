@@ -22,7 +22,7 @@ struct Item : Identifiable {
 
 struct DetailsView : View {    
     private var passport: NFCPassportModel
-    private var sectionNames = ["Chip information", "Verification information", "Document signing certificate", "Country signing certificate", "Datagroup Hashes"]
+    private var sectionNames = ["Chip information", "Verification information", "Document signing certificate", "Country signing certificate", "Security Info details", "Datagroup Hashes"]
     private var sections = [[Item]]()
 
     init( passport : NFCPassportModel ) {
@@ -31,6 +31,7 @@ struct DetailsView : View {
         sections.append(getVerificationDetailsSection(self.passport))
         sections.append(getCertificateSigningCertDetails(certItems:self.passport.documentSigningCertificate?.getItemsAsDict()))
         sections.append(getCertificateSigningCertDetails(certItems:self.passport.countrySigningCertificate?.getItemsAsDict()))
+        sections.append(getSecurityInfosSection(self.passport))
         sections.append(getDataGroupHashesSection(self.passport))
     }
     
@@ -38,7 +39,9 @@ struct DetailsView : View {
         VStack {
             List {
                 ForEach( 0 ..< self.sectionNames.count ) { i in
-                    SectionGroup(sectionTitle: self.sectionNames[i], items: self.sections[i])
+                    if self.sections[i].count > 0 {
+                        SectionGroup(sectionTitle: self.sectionNames[i], items: self.sections[i])
+                    }
                 }
             }
         }
@@ -103,6 +106,27 @@ struct DetailsView : View {
         return dgHashes
     }
 
+    func getSecurityInfosSection( _ passport : NFCPassportModel) -> [Item] {
+        guard let dg14 = passport.getDataGroup(.DG14) as? DataGroup14 else { return [] }
+        
+        var items = [Item]()
+        for secInfo in dg14.securityInfos {
+            var title : String = ""
+            var value : String = ""
+            if let cai = secInfo as? ChipAuthenticationInfo {
+                title = "ChipAuthenticationInfo"
+                value = "\(secInfo.getProtocolOIDString())\n\(secInfo.getObjectIdentifier())\nUses Key Id: \(cai.getKeyId())"
+            } else if let capki = secInfo as? ChipAuthenticationPublicKeyInfo {
+                title = "ChipAuthenticationPublicKeyInfo"
+                value = "\(secInfo.getProtocolOIDString())\n\(secInfo.getObjectIdentifier())\nKey Id: \(capki.getKeyId())"
+                
+            }
+            
+            items.append( Item(title:title, value: value))
+
+        }
+        return items
+    }
 }
 
 struct SectionGroup : View {
