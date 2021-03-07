@@ -233,6 +233,13 @@ public class PACEHandler {
                 }
                 
                 // Compute the shared secret using the mapping key and the passports public mapping key
+/*
+                let dh = EVP_PKEY_get0_DH(piccMappingPublicKey)
+                var dhPubKey : OpaquePointer?
+                DH_get0_key(dh, &dhPubKey, nil)
+                var secret = [UInt8](repeating: 0, count: Int(DH_size(dh)))
+                DH_compute_key( &secret, dhPubKey, dh_mapping_key)
+*/
                 let secret = OpenSSLUtils.computeSharedSecret(privateKeyPair: mappingKey, publicKey: piccMappingPublicKey)
                 
                 // Convert the secret to a bignum
@@ -498,8 +505,13 @@ public class PACEHandler {
             throw NFCPassportReaderError.InvalidDataPassed("Unable to get public key data")
         }
 
-        let v = EVP_PKEY_base_id( key )
-        let tag : TKTLVTag = v == EVP_PKEY_DH ? 0x84 : 0x86
+        let keyType = EVP_PKEY_base_id( key )
+        let tag : TKTLVTag
+        if keyType == EVP_PKEY_DH || keyType == EVP_PKEY_DHX {
+            tag = 0x84
+        } else {
+            tag = 0x86
+        }
 
         guard let encOid = TKBERTLVRecord(from: Data(encodedOid)) else {
             throw NFCPassportReaderError.InvalidASN1Value
@@ -520,7 +532,7 @@ public class PACEHandler {
         
         var error : Int32 = -1
         let keyType = EVP_PKEY_base_id( params )
-        if keyType == EVP_PKEY_DH {
+        if keyType == EVP_PKEY_DH || keyType == EVP_PKEY_DHX {
             let bn = BN_bin2bn(pubKeyData, Int32(pubKeyData.count), nil)
             defer{ BN_free(bn) }
             
