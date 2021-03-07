@@ -182,7 +182,9 @@ public class PACEHandler {
             }
             defer{ DH_free( dhKey ) }
 
+            DH_generate_key(dhKey)
             EVP_PKEY_set1_DH(mappingKey, dhKey)
+
         } else {
             Log.debug( "Generating ECDH mapping keys from parameterSpec - \(parameterSpec)")
             guard let ecKey = EC_KEY_new_by_curve_name(parameterSpec) else {
