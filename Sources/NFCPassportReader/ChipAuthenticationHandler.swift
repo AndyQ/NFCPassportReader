@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  ChipAuthenticationHandler.swift
 //  NFCPassportReader
 //
 //  Created by Andy Qua on 25/02/2021.
@@ -135,9 +135,8 @@ class ChipAuthenticationHandler {
     }
     
     private func sendPublicKey(oid : String, keyId : Int?, pcdPublicKey : OpaquePointer, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->()) throws {
-        let agreementAlg = try ChipAuthenticationInfo.toKeyAgreementAlgorithm(oid: oid)
         let cipherAlg = try ChipAuthenticationInfo.toCipherAlgorithm(oid: oid)
-        let keyData = getKeyData(agreementAlg: agreementAlg, key: pcdPublicKey)
+        let keyData = getPublicKeyData(key: pcdPublicKey)
         
         if cipherAlg.hasPrefix("DESede") {
         
@@ -183,25 +182,25 @@ class ChipAuthenticationHandler {
         })
     }
     
-    private func getKeyData( agreementAlg : String, key : OpaquePointer ) -> [UInt8] {
+    private func getPublicKeyData( key : OpaquePointer ) -> [UInt8] {
         
         var data : [UInt8] = []
         // Testing
         let v = EVP_PKEY_base_id( key )
         if v == EVP_PKEY_DH {
             let dh = EVP_PKEY_get1_DH(key)
-            var dhParams : OpaquePointer?
-            DH_get0_key(dh, &dhParams, nil)
+            var dhPubKey : OpaquePointer?
+            DH_get0_key(dh, &dhPubKey, nil)
             
-            let nrBytes = (BN_num_bits(dhParams)+7)/8
+            let nrBytes = (BN_num_bits(dhPubKey)+7)/8
             data = [UInt8](repeating: 0, count: Int(nrBytes))
             data.withUnsafeMutableBytes{ ( ptr) in
-                _ = BN_bn2bin(dhParams, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self))
+                _ = BN_bn2bin(dhPubKey, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self))
             }
             DH_free(dh)
         } else if v == EVP_PKEY_EC {
             
-            let ec = EVP_PKEY_get1_EC_KEY(key)
+            let ec = EVP_PKEY_get0_EC_KEY(key)
             
             let ec_pub = EC_KEY_get0_public_key(ec)
             let ec_group = EC_KEY_get0_group(ec)
@@ -224,7 +223,8 @@ class ChipAuthenticationHandler {
     
     private func computeSharedSecret( piccPubKey : OpaquePointer, pcdKey: OpaquePointer ) -> [UInt8]{
         let ctx = EVP_PKEY_CTX_new(pcdKey, nil)
-        
+        defer{ EVP_PKEY_CTX_free(ctx) }
+
         if EVP_PKEY_derive_init(ctx) != 1 {
             // error
             print( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )

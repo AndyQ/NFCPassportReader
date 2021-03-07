@@ -8,6 +8,7 @@
 
 import Foundation
 import CommonCrypto
+import CryptoTokenKit
 
 #if canImport(CryptoKit)
     import CryptoKit
@@ -47,12 +48,18 @@ extension StringProtocol {
 }
 
 
-public func binToHexRep( _ val : [UInt8] ) -> String {
-    var string = ""
+public func binToHexRep( _ val : [UInt8], asArray : Bool = false ) -> String {
+    var string = asArray ? "[" : ""
     for x in val {
-        string += String(format:"%02x", x )
+        if asArray {
+            string += String(format:"0x%02x, ", x )
+
+        } else {
+            string += String(format:"%02x", x )
+        }
     }
-    return string.uppercased()
+    string += asArray ? "]" : ""
+    return asArray ? string : string.uppercased()
 }
 
 public func binToHexRep( _ val : UInt8 ) -> String {
@@ -200,19 +207,18 @@ public func aesMAC( key: [UInt8], msg : [UInt8] ) -> [UInt8] {
 
 @available(iOS 13, macOS 10.15, *)
 func wrapDO( b : UInt8, arr : [UInt8] ) -> [UInt8] {
-    let result : [UInt8] = [b, UInt8(arr.count)] + arr
+    let tag = TKBERTLVRecord(tag: TKTLVTag(b), value: Data(arr))
+    let result = [UInt8](tag.data)
     return result;
 }
 
 @available(iOS 13, macOS 10.15, *)
 func unwrapDO( tag : UInt8, wrappedData : [UInt8]) throws -> [UInt8] {
-    let actualTag = wrappedData[0];
-    if actualTag != tag {
+    guard let rec = TKBERTLVRecord(from: Data(wrappedData)),
+          rec.tag == tag else {
         throw NFCPassportReaderError.InvalidASN1Value
     }
-    // Check tag?
-    let result = [UInt8](wrappedData[2...])
-    return result;
+    return [UInt8](rec.value);
 }
 
 
@@ -235,11 +241,13 @@ public func intToBytes( val: Int, removePadding:Bool) -> [UInt8] {
 }
 
 @available(iOS 13, *)
-public func oidToBytes(oid : String) -> [UInt8] {
+public func oidToBytes(oid : String, replaceTag : Bool) -> [UInt8] {
     var encOID = OpenSSLUtils.asn1EncodeOID(oid: oid)
     
-    // Replace tag (0x06) with 0x80
-    encOID[0] = 0x80
+    if replaceTag {
+        // Replace tag (0x06) with 0x80
+        encOID[0] = 0x80
+    }
     return encOID
 }
 

@@ -97,13 +97,7 @@ class SecureMessagingSessionKeyGenerator {
             throw NFCPassportReaderError.InvalidDataPassed( "Unsupported cipher algorithm used" )
         }
         
-        if (paceKeyReference == SecureMessagingSessionKeyGenerator.NO_PACE_KEY_REFERENCE) {
-            return keyBytes
-        } else {
-            throw NFCPassportReaderError.InvalidDataPassed( "PACE not yet supported" )
-            // Not yet supported
-            ///            return new PACESecretKeySpec(keyBytes, cipherAlg, paceKeyReference);
-        }
+        return keyBytes
     }
     
     func inferDigestAlgorithmFromCipherAlgorithmForKeyDerivation( cipherAlg : String, keyLength : Int) throws -> String {

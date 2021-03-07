@@ -82,8 +82,15 @@ public class SecureMessaging {
         
         let size = do87.count + do97.count + do8e.count
         var protectedAPDU = [UInt8](cmdHeader[0..<4]) + intToBin(size)
-        protectedAPDU += do87 + do97 + do8e + [0x00]
-        
+        protectedAPDU += do87 + do97 + do8e
+            
+        // If the data is more that 255, specify the we are using extended length (0x00, 0x00)
+        // Thanks to @filom for the fix!
+        if size > 255 {
+            protectedAPDU += [0x00,0x00]
+        } else {
+            protectedAPDU += [0x00]
+        }
         Log.verbose("Construct and send protected APDU")
         Log.verbose("\tProtectedAPDU: " + binToHexRep(protectedAPDU))
         

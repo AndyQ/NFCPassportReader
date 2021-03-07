@@ -26,6 +26,7 @@ public class PassportReader : NSObject {
     private var tagReader : TagReader?
     private var bacHandler : BACHandler?
     private var caHandler : ChipAuthenticationHandler?
+    private var paceHandler : PACEHandler?
     private var mrzKey : String = ""
     private var dataAmountToReadOverride : Int? = nil
     
@@ -194,6 +195,50 @@ extension PassportReader : NFCTagReaderSessionDelegate {
 extension PassportReader {
     
     func startReading() {
+        // Before we start the main work, lets try reading the EF.CardAccess
+        tagReader?.readCardAccess(completed: { [unowned self] data, error in
+            var ca : CardAccess?
+            if let data = data {
+                print( "Read CardAccess - data \(binToHexRep(data))" )
+                do {
+                    ca = try CardAccess(data)
+                } catch {
+                    print( "Error reading CardAccess - \(error)" )
+                }
+            }
+            if let cardAccess = ca {
+                self.doPACEAuthentication( cardAccess: cardAccess)
+            } else {
+                tagReader?.selectPassportApplication(completed: { response, error in
+                    self.doBACAuthentication()
+                })
+            }
+        })
+    }
+    
+    func doPACEAuthentication(cardAccess:CardAccess) {
+        self.handlePACE(cardAccess:cardAccess, completed: { [weak self] error in
+            if error == nil {
+                Log.info( "PACE Successful" )
+                // At this point, BAC Has been done and the TagReader has been set up with the SecureMessaging
+                // session keys
+                self?.tagReader?.selectPassportApplication(completed: { response, error in
+                    self?.startReadingDataGroups()
+                })
+
+            } else if let error = error {
+                Log.info( "PACE Failed" )
+                let displayMessage = NFCViewDisplayMessage.error(error)
+                self?.invalidateSession(errorMessage: displayMessage, error: error)
+            }
+
+//            self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
+//            self?.readerSession?.invalidate()
+//            self?.scanCompletedHandler( self?.passport, nil )
+        })
+    }
+    
+    func doBACAuthentication() {
         elementReadAttempts = 0
         self.currentlyReadingDataGroup = nil
         // Set Chip authentication to be unsuccessful - either we haven't done it yet or we have done it but it failed for some reason
@@ -203,40 +248,45 @@ extension PassportReader {
                 Log.info( "BAC Successful" )
                 // At this point, BAC Has been done and the TagReader has been set up with the SecureMessaging
                 // session keys
-                self?.readNextDataGroup( ) { [weak self] error in
-                    if self?.dataGroupsToRead.count != 0 {
-                        // OK we've got more datagroups to go - we've probably failed security verification
-                        // So lets re-establish BAC and try again
-                        DispatchQueue.global().async {
-                            self?.startReading()
-                        }
-                    } else {
-                        if let error = error {
-                            self?.invalidateSession(errorMessage:NFCViewDisplayMessage.error(error), error: error)
-                        } else {
-                            self?.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.successfulRead)
-                            
-                            // Before we finish, check if we should do active authentication
-                            self?.doActiveAuthenticationIfNeccessary() { [weak self] in
-                                // We succesfully read the passport, now we're about to invalidate the session. Before
-                                // doing so, we want to be sure that the 'user cancelled' error that we're causing by
-                                // calling 'invalidate' will not be reported back to the user
-                                self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
-                                self?.readerSession?.invalidate()
-                                
-                                // If we have a masterlist url set then use that and verify the passport now
-                                self?.passport.verifyPassport(masterListURL: self?.masterListURL, useCMSVerification: self?.passiveAuthenticationUsesOpenSSL ?? false)
-                                self?.scanCompletedHandler( self?.passport, nil )
-                            }
-                        }
-                    }
-                }
+                self?.startReadingDataGroups()
             } else if let error = error {
                 Log.info( "BAC Failed" )
                 let displayMessage = NFCViewDisplayMessage.error(error)
                 self?.invalidateSession(errorMessage: displayMessage, error: error)
             }
         })
+    }
+    
+    func startReadingDataGroups() {
+        self.readNextDataGroup( ) { [weak self] error in
+            if self?.dataGroupsToRead.count != 0 {
+                // OK we've got more datagroups to go - we've probably failed security verification
+                // So lets re-establish BAC and try again
+                DispatchQueue.global().async {
+                    self?.doBACAuthentication()
+                }
+            } else {
+                if let error = error {
+                    self?.invalidateSession(errorMessage:NFCViewDisplayMessage.error(error), error: error)
+                } else {
+                    self?.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.successfulRead)
+                    
+                    // Before we finish, check if we should do active authentication
+                    self?.doActiveAuthenticationIfNeccessary() { [weak self] in
+                        // We succesfully read the passport, now we're about to invalidate the session. Before
+                        // doing so, we want to be sure that the 'user cancelled' error that we're causing by
+                        // calling 'invalidate' will not be reported back to the user
+                        self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
+                        self?.readerSession?.invalidate()
+                        
+                        // If we have a masterlist url set then use that and verify the passport now
+                        self?.passport.verifyPassport(masterListURL: self?.masterListURL, useCMSVerification: self?.passiveAuthenticationUsesOpenSSL ?? false)
+                        self?.scanCompletedHandler( self?.passport, nil )
+                    }
+                }
+            }
+        }
+
     }
     
     func invalidateSession(errorMessage: NFCViewDisplayMessage, error: NFCPassportReaderError) {
@@ -273,11 +323,26 @@ extension PassportReader {
         }
         
         Log.info( "Starting Basic Access Control (BAC)" )
-
+        
         self.bacHandler = BACHandler( tagReader: tagReader )
         bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey ) { error in
             self.bacHandler = nil
             completed(error)
+        }
+    }
+    
+    func handlePACE( cardAccess:CardAccess, completed: @escaping (NFCPassportReaderError?)->()) {
+        guard let tagReader = self.tagReader else {
+            completed(NFCPassportReaderError.NoConnectedTag)
+            return
+        }
+        
+        Log.info( "Starting Password Authenticated Connection Establishment (PACE)" )
+        
+        self.paceHandler = PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
+        paceHandler?.doPACE(mrzKey: mrzKey ) { error in
+            self.paceHandler = nil
+            completed(nil)
         }
     }
     

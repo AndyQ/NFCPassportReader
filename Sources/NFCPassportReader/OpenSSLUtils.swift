@@ -457,25 +457,6 @@ public class OpenSSLUtils {
         return true
     }
 
-
-    @available(iOS 13, macOS 10.15, *)
-    static func generateDESCMAC( key: [UInt8], message : [UInt8] ) -> [UInt8] {
-        let ctx = CMAC_CTX_new();
-        defer { CMAC_CTX_free(ctx) }
-        var key = key
-        
-        var mac = [UInt8](repeating: 0, count: 32)
-        var maclen : Int = 0
-        
-        CMAC_Init(ctx, &key, key.count, EVP_des_cbc(), nil)
-        CMAC_Update(ctx, message, message.count);
-        CMAC_Final(ctx, &mac, &maclen);
-        
-        Log.verbose( "aesMac - mac - \(binToHexRep(mac))" )
-        
-        return [UInt8](mac[0..<maclen])
-    }
-    
     @available(iOS 13, macOS 10.15, *)
     static func generateAESCMAC( key: [UInt8], message : [UInt8] ) -> [UInt8] {
         let ctx = CMAC_CTX_new();

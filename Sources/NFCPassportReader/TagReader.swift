@@ -91,14 +91,14 @@ public class TagReader {
     func sendMSESetATIntAuth( oid: String, keyId: Int?, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
         
         let cmd : NFCISO7816APDU
-        let oidBytes = oidToBytes(oid: oid)
-
+        let oidBytes = oidToBytes(oid: oid, replaceTag: true)
+        
         if let keyId = keyId, keyId != 0 {
             let keyIdBytes = wrapDO(b:0x84, arr:intToBytes(val:keyId, removePadding: true))
             let data = oidBytes + keyIdBytes
-
+            
             cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x22, p1Parameter: 0x41, p2Parameter: 0xA4, data: Data(data), expectedResponseLength: 256)
-
+            
         } else {
             cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x22, p1Parameter: 0x41, p2Parameter: 0xA4, data: Data(oidBytes), expectedResponseLength: 256)
         }
@@ -106,7 +106,19 @@ public class TagReader {
         send( cmd: cmd, completed: completed )
     }
     
+    func sendMSESetATMutualAuth( oid: String, keyType: UInt8, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+        
+        let oidBytes = oidToBytes(oid: oid, replaceTag: true)
+        let keyTypeBytes = wrapDO( b: 0x83, arr:[keyType])
+        
+        let data = oidBytes + keyTypeBytes
+            
+        let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x22, p1Parameter: 0xC1, p2Parameter: 0xA4, data: Data(data), expectedResponseLength: 256)
+        
+        send( cmd: cmd, completed: completed )
+    }
     
+
     /// Sends a General Authenticate command.
     /// This command is the second command that is sent in the "AES" case.
     /// - Parameter data data to be sent, without the {@code 0x7C} prefix (this method will add it)
@@ -208,7 +220,45 @@ public class TagReader {
             }
         }
     }
+
+    func readCardAccess( completed: @escaping ([UInt8]?, NFCPassportReaderError?)->() ) {
+        // Info provided by @smulu
+        // By default NFCISO7816Tag requirers a list of ISO/IEC 7816 applets (AIDs). Upon discovery of NFC tag the first found applet from this list is automatically selected (and you have no way of changing this).
+        // This is a problem for PACE protocol becaues it requires reading parameters from file EF.CardAccess which lies outside of eMRTD applet (AID: A0000002471001) in the master file.
+        
+        // Now, the ICAO 9303 standard does specify command for selecting master file by sending SELECT APDU with P1=0x00, P2=0x0C and empty data field (see part 10 page 8). But after some testing I found out this command doesn't work on some passports (European passports) and although receiving success (sw=9000) from passport the master file is not selected.
+        
+        // After a bit of researching standard ISO/IEC 7816 I found there is an alternative SELECT command for selecting master file. The command doesn't differ much from the command specified in ICAO 9303 doc with only difference that data field is set to: 0x3F00. See section 6.11.3 of ISO/IEC 7816-4.
+        // By executing above SELECT command (with data=0x3F00) master file should be selected and you should be able to read EF.CardAccess from passport.
+        
+        // First select master file
+        let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 0x00, instructionCode: 0xA4, p1Parameter: 0x00, p2Parameter: 0x0C, data: Data([0x3f,0x00]), expectedResponseLength: 256)
+        
+        send( cmd: cmd) { response, error in
+            if let error = error {
+                completed( nil, error )
+                return
+            }
+            
+            // Now read EC.CardAccess
+            self.selectFileAndRead(tag: [0x01,0x1C]) { data, error in
+                completed( data, error)
+            }
+        }
+    }
     
+    func selectPassportApplication( completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+        // Finally reselect the eMRTD application so the rest of the reading works as normal
+        Log.debug( "Re-selecting eMRTD Application" )
+        let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 0x00, instructionCode: 0xA4, p1Parameter: 0x04, p2Parameter: 0x0C, data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]), expectedResponseLength: 256)
+        
+        self.send( cmd: cmd) { response, error in
+            completed( response, nil)
+        }
+
+    }
+    
+
     func selectFile( tag: [UInt8], completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
         
         let data : [UInt8] = [0x00, 0xA4, 0x02, 0x0C, 0x02] + tag
