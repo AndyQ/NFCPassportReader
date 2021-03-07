@@ -498,11 +498,11 @@ public class OpenSSLUtils {
     }
 
     @available(iOS 13, macOS 10.15, *)
-    public static func  getPublicKeyData(from key:OpaquePointer) -> [UInt8]? {
+    public static func getPublicKeyData(from key:OpaquePointer) -> [UInt8]? {
         var data : [UInt8] = []
         // Get Key type
         let v = EVP_PKEY_base_id( key )
-        if v == EVP_PKEY_DH {
+        if v == EVP_PKEY_DH || v == EVP_PKEY_DHX {
             guard let dh = EVP_PKEY_get0_DH(key) else {
                 return nil
             }

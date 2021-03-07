@@ -341,8 +341,12 @@ extension PassportReader {
         
         self.paceHandler = PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
         paceHandler?.doPACE(mrzKey: mrzKey ) { error in
-            self.paceHandler = nil
-            completed(nil)
+            if error == false {
+                
+            } else {
+                self.paceHandler = nil
+                completed(NFCPassportReaderError.InvalidDataPassed("PACE Failed"))
+            }
         }
     }
     
