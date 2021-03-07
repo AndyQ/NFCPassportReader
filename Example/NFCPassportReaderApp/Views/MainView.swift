@@ -63,11 +63,18 @@ struct MainView : View {
                     .disabled( !isValid )
 
                     Spacer()
-                    HStack {
+                    HStack(alignment:.firstTextBaseline) {
                         Text( "Version - \(UIApplication.version)" )
                             .font(.footnote)
                             .padding(.leading)
                         Spacer()
+                        Button(action: {
+                            shareLogs()
+                        }) {
+                            Text("Share logs")
+                                .foregroundColor(.secondary)
+                        }.padding(.trailing)
+                        .disabled( !isValid )
                     }
                 }
             }
@@ -107,6 +114,11 @@ extension MainView {
 
 // MARK: Action Functions
 extension MainView {
+
+    func shareLogs() {
+        hideKeyboard()
+        PassportUtils.shareLogs()
+    }
 
     func scanPassport( ) {
         hideKeyboard()

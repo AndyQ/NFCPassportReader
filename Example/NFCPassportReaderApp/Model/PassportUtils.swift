@@ -49,5 +49,21 @@ class PassportUtils {
         
         return (sum % 10)
     }
+    
+    static  func shareLogs() {
+        do {
+            let arr = Log.logData
+            let data = try JSONSerialization.data(withJSONObject: arr, options: .prettyPrinted)
+            
+            let temporaryURL = URL(fileURLWithPath: NSTemporaryDirectory() + "passportreader.log")
+            try data.write(to: temporaryURL)
+            
+            let av = UIActivityViewController(activityItems: [temporaryURL], applicationActivities: nil)
+            UIApplication.shared.windows.first?.rootViewController?.present(av, animated: true, completion: nil)
+        } catch {
+            print( "ERROR - \(error)" )
+        }
+    }
+
 }
 

@@ -119,9 +119,11 @@ struct DetailsView : View {
             } else if let capki = secInfo as? ChipAuthenticationPublicKeyInfo {
                 title = "ChipAuthenticationPublicKeyInfo"
                 value = "\(secInfo.getProtocolOIDString())\n\(secInfo.getObjectIdentifier())\nKey Id: \(capki.getKeyId())"
-                
+            } else if let pacei = secInfo as? PACEInfo {
+                title = "PACEInfo"
+                value = "\(pacei.getProtocolOIDString())\n\(pacei.getObjectIdentifier())\nParameter ID: \(pacei.getParameterId() ?? -1)"
             }
-            
+
             items.append( Item(title:title, value: value))
 
         }
