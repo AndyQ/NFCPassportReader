@@ -72,33 +72,45 @@ public class PACEHandler {
 
             paceKeyType = PACEHandler.MRZ_PACE_KEY_REFERENCE;
             paceKey = try createPaceKey( from: mrzKey )
+            
+            // Temporary logging
+            Log.verbose("doPace - inpit parameters" )
+            Log.verbose("paceOID - \(paceOID)" )
+            Log.verbose("parameterSpec - \(parameterSpec)" )
+            Log.verbose("mappingType - \(mappingType!)" )
+            Log.verbose("agreementAlg - \(agreementAlg)" )
+            Log.verbose("cipherAlg - \(cipherAlg)" )
+            Log.verbose("digestAlg - \(digestAlg)" )
+            Log.verbose("keyLength - \(keyLength)" )
+            Log.verbose("keyLength - \(mrzKey)" )
+            Log.verbose("paceKey - \(binToHexRep(paceKey, asArray:true))" )
 
             // First start the initial auth call
             tagReader?.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType, completed: { [unowned self] response, error in
                 if let error = error {
-                    return handleError( "Error - \(error.localizedDescription)" )
+                    return handleError( "MSESatATMutualAuth", "Error - \(error.localizedDescription)" )
                 }
                 
                 self.doStep1()
             })
             
         } catch {
-            return handleError( "Error - \(error.localizedDescription)" )
+            return handleError( "doPACE", "Error - \(error.localizedDescription)" )
         }
     }
     
-    func handleError( _ error: String ) {
-        Log.error( "PACEHandler: \(error)" )
+    func handleError( _ stage: String, _ error: String ) {
+        Log.error( "PACEHandler: \(stage) - \(error)" )
         Log.error( "   OpenSSLError: \(OpenSSLUtils.getOpenSSLError())" )
         completedHandler?( false )
 
     }
     
     func doStep1() {
-        Log.debug( "Doing PACE Step1...")
+        Log.debug("Doing PACE Step1...")
         tagReader?.sendGeneralAuthenticate(data: [], isLast: false, completed: { [unowned self] response, error in
             if let error = error {
-                return handleError( "Failed to send GA Step1 - \(error.localizedDescription)" )
+                return handleError( "Step1", "Failed to send General Authenticate Step1 - \(error.localizedDescription)" )
             }
             
             do {
@@ -119,7 +131,7 @@ public class PACEHandler {
                 self.doStep2()
 
             } catch {
-                return handleError( "Unable to get encryptedNonce - \(error.localizedDescription)" )
+                return handleError( "Step1", "Unable to get encryptedNonce - \(error.localizedDescription)" )
             }
         })
     }
@@ -153,25 +165,28 @@ public class PACEHandler {
             var dhKey : OpaquePointer? = nil
             switch parameterSpec {
                 case 0:
+                    Log.verbose( "Using DH_get_1024_160" )
                     dhKey = DH_get_1024_160()
                 case 1:
+                    Log.verbose( "Using DH_get_2048_224" )
                     dhKey = DH_get_2048_224()
                 case 2:
+                    Log.verbose( "Using DH_get_2048_256" )
                     dhKey = DH_get_2048_256()
                 default:
                     // Error
                     break
             }
             guard dhKey != nil else {
-                return handleError( "Unable to create DH mapping key" )
+                return handleError( "Step2GM", "Unable to create DH mapping key" )
             }
             defer{ DH_free( dhKey ) }
 
             EVP_PKEY_set1_DH(mappingKey, dhKey)
         } else {
-            Log.debug( "Generating ECDH mapping keys")
+            Log.debug( "Generating ECDH mapping keys from parameterSpec - \(parameterSpec)")
             guard let ecKey = EC_KEY_new_by_curve_name(parameterSpec) else {
-                return handleError( "Unable to create EC mapping key" )
+                return handleError( "Step2GM", "Unable to create EC mapping key" )
             }
             defer{ EC_KEY_free( ecKey ) }
             
@@ -179,20 +194,25 @@ public class PACEHandler {
             EVP_PKEY_set1_EC_KEY(mappingKey, ecKey)
         }
 
-        let pcdMappingEncodedPublicKey = getPublicKeyData(from: mappingKey)
+        guard let pcdMappingEncodedPublicKey = OpenSSLUtils.getPublicKeyData(from: mappingKey) else {
+            return self.handleError( "Step2GM", "Unable to get public key from mapping key" )
+        }
         let step2Data = wrapDO(b:0x81, arr:pcdMappingEncodedPublicKey);
-        
+        Log.verbose( "public mapping key - \(binToHexRep(pcdMappingEncodedPublicKey, asArray:true))")
+
         Log.debug( "Sending public mapping key to passport..")
         tagReader?.sendGeneralAuthenticate(data:step2Data, isLast:false, completed: { [weak self] response, error in
             guard let sself = self else { return }
             
             if let error = error {
-                return sself.handleError( "Error - \(error)" )
+                return sself.handleError( "Step2GM", "Error - \(error)" )
             }
 
             let step2Response = response!.data
             let piccMappingEncodedPublicKey = try? unwrapDO(tag: 0x82, wrappedData: step2Response)
-            let piccMappingPublicKey = sself.decodePublicKey(pubKeyData: piccMappingEncodedPublicKey!, params: mappingKey)
+            guard let piccMappingPublicKey = sself.decodePublicKey(pubKeyData: piccMappingEncodedPublicKey!, params: mappingKey) else {
+                return sself.handleError( "Step2GM", "Unable to decode passport public mapping key" )
+            }
             
             Log.debug( "Received passports public mapping key")
 
@@ -207,11 +227,11 @@ public class PACEHandler {
                 Log.debug( "Doing DH Mapping agreement")
                 guard let dh_mapping_key = EVP_PKEY_get1_DH(mappingKey) else {
                     // Error
-                    return sself.handleError( "Unable to get DH mapping key" )
+                    return sself.handleError( "Step2GM DH", "Unable to get DH mapping key" )
                 }
                 
                 // Compute the shared secret using the mapping key and the passports public mapping key
-                let secret = sself.computeSharedSecret(privateKeyPair: mappingKey, publicKey: piccMappingPublicKey!)
+                let secret = OpenSSLUtils.computeSharedSecret(privateKeyPair: mappingKey, publicKey: piccMappingPublicKey)
                 
                 // Convert the secret to a bignum
                 let bn_h = BN_bin2bn(secret, Int32(secret.count), nil);
@@ -220,7 +240,7 @@ public class PACEHandler {
                 // Initialize ephemeral parameters with parameters from the mapping key
                 guard let ephemeral_key = DHparams_dup(dh_mapping_key) else {
                     // Error
-                    return sself.handleError( "Unable to get initialise ephemeral parameters from DH mapping key" )
+                    return sself.handleError( "Step2GM DH", "Unable to get initialise ephemeral parameters from DH mapping key" )
                 }
                 defer{ EC_KEY_free(ephemeral_key) }
 
@@ -229,10 +249,10 @@ public class PACEHandler {
                 
                 // map to new generator
                 guard let bn_g = BN_new() else {
-                    return sself.handleError( "Unable to create bn_g" )
+                    return sself.handleError( "Step2GM DH", "Unable to create bn_g" )
                 }
                 guard let new_g = BN_new() else {
-                    return sself.handleError( "Unable to create new_g" )
+                    return sself.handleError( "Step2GM DH", "Unable to create new_g" )
                 }
                 defer { BN_free(bn_h) ; BN_free(new_g) }
                 
@@ -241,18 +261,18 @@ public class PACEHandler {
                 guard BN_mod_exp(bn_g, g, bn_nonce, p, nil) != 1,
                       BN_mod_mul(new_g, bn_g, bn_h, p, nil) != 1 else {
                     // Error
-                    return sself.handleError( "Failed to generate new parameters" )
+                    return sself.handleError( "Step2GM DH", "Failed to generate new parameters" )
                 }
                 
                 guard DH_set0_pqg(ephemeral_key, BN_dup(p), BN_dup(q), new_g) != 1 else {
                     // Error
-                    return sself.handleError( "Unable to set DH pqg paramerters" )
+                    return sself.handleError( "Step2GM DH", "Unable to set DH pqg paramerters" )
                 }
                 
                 // Set the ephemeral params
                 guard EVP_PKEY_set1_DH(ephemeralParams, ephemeral_key) != 1 else {
                     // Error
-                    return sself.handleError( "Unable to set ephemeral parameters" )
+                    return sself.handleError( "Step2GM DH", "Unable to set ephemeral parameters" )
                 }
 
             } else if agreementAlg == "ECDH" {
@@ -262,44 +282,44 @@ public class PACEHandler {
 
                 guard let group = EC_GROUP_dup(EC_KEY_get0_group(ec_mapping_key)) else {
                     // Error
-                    return sself.handleError( "Unable to get EC mapping key" )
+                    return sself.handleError( "Step2GM ECDH", "Unable to get EC mapping key" )
                 }
                 defer { EC_GROUP_free(group) }
                     
                 guard let order = BN_new() else {
                     // Error
-                    return sself.handleError( "Unable to create order bignum" )
+                    return sself.handleError( "Step2GM ECDH", "Unable to create order bignum" )
                 }
                 defer { BN_free( order ) }
                     
                 guard let cofactor = BN_new() else {
                     // error
-                    return sself.handleError( "Unable to create cofactor bignum" )
+                    return sself.handleError( "Step2GM ECDH", "Unable to create cofactor bignum" )
                 }
                 defer { BN_free( cofactor ) }
                 
                 guard EC_GROUP_get_order(group, order, nil) == 1 ||
                     EC_GROUP_get_cofactor(group, cofactor, nil) == 1 else {
                     // Handle error
-                    return sself.handleError( "Unable to get order or cofactor from group" )
+                    return sself.handleError( "Step2GM ECDH", "Unable to get order or cofactor from group" )
                 }
                 
                 // complete the ECDH and get the resulting point h
                 guard let ecp_h = sself.computeECDHKeyPoint(key: mappingKey, inputKey: piccMappingEncodedPublicKey!) else {
                     // Error
-                    return sself.handleError( "Failed to compute new ECDH key point from mapping key and passport public mapping key" )
+                    return sself.handleError( "Step2GM ECDH", "Failed to compute new ECDH key point from mapping key and passport public mapping key" )
                 }
                 defer { EC_POINT_free( ecp_h ) }
 
                 /* map to new generator */
                 guard let ecp_g = EC_POINT_new(group) else {
-                    return sself.handleError( "Unable to create new mapping generator point" )
+                    return sself.handleError( "Step2GM ECDH", "Unable to create new mapping generator point" )
                 }
                 defer{ EC_POINT_free(ecp_g) }
                 
                 /* g' = g*s + h*1 */
                 guard EC_POINT_mul(group, ecp_g, bn_nonce, ecp_h, BN_value_one(), nil) == 1 else {
-                    return sself.handleError( "Failed to multipl mapping generator params" )
+                    return sself.handleError( "Step2GM ECDH", "Failed to multipl mapping generator params" )
                 }
                 
                 // Initialize ephemeral parameters with parameters from the mapping key
@@ -312,7 +332,7 @@ public class PACEHandler {
                       EC_GROUP_check(group, nil) == 1,
                     EC_KEY_set_group(ephemeral_key, group) == 1 else {
                     // Error
-                    return sself.handleError( "Unable to configure new ephemeral params" )
+                    return sself.handleError( "Step2GM ECDH", "Unable to configure new ephemeral params" )
                 }
             }
 
@@ -324,7 +344,7 @@ public class PACEHandler {
     
     func doPACEStep2IM(agreementAlg: String, parameterSpec : Int32, piccNonce: [UInt8], cipherAlg: String) {
         // Not implemented yet
-        return handleError( "IM not yet implemented" )
+        return handleError( "Step2IM", "IM not yet implemented" )
 
     }
     
@@ -343,7 +363,9 @@ public class PACEHandler {
         // We've finished with the ephemeralParams now - we can now free it
         EVP_PKEY_free( ephemeralParams )
 
-        let publicKey = getPublicKeyData( from: ephemeralKeyPair! )
+        guard let publicKey = OpenSSLUtils.getPublicKeyData( from: ephemeralKeyPair! ) else {
+            return self.handleError( "Step3 KeyEx", "Unable to get public key from ephermeral key pair" )
+        }
 
         // exchange public keys
         Log.debug( "Sending ephemeral public key to passport")
@@ -352,7 +374,7 @@ public class PACEHandler {
             guard let sself = self else { return }
             
             if let error = error {
-                return sself.handleError( "Error - \(error.localizedDescription)" )
+                return sself.handleError( "Step3 KeyEx", "Error - \(error.localizedDescription)" )
             }
 
             let step3Response = response!.data
@@ -369,7 +391,7 @@ public class PACEHandler {
         Log.debug( "Doing PACE Step3 Key Agreement...")
 
         Log.debug( "Computing shared secret...")
-        let sharedSecret = computeSharedSecret(privateKeyPair: pcdKeyPair, publicKey: passportPublicKey)
+        let sharedSecret = OpenSSLUtils.computeSharedSecret(privateKeyPair: pcdKeyPair, publicKey: passportPublicKey)
         Log.verbose( "Shared secret - \(binToHexRep(sharedSecret, asArray:true))")
 
         Log.debug( "Deriving ksEnc and ksMac keys from shared secret")
@@ -381,7 +403,9 @@ public class PACEHandler {
 
         // Step 4 - generate authentication token
         Log.debug( "Generating authentication token")
-        let pcdAuthToken = generateAuthenticationToken( oid: self.paceOID, publicKey: passportPublicKey, macKey: macKey)
+        guard let pcdAuthToken = try? generateAuthenticationToken( oid: self.paceOID, publicKey: passportPublicKey, macKey: macKey) else {
+            return self.handleError( "Step3 KeyAgreement", "Unable to generate authentication token using passports public key" )
+        }
         Log.verbose( "authentication token - \(pcdAuthToken)")
 
         Log.debug( "Sending auth token to passport")
@@ -391,7 +415,7 @@ public class PACEHandler {
 
             if let error = error {
                 // Error
-                return sself.handleError( "Error - \(error.localizedDescription)" )
+                return sself.handleError( "Step3 KeyAgreement", "Error - \(error.localizedDescription)" )
             }
             
             let tvlResp = TKBERTLVRecord.sequenceOfRecords(from: Data(response!.data))!
@@ -399,7 +423,9 @@ public class PACEHandler {
                 Log.warning("Was expecting tag 0x86, found: \(binToHex(UInt8(tvlResp[0].tag)))");
             }
             // Calculate expected authentication token
-            let expectedPICCToken = sself.generateAuthenticationToken(oid: sself.paceOID, publicKey: pcdKeyPair, macKey: macKey)
+            guard let expectedPICCToken = try? sself.generateAuthenticationToken(oid: sself.paceOID, publicKey: pcdKeyPair, macKey: macKey) else {
+                return sself.handleError( "Step3 KeyAgreement", "Unable to generate authentication token using our ephemeral key" )
+            }
             Log.verbose( "Expecting authentication token from passport - \(expectedPICCToken)")
 
             let piccToken = [UInt8](tvlResp[0].value)
@@ -408,7 +434,7 @@ public class PACEHandler {
             guard piccToken == expectedPICCToken else {
                 Log.error( "Error PICC Token mismatch!\npicToken - \(piccToken)\nexpectedPICCToken - \(expectedPICCToken)" )
                 sself.completedHandler?(false)
-                return sself.handleError( "Error PICC Token mismatch!\npicToken - \(piccToken)\nexpectedPICCToken - \(expectedPICCToken)" )
+                return sself.handleError( "Step3 KeyAgreement", "Error PICC Token mismatch!\npicToken - \(piccToken)\nexpectedPICCToken - \(expectedPICCToken)" )
             }
             
             Log.debug( "Auth token from passport matches expected token!" )
@@ -438,13 +464,13 @@ public class PACEHandler {
             let sm = SecureMessaging(encryptionAlgorithm: .AES, ksenc: ksEnc, ksmac: ksMac, ssc: ssc)
             tagReader?.secureMessaging = sm
         } else {
-            return self.handleError( "Not restarting secure messaging as unsupported cipher algorithm requested - \(cipherAlg)" )
+            return self.handleError( "PACECompleted", "Not restarting secure messaging as unsupported cipher algorithm requested - \(cipherAlg)" )
         }
         completedHandler?(true)
     }
     
-    func generateAuthenticationToken( oid : String, publicKey: OpaquePointer, macKey: [UInt8] ) -> [UInt8] {
-        var encodedPublicKeyData = encodePublicKey(oid:self.paceOID, key:publicKey)
+    func generateAuthenticationToken( oid : String, publicKey: OpaquePointer, macKey: [UInt8] ) throws -> [UInt8] {
+        var encodedPublicKeyData = try encodePublicKey(oid:self.paceOID, key:publicKey)
         
         if cipherAlg == "DESede" {
             // If DESede (3DES), we need to pad the data
@@ -463,14 +489,19 @@ public class PACEHandler {
         return authToken
     }
 
-    func encodePublicKey( oid : String, key : OpaquePointer ) -> [UInt8] {
+    func encodePublicKey( oid : String, key : OpaquePointer ) throws -> [UInt8] {
         let encodedOid = oidToBytes(oid:oid, replaceTag: false)
-        let pubKeyData = getPublicKeyData(from: key)
+        guard let pubKeyData = OpenSSLUtils.getPublicKeyData(from: key) else {
+            Log.error( "PACEHandler: encodePublicKey() - Unable to get public key data" )
+            throw NFCPassportReaderError.InvalidDataPassed("Unable to get public key data")
+        }
 
         let v = EVP_PKEY_base_id( key )
         let tag : TKTLVTag = v == EVP_PKEY_DH ? 0x84 : 0x86
 
-        let encOid = TKBERTLVRecord(from: Data(encodedOid))!
+        guard let encOid = TKBERTLVRecord(from: Data(encodedOid)) else {
+            throw NFCPassportReaderError.InvalidASN1Value
+        }
         let encPub = TKBERTLVRecord(tag:tag, value: Data(pubKeyData))
         let record = TKBERTLVRecord(tag: 0x7F49, records:[encOid, encPub])
         let data = record.data
@@ -479,44 +510,7 @@ public class PACEHandler {
     }
 
 
-    func getPublicKeyData(from key:OpaquePointer) -> [UInt8] {
-        
-        var data : [UInt8] = []
-        // Testing
-        let v = EVP_PKEY_base_id( key )
-        if v == EVP_PKEY_DH {
-            let dh = EVP_PKEY_get1_DH(key)
-            var dhPubKey : OpaquePointer?
-            DH_get0_key(dh, &dhPubKey, nil)
-            
-            let nrBytes = (BN_num_bits(dhPubKey)+7)/8
-            data = [UInt8](repeating: 0, count: Int(nrBytes))
-            data.withUnsafeMutableBytes{ ( ptr) in
-                _ = BN_bn2bin(dhPubKey, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self))
-            }
-            DH_free(dh)
-        } else if v == EVP_PKEY_EC {
-            
-            let ec = EVP_PKEY_get1_EC_KEY(key)
-            defer { EC_KEY_free(ec) }
 
-            let ec_pub = EC_KEY_get0_public_key(ec)
-            let ec_group = EC_KEY_get0_group(ec)
-            
-            let form = EC_KEY_get_conv_form(ec)
-            let len = EC_POINT_point2oct(ec_group, ec_pub,
-                                         form, nil, 0, nil)
-            data = [UInt8](repeating: 0, count: Int(len))
-            if len != 0 {
-                _ = EC_POINT_point2oct(ec_group, ec_pub,
-                                       form, &data, len,
-                                       nil)
-            }
-        }
-        
-        return data
-    }
-    
 
     // Caller is responsible for freeing the key
     func decodePublicKey(pubKeyData: [UInt8], params: OpaquePointer) -> OpaquePointer? {
@@ -572,39 +566,6 @@ public class PACEHandler {
         return key
     }
 
-    func computeSharedSecret( privateKeyPair: OpaquePointer, publicKey: OpaquePointer ) -> [UInt8] {
-        
-        let ctx = EVP_PKEY_CTX_new(privateKeyPair, nil)
-        defer{ EVP_PKEY_CTX_free(ctx) }
-        
-        if EVP_PKEY_derive_init(ctx) != 1 {
-            // error
-            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
-        }
-        
-        // Set the public key
-        if EVP_PKEY_derive_set_peer( ctx, publicKey ) != 1 {
-            // error
-            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
-        }
-        
-        // get buffer length needed for shared secret
-        var keyLen = 0
-        if EVP_PKEY_derive(ctx, nil, &keyLen) != 1 {
-            // Error
-            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
-        }
-        
-        // Derive the shared secret
-        var secret = [UInt8](repeating: 0, count: keyLen)
-        if EVP_PKEY_derive(ctx, &secret, &keyLen) != 1 {
-            // Error
-            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
-        }
-        
-        return secret
-    }
-    
     func computeECDHKeyPoint( key : OpaquePointer, inputKey : [UInt8] ) -> OpaquePointer? {
         
         let ecdh = EVP_PKEY_get1_EC_KEY(key)

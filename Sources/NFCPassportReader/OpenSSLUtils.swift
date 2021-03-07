@@ -497,4 +497,73 @@ public class OpenSSLUtils {
         return data
     }
 
+    @available(iOS 13, macOS 10.15, *)
+    public static func getPublicKeyData(from key:OpaquePointer) -> [UInt8]? {
+        var data : [UInt8] = []
+        // Get Key type
+        let v = EVP_PKEY_base_id( key )
+        if v == EVP_PKEY_DH {
+            guard let dh = EVP_PKEY_get0_DH(key) else {
+                return nil
+            }
+            var dhPubKey : OpaquePointer?
+            DH_get0_key(dh, &dhPubKey, nil)
+            
+            let nrBytes = (BN_num_bits(dhPubKey)+7)/8
+            data = [UInt8](repeating: 0, count: Int(nrBytes))
+            if BN_bn2bin(dhPubKey, &data) != 1 {
+                return nil
+            }
+        } else if v == EVP_PKEY_EC {
+            
+            guard let ec = EVP_PKEY_get0_EC_KEY(key),
+                let ec_pub = EC_KEY_get0_public_key(ec),
+                let ec_group = EC_KEY_get0_group(ec) else {
+                return nil
+            }
+            
+            let form = EC_KEY_get_conv_form(ec)
+            let len = EC_POINT_point2oct(ec_group, ec_pub, form, nil, 0, nil)
+            data = [UInt8](repeating: 0, count: Int(len))
+            if len == 0 {
+                return nil
+            }
+            _ = EC_POINT_point2oct(ec_group, ec_pub, form, &data, len, nil)
+        }
+        
+        return data
+    }
+    
+    public static func computeSharedSecret( privateKeyPair: OpaquePointer, publicKey: OpaquePointer ) -> [UInt8] {
+        let ctx = EVP_PKEY_CTX_new(privateKeyPair, nil)
+        defer{ EVP_PKEY_CTX_free(ctx) }
+        
+        if EVP_PKEY_derive_init(ctx) != 1 {
+            // error
+            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+        }
+        
+        // Set the public key
+        if EVP_PKEY_derive_set_peer( ctx, publicKey ) != 1 {
+            // error
+            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+        }
+        
+        // get buffer length needed for shared secret
+        var keyLen = 0
+        if EVP_PKEY_derive(ctx, nil, &keyLen) != 1 {
+            // Error
+            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+        }
+        
+        // Derive the shared secret
+        var secret = [UInt8](repeating: 0, count: keyLen)
+        if EVP_PKEY_derive(ctx, &secret, &keyLen) != 1 {
+            // Error
+            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+        }
+        
+        return secret
+    }
+    
 }

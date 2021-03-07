@@ -96,11 +96,11 @@ public class PACEInfo : SecurityInfo {
     public static func getParameterSpec(stdDomainParam : Int) throws -> Int32 {
         switch (stdDomainParam) {
             case PARAM_ID_GFP_1024_160:
-                return -1 // "rfc5114_1024_160";
+                return 0 // "rfc5114_1024_160";
             case PARAM_ID_GFP_2048_224:
-                return -1 // "rfc5114_2048_224";
+                return 1 // "rfc5114_2048_224";
             case PARAM_ID_GFP_2048_256:
-                return -1 // "rfc5114_2048_256";
+                return 2 // "rfc5114_2048_256";
             case PARAM_ID_ECP_NIST_P192_R1:
                 return NID_X9_62_prime192v1 // "secp192r1";
             case PARAM_ID_ECP_NIST_P224_R1:

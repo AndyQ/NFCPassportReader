@@ -80,8 +80,16 @@ public class SecureMessaging {
         
         let do8e = self.buildD08E(mac: CC)
         
+        // If dataSize > 255 then it will be encoded in 3 bytes with the first byte being 0x00
+        // otherwise its a single byte of size
         let size = do87.count + do97.count + do8e.count
-        var protectedAPDU = [UInt8](cmdHeader[0..<4]) + intToBin(size)
+        var dataSize: [UInt8]
+        if size > 255 {
+            dataSize = [0x00] + intToBin(size, pad: 4)
+        } else {
+            dataSize = intToBin(size)
+        }
+        var protectedAPDU = [UInt8](cmdHeader[0..<4]) + dataSize
         protectedAPDU += do87 + do97 + do8e
             
         // If the data is more that 255, specify the we are using extended length (0x00, 0x00)

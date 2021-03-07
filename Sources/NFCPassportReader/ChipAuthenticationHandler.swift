@@ -121,7 +121,7 @@ class ChipAuthenticationHandler {
             
             // Use our ephemeral private key and the passports public key to generate a shared secret
             // (the passport with do the same thing with their private key and our public key)
-            let sharedSecret = self.computeSharedSecret(piccPubKey:publicKey, pcdKey:ephemeralKeyPair!)
+            let sharedSecret = OpenSSLUtils.computeSharedSecret(privateKeyPair:ephemeralKeyPair!, publicKey:publicKey)
             
             // Now try to restart Secure Messaging using the new shared secret and
             do {
@@ -136,7 +136,10 @@ class ChipAuthenticationHandler {
     
     private func sendPublicKey(oid : String, keyId : Int?, pcdPublicKey : OpaquePointer, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->()) throws {
         let cipherAlg = try ChipAuthenticationInfo.toCipherAlgorithm(oid: oid)
-        let keyData = getPublicKeyData(key: pcdPublicKey)
+        guard let keyData = OpenSSLUtils.getPublicKeyData(from: pcdPublicKey) else {
+            completed(nil, NFCPassportReaderError.InvalidDataPassed("Unable to get public key data from public key" ))
+            return
+        }
         
         if cipherAlg.hasPrefix("DESede") {
         
@@ -181,79 +184,7 @@ class ChipAuthenticationHandler {
             }
         })
     }
-    
-    private func getPublicKeyData( key : OpaquePointer ) -> [UInt8] {
         
-        var data : [UInt8] = []
-        // Testing
-        let v = EVP_PKEY_base_id( key )
-        if v == EVP_PKEY_DH {
-            let dh = EVP_PKEY_get1_DH(key)
-            var dhPubKey : OpaquePointer?
-            DH_get0_key(dh, &dhPubKey, nil)
-            
-            let nrBytes = (BN_num_bits(dhPubKey)+7)/8
-            data = [UInt8](repeating: 0, count: Int(nrBytes))
-            data.withUnsafeMutableBytes{ ( ptr) in
-                _ = BN_bn2bin(dhPubKey, ptr.baseAddress?.assumingMemoryBound(to: UInt8.self))
-            }
-            DH_free(dh)
-        } else if v == EVP_PKEY_EC {
-            
-            let ec = EVP_PKEY_get0_EC_KEY(key)
-            
-            let ec_pub = EC_KEY_get0_public_key(ec)
-            let ec_group = EC_KEY_get0_group(ec)
-            
-            let bn_ctx = BN_CTX_new()
-            
-            let form = EC_KEY_get_conv_form(ec)
-            let len = EC_POINT_point2oct(ec_group, ec_pub,
-                                         form, nil, 0, bn_ctx)
-            data = [UInt8](repeating: 0, count: Int(len))
-            if len != 0 {
-                _ = EC_POINT_point2oct(ec_group, ec_pub,
-                                       form, &data, len,
-                                       bn_ctx)
-            }
-        }
-        
-        return data
-    }
-    
-    private func computeSharedSecret( piccPubKey : OpaquePointer, pcdKey: OpaquePointer ) -> [UInt8]{
-        let ctx = EVP_PKEY_CTX_new(pcdKey, nil)
-        defer{ EVP_PKEY_CTX_free(ctx) }
-
-        if EVP_PKEY_derive_init(ctx) != 1 {
-            // error
-            print( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
-        }
-        
-        if EVP_PKEY_derive_set_peer( ctx, piccPubKey ) != 1 {
-            // error
-            print( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
-        }
-        
-        // Determine buffer length for shared secret
-        var keyLen = 0
-        if EVP_PKEY_derive(ctx, nil, &keyLen) != 1 {
-            // Error
-            print( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
-        }
-        
-        // Create the buffer
-        var secret = [UInt8](repeating: 0, count: keyLen)
-        
-        // Derive the shared secret
-        if EVP_PKEY_derive(ctx, &secret, &keyLen) != 1 {
-            // Error
-            print( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
-        }
-        
-        return secret
-    }
-    
     private func restartSecureMessaging( oid : String, sharedSecret : [UInt8], maxTranceiveLength : Int, shouldCheckMAC : Bool) throws  {
         let cipherAlg = try ChipAuthenticationInfo.toCipherAlgorithm(oid: oid)
         let keyLength = try ChipAuthenticationInfo.toKeyLength(oid: oid)
