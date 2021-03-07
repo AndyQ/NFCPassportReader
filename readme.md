@@ -2,6 +2,8 @@
 
 This package handles reading an NFC Enabled passport using iOS 13 CoreNFC APIS
 
+THIS IS AN IN-PROGRESS BRANCH AND NOT EVEN REMOTELY SUPPORTED! IT MAY CRASH OR JUST NOT WORK!
+
 
 Supported features:
 * Basic Access Control (BAC)
