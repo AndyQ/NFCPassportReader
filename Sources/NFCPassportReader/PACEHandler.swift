@@ -427,13 +427,13 @@ extension PACEHandler {
         // bn_g = g^nonce mod p
         // ephemeral_key->g = bn_g mod p * h  => (g^nonce mod p) * h mod p
         let bn_ctx = BN_CTX_new()
-        guard BN_mod_exp(bn_g, g, nonce, p, bn_ctx) != 1,
-              BN_mod_mul(new_g, bn_g, bn_h, p, bn_ctx) != 1 else {
+        guard BN_mod_exp(bn_g, g, nonce, p, bn_ctx) == 1,
+              BN_mod_mul(new_g, bn_g, bn_h, p, bn_ctx) == 1 else {
             // Error
             throw PACEHandlerError.DHKeyAgreementError( "Failed to generate new parameters" )
         }
         
-        guard DH_set0_pqg(ephemeral_key, BN_dup(p), BN_dup(q), new_g) != 1 else {
+        guard DH_set0_pqg(ephemeral_key, BN_dup(p), BN_dup(q), new_g) == 1 else {
             // Error
             throw PACEHandlerError.DHKeyAgreementError( "Unable to set DH pqg paramerters" )
         }
@@ -443,7 +443,7 @@ extension PACEHandler {
             throw PACEHandlerError.ECDHKeyAgreementError( "Unable to create ephemeral params" )
         }
 
-        guard EVP_PKEY_set1_DH(ephemeralParams, ephemeral_key) != 1 else {
+        guard EVP_PKEY_set1_DH(ephemeralParams, ephemeral_key) == 1 else {
             // Error
             EVP_PKEY_free( ephemeralParams )
             throw PACEHandlerError.DHKeyAgreementError( "Unable to set ephemeral parameters" )
