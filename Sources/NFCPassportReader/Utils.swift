@@ -206,14 +206,14 @@ public func aesMAC( key: [UInt8], msg : [UInt8] ) -> [UInt8] {
 }
 
 @available(iOS 13, macOS 10.15, *)
-func wrapDO( b : UInt8, arr : [UInt8] ) -> [UInt8] {
+public func wrapDO( b : UInt8, arr : [UInt8] ) -> [UInt8] {
     let tag = TKBERTLVRecord(tag: TKTLVTag(b), value: Data(arr))
     let result = [UInt8](tag.data)
     return result;
 }
 
 @available(iOS 13, macOS 10.15, *)
-func unwrapDO( tag : UInt8, wrappedData : [UInt8]) throws -> [UInt8] {
+public func unwrapDO( tag : UInt8, wrappedData : [UInt8]) throws -> [UInt8] {
     guard let rec = TKBERTLVRecord(from: Data(wrappedData)),
           rec.tag == tag else {
         throw NFCPassportReaderError.InvalidASN1Value

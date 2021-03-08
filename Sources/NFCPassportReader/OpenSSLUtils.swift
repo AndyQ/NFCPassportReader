@@ -13,7 +13,7 @@ public class OpenSSLUtils {
     private static var loaded = false
     
     /// Returns any OpenSSL Error as a String
-    static func getOpenSSLError() -> String {
+    public static func getOpenSSLError() -> String {
         
         guard let out = BIO_new(BIO_s_mem()) else { return "Unknown" }
         defer { BIO_free(out) }
@@ -547,13 +547,9 @@ public class OpenSSLUtils {
             defer{ DH_free(dhKey) }
             
             DH_set0_key(dhKey, bn, nil)
-            
+
             pubKey = EVP_PKEY_new()
             error = EVP_PKEY_set1_DH(pubKey, dhKey)
-            
-            var keyType2 = EVP_PKEY_base_id( pubKey )
-            print( "KT2" )
-
         } else {
             let ec = EVP_PKEY_get1_EC_KEY(params)
             let group = EC_KEY_get0_group(ec);

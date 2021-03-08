@@ -340,9 +340,9 @@ extension PassportReader {
         Log.info( "Starting Password Authenticated Connection Establishment (PACE)" )
         
         self.paceHandler = PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
-        paceHandler?.doPACE(mrzKey: mrzKey ) { error in
-            if error == false {
-                
+        paceHandler?.doPACE(mrzKey: mrzKey ) { paceSucceeded in
+            if paceSucceeded {
+                completed(nil)
             } else {
                 self.paceHandler = nil
                 completed(NFCPassportReaderError.InvalidDataPassed("PACE Failed"))

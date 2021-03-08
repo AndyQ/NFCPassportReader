@@ -14,7 +14,30 @@ import CoreNFC
 import CryptoKit
 
 @available(iOS 13, *)
+private enum PACEHandlerError {
+    case DHKeyAgreementError(String)
+    case ECDHKeyAgreementError(String)
+    
+    var value: String {
+        switch self {
+            case .DHKeyAgreementError(let errMsg): return errMsg
+            case .ECDHKeyAgreementError(let errMsg): return errMsg
+
+        }
+    }
+}
+
+@available(iOS 13, *)
+extension PACEHandlerError: LocalizedError {
+    public var errorDescription: String? {
+        return NSLocalizedString(value, comment: "PACEHandlerError")
+    }
+}
+
+@available(iOS 13, *)
 public class PACEHandler {
+    
+    
     private static let MRZ_PACE_KEY_REFERENCE : UInt8 = 0x01
     private static let CAN_PACE_KEY_REFERENCE : UInt8 = 0x02 // Not currently supported
     private static let PIN_PACE_KEY_REFERENCE : UInt8 = 0x03 // Not currently supported
@@ -154,55 +177,21 @@ public class PACEHandler {
     
     func doPACEStep2GM(agreementAlg: String, parameterSpec : Int32, piccNonce : [UInt8]) {
         
-        // TODO - I think this can move into PACEInfo and rather than passing in the param spec, pass in the params????
-
-        // This will get freed later
-        let mappingKey : OpaquePointer = EVP_PKEY_new()
-
-        if agreementAlg == "DH" {
-            Log.debug( "Generating DH mapping keys")
-            //The EVP_PKEY_CTX_set_dh_rfc5114() and EVP_PKEY_CTX_set_dhx_rfc5114() macros are synonymous. They set the DH parameters to the values defined in RFC5114. The rfc5114 parameter must be 1, 2 or 3 corresponding to RFC5114 sections 2.1, 2.2 and 2.3. or 0 to clear the stored value. This macro can be called during parameter generation. The ctx must have a key type of EVP_PKEY_DHX. The rfc5114 parameter and the nid parameter are mutually exclusive.
-            var dhKey : OpaquePointer? = nil
-            switch parameterSpec {
-                case 0:
-                    Log.verbose( "Using DH_get_1024_160" )
-                    dhKey = DH_get_1024_160()
-                case 1:
-                    Log.verbose( "Using DH_get_2048_224" )
-                    dhKey = DH_get_2048_224()
-                case 2:
-                    Log.verbose( "Using DH_get_2048_256" )
-                    dhKey = DH_get_2048_256()
-                default:
-                    // Error
-                    break
-            }
-            guard dhKey != nil else {
-                return handleError( "Step2GM", "Unable to create DH mapping key" )
-            }
-            defer{ DH_free( dhKey ) }
-
-            DH_generate_key(dhKey)
-            EVP_PKEY_set1_DH(mappingKey, dhKey)
-
-        } else {
-            Log.debug( "Generating ECDH mapping keys from parameterSpec - \(parameterSpec)")
-            guard let ecKey = EC_KEY_new_by_curve_name(parameterSpec) else {
-                return handleError( "Step2GM", "Unable to create EC mapping key" )
-            }
-            defer{ EC_KEY_free( ecKey ) }
-            
-            EC_KEY_generate_key(ecKey)
-            EVP_PKEY_set1_EC_KEY(mappingKey, ecKey)
+        let mappingKey : OpaquePointer
+        do {
+            mappingKey = try PACEInfo.createMappingKey( agreementAlgorithm: agreementAlg, parameterSpec: parameterSpec )
+        } catch {
+            return self.handleError( "Step2GM", "Error - \(error.localizedDescription)" )
         }
 
         guard let pcdMappingEncodedPublicKey = OpenSSLUtils.getPublicKeyData(from: mappingKey) else {
             return self.handleError( "Step2GM", "Unable to get public key from mapping key" )
         }
-        let step2Data = wrapDO(b:0x81, arr:pcdMappingEncodedPublicKey);
         Log.verbose( "public mapping key - \(binToHexRep(pcdMappingEncodedPublicKey, asArray:true))")
 
+
         Log.debug( "Sending public mapping key to passport..")
+        let step2Data = wrapDO(b:0x81, arr:pcdMappingEncodedPublicKey);
         tagReader?.sendGeneralAuthenticate(data:step2Data, isLast:false, completed: { [weak self] response, error in
             guard let sself = self else { return }
             
@@ -210,143 +199,42 @@ public class PACEHandler {
                 return sself.handleError( "Step2GM", "Error - \(error)" )
             }
 
-            let step2Response = response!.data
-            let piccMappingEncodedPublicKey = try? unwrapDO(tag: 0x82, wrappedData: step2Response)
-            guard let piccMappingPublicKey = OpenSSLUtils.decodePublicKeyFromBytes(pubKeyData: piccMappingEncodedPublicKey!, params: mappingKey) else {
+            guard let step2Response = response?.data,
+                  let piccMappingEncodedPublicKey = try? unwrapDO(tag: 0x82, wrappedData: step2Response) else { //,
+//                  let piccMappingPublicKey = OpenSSLUtils.decodePublicKeyFromBytes(pubKeyData: piccMappingEncodedPublicKey, params: mappingKey) else {
                 return sself.handleError( "Step2GM", "Unable to decode passport public mapping key" )
             }
             
             Log.debug( "Received passports public mapping key")
+            Log.verbose( "   public mapping key - \(binToHexRep(piccMappingEncodedPublicKey, asArray: true))")
 
             // Do mapping agreement
-            // ephmeralParams are free'd in stage 3
-            let ephemeralParams = EVP_PKEY_new()
 
             // First, Convert nonce to BIGNUM
-            let bn_nonce = BN_bin2bn(piccNonce, Int32(piccNonce.count), nil);
+            guard let bn_nonce = BN_bin2bn(piccNonce, Int32(piccNonce.count), nil) else {
+                return sself.handleError( "Step2GM", "Unable to convert picc nonce to bignum" )
+            }
             defer { BN_free(bn_nonce) }
-            if agreementAlg == "DH" {
-                Log.debug( "Doing DH Mapping agreement")
-                guard let dh_mapping_key = EVP_PKEY_get1_DH(mappingKey) else {
-                    // Error
-                    return sself.handleError( "Step2GM DH", "Unable to get DH mapping key" )
-                }
-                
-                // Compute the shared secret using the mapping key and the passports public mapping key
-                let picc_pub_key_dh = EVP_PKEY_get0_DH(piccMappingPublicKey)
-                var picc_pub_key : OpaquePointer?
-                DH_get0_key(picc_pub_key_dh, &picc_pub_key, nil)
-                var secret = [UInt8](repeating: 0, count: Int(DH_size(picc_pub_key_dh)))
-                DH_compute_key( &secret, picc_pub_key, dh_mapping_key)
 
-///                let secret = OpenSSLUtils.computeSharedSecret(privateKeyPair: mappingKey, publicKey: piccMappingPublicKey)
-                
-                // Convert the secret to a bignum
-                let bn_h = BN_bin2bn(secret, Int32(secret.count), nil);
-                defer { BN_clear_free(bn_h) }
-                
-                // Initialize ephemeral parameters with parameters from the mapping key
-                guard let ephemeral_key = DHparams_dup(dh_mapping_key) else {
-                    // Error
-                    return sself.handleError( "Step2GM DH", "Unable to get initialise ephemeral parameters from DH mapping key" )
+            // ephmeralParams are free'd in stage 3
+            let ephemeralParams : OpaquePointer
+            do {
+                if agreementAlg == "DH" {
+                    Log.debug( "Doing DH Mapping agreement")
+                    ephemeralParams = try sself.doDHMappingAgreement(mappingKey: mappingKey, passportPublicKeyData: piccMappingEncodedPublicKey, nonce: bn_nonce )
+                } else if agreementAlg == "ECDH" {
+                    Log.debug( "Doing ECDH Mapping agreement")
+                    ephemeralParams = try sself.doECDHMappingAgreement(mappingKey: mappingKey, passportPublicKeyData: piccMappingEncodedPublicKey, nonce: bn_nonce )
+                } else {
+                    return sself.handleError( "Step2GM", "Unsupport agreement algorithm" )
                 }
-                defer{ DH_free(ephemeral_key) }
-
-                var p, q, g : OpaquePointer?
-                DH_get0_pqg(dh_mapping_key, &p, &q, &g);
-                
-                // map to new generator
-                guard let bn_g = BN_new() else {
-                    return sself.handleError( "Step2GM DH", "Unable to create bn_g" )
-                }
-                guard let new_g = BN_new() else {
-                    return sself.handleError( "Step2GM DH", "Unable to create new_g" )
-                }
-                defer { BN_free(bn_g) ; BN_free(new_g) }
-                
-                // bn_g = g^nonce mod p
-                // ephemeral_key->g = bn_g mod p * h  => (g^nonce mod p) * h mod p
-                guard BN_mod_exp(bn_g, g, bn_nonce, p, nil) != 1,
-                      BN_mod_mul(new_g, bn_g, bn_h, p, nil) != 1 else {
-                    // Error
-                    return sself.handleError( "Step2GM DH", "Failed to generate new parameters" )
-                }
-                
-                guard DH_set0_pqg(ephemeral_key, BN_dup(p), BN_dup(q), new_g) != 1 else {
-                    // Error
-                    return sself.handleError( "Step2GM DH", "Unable to set DH pqg paramerters" )
-                }
-                
-                // Set the ephemeral params
-                guard EVP_PKEY_set1_DH(ephemeralParams, ephemeral_key) != 1 else {
-                    // Error
-                    return sself.handleError( "Step2GM DH", "Unable to set ephemeral parameters" )
-                }
-
-            } else if agreementAlg == "ECDH" {
-                Log.debug( "Doing ECDH Mapping agreement")
-
-                let ec_mapping_key = EVP_PKEY_get1_EC_KEY(mappingKey);
-
-                guard let group = EC_GROUP_dup(EC_KEY_get0_group(ec_mapping_key)) else {
-                    // Error
-                    return sself.handleError( "Step2GM ECDH", "Unable to get EC mapping key" )
-                }
-                defer { EC_GROUP_free(group) }
-                    
-                guard let order = BN_new() else {
-                    // Error
-                    return sself.handleError( "Step2GM ECDH", "Unable to create order bignum" )
-                }
-                defer { BN_free( order ) }
-                    
-                guard let cofactor = BN_new() else {
-                    // error
-                    return sself.handleError( "Step2GM ECDH", "Unable to create cofactor bignum" )
-                }
-                defer { BN_free( cofactor ) }
-                
-                guard EC_GROUP_get_order(group, order, nil) == 1 ||
-                    EC_GROUP_get_cofactor(group, cofactor, nil) == 1 else {
-                    // Handle error
-                    return sself.handleError( "Step2GM ECDH", "Unable to get order or cofactor from group" )
-                }
-                
-                // complete the ECDH and get the resulting point h
-                guard let ecp_h = sself.computeECDHKeyPoint(key: mappingKey, inputKey: piccMappingEncodedPublicKey!) else {
-                    // Error
-                    return sself.handleError( "Step2GM ECDH", "Failed to compute new ECDH key point from mapping key and passport public mapping key" )
-                }
-                defer { EC_POINT_free( ecp_h ) }
-
-                /* map to new generator */
-                guard let ecp_g = EC_POINT_new(group) else {
-                    return sself.handleError( "Step2GM ECDH", "Unable to create new mapping generator point" )
-                }
-                defer{ EC_POINT_free(ecp_g) }
-                
-                /* g' = g*s + h*1 */
-                guard EC_POINT_mul(group, ecp_g, bn_nonce, ecp_h, BN_value_one(), nil) == 1 else {
-                    return sself.handleError( "Step2GM ECDH", "Failed to multipl mapping generator params" )
-                }
-                
-                // Initialize ephemeral parameters with parameters from the mapping key
-                let ephemeral_key = EC_KEY_dup(ec_mapping_key);
-                defer{ EC_KEY_free(ephemeral_key) }
-                EVP_PKEY_set1_EC_KEY(ephemeralParams, ephemeral_key);
-                
-                // configure the new EC_KEY
-                guard EC_GROUP_set_generator(group, ecp_g, order, cofactor) == 1,
-                      EC_GROUP_check(group, nil) == 1,
-                    EC_KEY_set_group(ephemeral_key, group) == 1 else {
-                    // Error
-                    return sself.handleError( "Step2GM ECDH", "Unable to configure new ephemeral params" )
-                }
+            } catch {
+                return sself.handleError( "Step2GM", "Error - \(error.localizedDescription)" )
             }
 
             // Need to free the mapping key we created now
             EVP_PKEY_free(mappingKey)
-            sself.doStep3KeyExchange(agreementAlg: agreementAlg, ephemeralParams: ephemeralParams!)
+            sself.doStep3KeyExchange(agreementAlg: agreementAlg, ephemeralParams: ephemeralParams)
         })
     }
     
@@ -475,6 +363,164 @@ public class PACEHandler {
             return self.handleError( "PACECompleted", "Not restarting secure messaging as unsupported cipher algorithm requested - \(cipherAlg)" )
         }
         completedHandler?(true)
+    }
+}
+
+// MARK - PACEHandler Utility functions
+@available(iOS 13, *)
+extension PACEHandler {
+    
+    /// Does the DH key Mapping agreement
+    /// - Parameter mappingKey - Pointer to an EVP_PKEY structure containing the mapping key
+    /// - Parameter passportPublicKeyData - byte array containing the publick key read from the passport
+    /// - Parameter nonce - Pointer to an BIGNUM structure containing the unencrypted nonce
+    /// - Returns the EVP_PKEY containing the mapped ephemeral parameters
+    func doDHMappingAgreement( mappingKey : OpaquePointer, passportPublicKeyData: [UInt8], nonce: OpaquePointer ) throws -> OpaquePointer {
+        guard let dh_mapping_key = EVP_PKEY_get1_DH(mappingKey) else {
+            // Error
+            throw PACEHandlerError.DHKeyAgreementError( "Unable to get DH mapping key" )
+        }
+        
+        // Compute the shared secret using the mapping key and the passports public mapping key
+        let bn = BN_bin2bn(passportPublicKeyData, Int32(passportPublicKeyData.count), nil);
+        defer { BN_free( bn ) }
+        
+        var secret = [UInt8](repeating: 0, count: Int(DH_size(dh_mapping_key)))
+        DH_compute_key( &secret, bn, dh_mapping_key)
+        
+        /*
+         let picc_pub_key_dh = EVP_PKEY_get1_DH(piccMappingPublicKey)
+         defer{ DH_free(picc_pub_key_dh) }
+         var picc_pub_key : OpaquePointer?
+         DH_get0_key(picc_pub_key_dh, &picc_pub_key, nil)
+         var secret = [UInt8](repeating: 0, count: Int(DH_size(picc_pub_key_dh)))
+         DH_compute_key( &secret, picc_pub_key, dh_mapping_key)
+         */
+//       let secret = OpenSSLUtils.computeSharedSecret(privateKeyPair: mappingKey, publicKey: piccMappingPublicKey)
+        
+        // Convert the secret to a bignum
+        let bn_h = BN_bin2bn(secret, Int32(secret.count), nil);
+        defer { BN_clear_free(bn_h) }
+        
+        // Initialize ephemeral parameters with parameters from the mapping key
+        guard let ephemeral_key = DHparams_dup(dh_mapping_key) else {
+            // Error
+            throw PACEHandlerError.DHKeyAgreementError("Unable to get initialise ephemeral parameters from DH mapping key")
+        }
+        defer{ DH_free(ephemeral_key) }
+        
+        var p : OpaquePointer? = nil
+        var q : OpaquePointer? = nil
+        var g : OpaquePointer? = nil
+        DH_get0_pqg(dh_mapping_key, &p, &q, &g);
+        
+        // map to new generator
+        guard let bn_g = BN_new() else {
+            throw PACEHandlerError.DHKeyAgreementError( "Unable to create bn_g" )
+        }
+        defer{ BN_free(bn_g) }
+        guard let new_g = BN_new() else {
+            throw PACEHandlerError.DHKeyAgreementError( "Unable to create new_g" )
+        }
+        defer{ BN_free(new_g) }
+        
+        // bn_g = g^nonce mod p
+        // ephemeral_key->g = bn_g mod p * h  => (g^nonce mod p) * h mod p
+        let bn_ctx = BN_CTX_new()
+        guard BN_mod_exp(bn_g, g, nonce, p, bn_ctx) != 1,
+              BN_mod_mul(new_g, bn_g, bn_h, p, bn_ctx) != 1 else {
+            // Error
+            throw PACEHandlerError.DHKeyAgreementError( "Failed to generate new parameters" )
+        }
+        
+        guard DH_set0_pqg(ephemeral_key, BN_dup(p), BN_dup(q), new_g) != 1 else {
+            // Error
+            throw PACEHandlerError.DHKeyAgreementError( "Unable to set DH pqg paramerters" )
+        }
+        
+        // Set the ephemeral params
+        guard let ephemeralParams = EVP_PKEY_new() else {
+            throw PACEHandlerError.ECDHKeyAgreementError( "Unable to create ephemeral params" )
+        }
+
+        guard EVP_PKEY_set1_DH(ephemeralParams, ephemeral_key) != 1 else {
+            // Error
+            EVP_PKEY_free( ephemeralParams )
+            throw PACEHandlerError.DHKeyAgreementError( "Unable to set ephemeral parameters" )
+        }
+        return ephemeralParams
+    }
+    
+    /// Does the ECDH key Mapping agreement
+    /// - Parameter mappingKey - Pointer to an EVP_PKEY structure containing the mapping key
+    /// - Parameter passportPublicKeyData - byte array containing the publick key read from the passport
+    /// - Parameter nonce - Pointer to an BIGNUM structure containing the unencrypted nonce
+    /// - Returns the EVP_PKEY containing the mapped ephemeral parameters
+    func doECDHMappingAgreement( mappingKey : OpaquePointer, passportPublicKeyData: [UInt8], nonce: OpaquePointer ) throws -> OpaquePointer {
+
+        let ec_mapping_key = EVP_PKEY_get1_EC_KEY(mappingKey);
+        
+        guard let group = EC_GROUP_dup(EC_KEY_get0_group(ec_mapping_key)) else {
+            // Error
+            throw PACEHandlerError.ECDHKeyAgreementError( "Unable to get EC mapping key" )
+        }
+        defer { EC_GROUP_free(group) }
+        
+        guard let order = BN_new() else {
+            // Error
+            throw PACEHandlerError.ECDHKeyAgreementError( "Unable to create order bignum" )
+        }
+        defer { BN_free( order ) }
+        
+        guard let cofactor = BN_new() else {
+            // error
+            throw PACEHandlerError.ECDHKeyAgreementError( "Unable to create cofactor bignum" )
+        }
+        defer { BN_free( cofactor ) }
+        
+        guard EC_GROUP_get_order(group, order, nil) == 1 ||
+                EC_GROUP_get_cofactor(group, cofactor, nil) == 1 else {
+            // Handle error
+            throw PACEHandlerError.ECDHKeyAgreementError( "Unable to get order or cofactor from group" )
+        }
+        
+        // complete the ECDH and get the resulting point h
+        guard let ecp_h = self.computeECDHKeyPoint(key: mappingKey, inputKey: passportPublicKeyData) else {
+            // Error
+            throw PACEHandlerError.ECDHKeyAgreementError( "Failed to compute new ECDH key point from mapping key and passport public mapping key" )
+        }
+        defer { EC_POINT_free( ecp_h ) }
+        
+        /* map to new generator */
+        guard let ecp_g = EC_POINT_new(group) else {
+            throw PACEHandlerError.ECDHKeyAgreementError( "Unable to create new mapping generator point" )
+        }
+        defer{ EC_POINT_free(ecp_g) }
+        
+        /* g' = g*s + h*1 */
+        guard EC_POINT_mul(group, ecp_g, nonce, ecp_h, BN_value_one(), nil) == 1 else {
+            throw PACEHandlerError.ECDHKeyAgreementError( "Failed to multipl mapping generator params" )
+        }
+        
+        // Initialize ephemeral parameters with parameters from the mapping key
+        guard let ephemeralParams = EVP_PKEY_new() else {
+            throw PACEHandlerError.ECDHKeyAgreementError( "Unable to create ephemeral params" )
+        }
+
+        let ephemeral_key = EC_KEY_dup(ec_mapping_key);
+        defer{ EC_KEY_free(ephemeral_key) }
+        
+        // configure the new EC_KEY
+        guard EVP_PKEY_set1_EC_KEY(ephemeralParams, ephemeral_key) == 1,
+              EC_GROUP_set_generator(group, ecp_g, order, cofactor) == 1,
+              EC_GROUP_check(group, nil) == 1,
+              EC_KEY_set_group(ephemeral_key, group) == 1 else {
+            // Error
+
+            EVP_PKEY_free( ephemeralParams )
+            throw PACEHandlerError.ECDHKeyAgreementError( "Unable to configure new ephemeral params" )
+        }
+        return ephemeralParams
     }
     
     func generateAuthenticationToken( oid : String, publicKey: OpaquePointer, macKey: [UInt8] ) throws -> [UInt8] {
