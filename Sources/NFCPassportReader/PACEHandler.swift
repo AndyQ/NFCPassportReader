@@ -250,7 +250,7 @@ public class PACEHandler {
                     // Error
                     return sself.handleError( "Step2GM DH", "Unable to get initialise ephemeral parameters from DH mapping key" )
                 }
-                defer{ EC_KEY_free(ephemeral_key) }
+                defer{ DH_free(ephemeral_key) }
 
                 var p, q, g : OpaquePointer?
                 DH_get0_pqg(dh_mapping_key, &p, &q, &g);
