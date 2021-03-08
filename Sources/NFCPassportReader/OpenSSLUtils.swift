@@ -540,12 +540,12 @@ public class OpenSSLUtils {
         var error : Int32 = -1
         let keyType = EVP_PKEY_base_id( params )
         if keyType == EVP_PKEY_DH || keyType == EVP_PKEY_DHX {
-            let bn = BN_bin2bn(pubKeyData, Int32(pubKeyData.count), nil)
-            defer{ BN_free(bn) }
             
             let dhKey = DH_new()
             defer{ DH_free(dhKey) }
             
+            // We don't free this as its part of the key!
+            let bn = BN_bin2bn(pubKeyData, Int32(pubKeyData.count), nil)
             DH_set0_key(dhKey, bn, nil)
 
             pubKey = EVP_PKEY_new()
@@ -576,34 +576,53 @@ public class OpenSSLUtils {
     
 
     public static func computeSharedSecret( privateKeyPair: OpaquePointer, publicKey: OpaquePointer ) -> [UInt8] {
-        let ctx = EVP_PKEY_CTX_new(privateKeyPair, nil)
-        defer{ EVP_PKEY_CTX_free(ctx) }
         
-        if EVP_PKEY_derive_init(ctx) != 1 {
-            // error
-            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+        // Oddly it seems that we cant use EVP_PKEY stuff for DH as it uses DTX keys which OpenSSL doesn't quite handle right
+        // OR I'm misunderstanding something (which is more possible)
+        // Works fine though for ECDH keys
+        var secret : [UInt8]
+        let keyType = EVP_PKEY_base_id( privateKeyPair )
+        if keyType == EVP_PKEY_DH || keyType == EVP_PKEY_DHX {
+            // Get bn for public key
+            let dh = EVP_PKEY_get1_DH(privateKeyPair);
+            
+            let dh_pub = EVP_PKEY_get1_DH(publicKey)
+            var bn = BN_new()
+            DH_get0_key( dh_pub, &bn, nil )
+            
+            secret = [UInt8](repeating: 0, count: Int(DH_size(dh)))
+            let len = DH_compute_key(&secret, bn, dh);
+            
+            Log.verbose( "OpenSSLUtils.computeSharedSecret - DH secret len - \(len)" )
+        } else {
+            let ctx = EVP_PKEY_CTX_new(privateKeyPair, nil)
+            defer{ EVP_PKEY_CTX_free(ctx) }
+            
+            if EVP_PKEY_derive_init(ctx) != 1 {
+                // error
+                Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+            }
+            
+            // Set the public key
+            if EVP_PKEY_derive_set_peer( ctx, publicKey ) != 1 {
+                // error
+                Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+            }
+            
+            // get buffer length needed for shared secret
+            var keyLen = 0
+            if EVP_PKEY_derive(ctx, nil, &keyLen) != 1 {
+                // Error
+                Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+            }
+            
+            // Derive the shared secret
+            secret = [UInt8](repeating: 0, count: keyLen)
+            if EVP_PKEY_derive(ctx, &secret, &keyLen) != 1 {
+                // Error
+                Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+            }
         }
-        
-        // Set the public key
-        if EVP_PKEY_derive_set_peer( ctx, publicKey ) != 1 {
-            // error
-            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
-        }
-        
-        // get buffer length needed for shared secret
-        var keyLen = 0
-        if EVP_PKEY_derive(ctx, nil, &keyLen) != 1 {
-            // Error
-            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
-        }
-        
-        // Derive the shared secret
-        var secret = [UInt8](repeating: 0, count: keyLen)
-        if EVP_PKEY_derive(ctx, &secret, &keyLen) != 1 {
-            // Error
-            Log.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
-        }
-        
         return secret
     }
     

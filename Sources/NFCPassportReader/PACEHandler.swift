@@ -255,13 +255,14 @@ public class PACEHandler {
         EVP_PKEY_CTX_free(pctx)
         
         Log.debug( "Generated Ephemeral key pair")
-        
+
         // We've finished with the ephemeralParams now - we can now free it
         EVP_PKEY_free( ephemeralParams )
 
         guard let publicKey = OpenSSLUtils.getPublicKeyData( from: ephemeralKeyPair! ) else {
             return self.handleError( "Step3 KeyEx", "Unable to get public key from ephermeral key pair" )
         }
+        Log.verbose( "Ephemeral public key - \(binToHexRep(publicKey, asArray: true))")
 
         // exchange public keys
         Log.debug( "Sending ephemeral public key to passport")
@@ -433,7 +434,7 @@ extension PACEHandler {
             throw PACEHandlerError.DHKeyAgreementError( "Failed to generate new parameters" )
         }
         
-        guard DH_set0_pqg(ephemeral_key, BN_dup(p), BN_dup(q), new_g) == 1 else {
+        guard DH_set0_pqg(ephemeral_key, BN_dup(p), BN_dup(q), BN_dup(new_g)) == 1 else {
             // Error
             throw PACEHandlerError.DHKeyAgreementError( "Unable to set DH pqg paramerters" )
         }
