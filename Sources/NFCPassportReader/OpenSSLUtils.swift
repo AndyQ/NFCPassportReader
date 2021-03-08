@@ -532,6 +532,53 @@ public class OpenSSLUtils {
         return data
     }
     
+    // Caller is responsible for freeing the key
+    @available(iOS 13, macOS 10.15, *)
+    public static func decodePublicKeyFromBytes(pubKeyData: [UInt8], params: OpaquePointer) -> OpaquePointer? {
+        var pubKey : OpaquePointer?
+        
+        var error : Int32 = -1
+        let keyType = EVP_PKEY_base_id( params )
+        if keyType == EVP_PKEY_DH || keyType == EVP_PKEY_DHX {
+            let bn = BN_bin2bn(pubKeyData, Int32(pubKeyData.count), nil)
+            defer{ BN_free(bn) }
+            
+            let dhKey = DH_new()
+            defer{ DH_free(dhKey) }
+            
+            DH_set0_key(dhKey, bn, nil)
+            
+            pubKey = EVP_PKEY_new()
+            error = EVP_PKEY_set1_DH(pubKey, dhKey)
+            
+            var keyType2 = EVP_PKEY_base_id( pubKey )
+            print( "KT2" )
+
+        } else {
+            let ec = EVP_PKEY_get1_EC_KEY(params)
+            let group = EC_KEY_get0_group(ec);
+            let ecp = EC_POINT_new(group);
+            let key = EC_KEY_new();
+            defer {
+                EC_KEY_free(ec)
+                EC_POINT_free(ecp)
+                EC_KEY_free(key)
+            }
+            
+            // Read EC_Point from public key data
+            error = EC_POINT_oct2point(group, ecp, pubKeyData, pubKeyData.count, nil)
+            
+            error = EC_KEY_set_group(key, group)
+            error = EC_KEY_set_public_key(key, ecp);
+            
+            pubKey = EVP_PKEY_new()
+            error = EVP_PKEY_set1_EC_KEY(pubKey, key);
+        }
+        
+        return pubKey
+    }
+    
+
     public static func computeSharedSecret( privateKeyPair: OpaquePointer, publicKey: OpaquePointer ) -> [UInt8] {
         let ctx = EVP_PKEY_CTX_new(privateKeyPair, nil)
         defer{ EVP_PKEY_CTX_free(ctx) }

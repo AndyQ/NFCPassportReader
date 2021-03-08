@@ -330,13 +330,13 @@ public class TagReader {
                 if let sm = self.secureMessaging {
                     do {
                         rep = try sm.unprotect(rapdu:rep)
-                        Log.verbose(String(format:"TagReader [SM - unprotected] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
+                        Log.verbose(String(format:"TagReader [SM - unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
                     } catch {
                         completed( nil, NFCPassportReaderError.UnableToUnprotectAPDU )
                         return
                     }
                 } else {
-                    Log.verbose(String(format:"TagReader [unprotected] \(rep.data), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
+                    Log.verbose(String(format:"TagReader [unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
 
                 }
                 

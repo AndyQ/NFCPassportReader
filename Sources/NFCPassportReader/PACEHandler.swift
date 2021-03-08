@@ -212,7 +212,7 @@ public class PACEHandler {
 
             let step2Response = response!.data
             let piccMappingEncodedPublicKey = try? unwrapDO(tag: 0x82, wrappedData: step2Response)
-            guard let piccMappingPublicKey = sself.decodePublicKey(pubKeyData: piccMappingEncodedPublicKey!, params: mappingKey) else {
+            guard let piccMappingPublicKey = OpenSSLUtils.decodePublicKeyFromBytes(pubKeyData: piccMappingEncodedPublicKey!, params: mappingKey) else {
                 return sself.handleError( "Step2GM", "Unable to decode passport public mapping key" )
             }
             
@@ -233,14 +233,13 @@ public class PACEHandler {
                 }
                 
                 // Compute the shared secret using the mapping key and the passports public mapping key
-/*
-                let dh = EVP_PKEY_get0_DH(piccMappingPublicKey)
-                var dhPubKey : OpaquePointer?
-                DH_get0_key(dh, &dhPubKey, nil)
-                var secret = [UInt8](repeating: 0, count: Int(DH_size(dh)))
-                DH_compute_key( &secret, dhPubKey, dh_mapping_key)
-*/
-                let secret = OpenSSLUtils.computeSharedSecret(privateKeyPair: mappingKey, publicKey: piccMappingPublicKey)
+                let picc_pub_key_dh = EVP_PKEY_get0_DH(piccMappingPublicKey)
+                var picc_pub_key : OpaquePointer?
+                DH_get0_key(picc_pub_key_dh, &picc_pub_key, nil)
+                var secret = [UInt8](repeating: 0, count: Int(DH_size(picc_pub_key_dh)))
+                DH_compute_key( &secret, picc_pub_key, dh_mapping_key)
+
+///                let secret = OpenSSLUtils.computeSharedSecret(privateKeyPair: mappingKey, publicKey: piccMappingPublicKey)
                 
                 // Convert the secret to a bignum
                 let bn_h = BN_bin2bn(secret, Int32(secret.count), nil);
@@ -263,7 +262,7 @@ public class PACEHandler {
                 guard let new_g = BN_new() else {
                     return sself.handleError( "Step2GM DH", "Unable to create new_g" )
                 }
-                defer { BN_free(bn_h) ; BN_free(new_g) }
+                defer { BN_free(bn_g) ; BN_free(new_g) }
                 
                 // bn_g = g^nonce mod p
                 // ephemeral_key->g = bn_g mod p * h  => (g^nonce mod p) * h mod p
@@ -388,7 +387,7 @@ public class PACEHandler {
 
             let step3Response = response!.data
             let passportEncodedPublicKey = try? unwrapDO(tag: 0x84, wrappedData: step3Response)
-            let passportPublicKey = sself.decodePublicKey(pubKeyData: passportEncodedPublicKey!, params: ephemeralKeyPair!)
+            let passportPublicKey = OpenSSLUtils.decodePublicKeyFromBytes(pubKeyData: passportEncodedPublicKey!, params: ephemeralKeyPair!)
 
             Log.verbose( "Received passports ephemeral public key - \(binToHexRep(passportEncodedPublicKey!, asArray: true))" )
 
@@ -526,48 +525,6 @@ public class PACEHandler {
 
 
 
-    // Caller is responsible for freeing the key
-    func decodePublicKey(pubKeyData: [UInt8], params: OpaquePointer) -> OpaquePointer? {
-        var pubKey : OpaquePointer?
-        
-        var error : Int32 = -1
-        let keyType = EVP_PKEY_base_id( params )
-        if keyType == EVP_PKEY_DH || keyType == EVP_PKEY_DHX {
-            let bn = BN_bin2bn(pubKeyData, Int32(pubKeyData.count), nil)
-            defer{ BN_free(bn) }
-            
-            let dhKey = DH_new()
-            defer{ DH_free(dhKey) }
-            
-            DH_set0_key(dhKey, bn, nil)
-            
-            pubKey = EVP_PKEY_new()
-            error = EVP_PKEY_set1_DH(pubKey, dhKey)
-
-        } else {
-            let ec = EVP_PKEY_get1_EC_KEY(params)
-            let group = EC_KEY_get0_group(ec);
-            let ecp = EC_POINT_new(group);
-            let key = EC_KEY_new();
-            defer {
-                EC_KEY_free(ec)
-                EC_POINT_free(ecp)
-                EC_KEY_free(key)
-            }
-
-            // Read EC_Point from public key data
-            error = EC_POINT_oct2point(group, ecp, pubKeyData, pubKeyData.count, nil)
-
-            error = EC_KEY_set_group(key, group)
-            error = EC_KEY_set_public_key(key, ecp);
-
-            pubKey = EVP_PKEY_new()
-            error = EVP_PKEY_set1_EC_KEY(pubKey, key);
-        }
-        
-        return pubKey
-    }
-    
     /// Computes a key seed based on an MRZ key
     /// - Parameter the mrz key
     /// - Returns a encoded key based on the mrz key that can be used for PACE
