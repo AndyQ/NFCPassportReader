@@ -66,9 +66,17 @@ struct DetailsView : View {
         if passport.chipAuthenticationSupported {
             chipAuth = passport.chipAuthenticationSuccessful ? "SUCCESS\nSignature verified" : "FAILED\nCould not verify signature"
         }
+        
+        let authType : String = passport.PACESuccessful ? "PACE" : "BAC"
 
-        let verificationDetails : [Item] = [
-            Item(title: "Access Control", value: "BAC"),
+        var optionalItems : [Item] = []
+        if passport.PACESupported && !passport.PACESuccessful {
+            optionalItems.append( Item(title: "PACE ", value: "FAILED\nPACE unsuccessful") )
+        } else if !passport.PACESupported {
+            optionalItems.append( Item(title: "PACE ", value: "PACE not Supported") )
+        }
+
+        let verificationDetails : [Item] = [Item(title: "Access Control", value: authType)] + optionalItems + [
             Item(title: "Active Authentication", value: activeAuth),
             Item(title: "Chip Authentication", value: chipAuth),
             Item(title: "Document Signing Certificate", value: passport.documentSigningCertificateVerified ? "SUCCESS\nSOD Signature verified" : "FAILED\nCouldn't verify SOD signature"),

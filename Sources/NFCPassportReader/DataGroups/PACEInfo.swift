@@ -75,6 +75,10 @@ public class PACEInfo : SecurityInfo {
         return oid
     }
     
+    public override func getProtocolOIDString() -> String {
+        return PACEInfo.toProtocolOIDString(oid:oid)
+    }
+    
     public func getVersion() -> Int {
         return version
     }
@@ -83,58 +87,74 @@ public class PACEInfo : SecurityInfo {
         return parameterId
     }
     
-    public  func getParameterSpec() throws -> Int32 {
-        
+    public func getParameterSpec() throws -> Int32 {
         return try PACEInfo.getParameterSpec(stdDomainParam: self.parameterId ?? -1 )
     }
-
     
-    public override func getProtocolOIDString() -> String {
-        return PACEInfo.toProtocolOIDString(oid:oid)
+    public func getMappingType() throws -> PACEMappingType {
+        return try PACEInfo.toMappingType(oid: oid); // Either GM, CAM, or IM.
     }
     
+    public func getKeyAgreementAlgorithm() throws -> String {
+        return try PACEInfo.toKeyAgreementAlgorithm(oid: oid); // Either DH or ECDH.
+    }
+    
+    public func getCipherAlgorithm() throws -> String {
+        return try PACEInfo.toCipherAlgorithm(oid: oid); // Either DESede or AES.
+    }
+    
+    public func getDigestAlgorithm() throws -> String {
+        return try PACEInfo.toDigestAlgorithm(oid: oid); // Either SHA-1 or SHA-256.
+    }
+    
+    public func getKeyLength() throws -> Int {
+        return try PACEInfo.toKeyLength(oid: oid); // Of the enc cipher. Either 128, 192, or 256.
+    }
+
     /// Caller is required to free the returned EVP_PKEY value
-    public static func createMappingKey( agreementAlgorithm: String, parameterSpec : Int32 ) throws -> OpaquePointer {
+    public func createMappingKey( ) throws -> OpaquePointer {
         // This will get freed later
         let mappingKey : OpaquePointer = EVP_PKEY_new()
         
-        if agreementAlgorithm == "DH" {
-            Log.debug( "Generating DH mapping keys")
-            //The EVP_PKEY_CTX_set_dh_rfc5114() and EVP_PKEY_CTX_set_dhx_rfc5114() macros are synonymous. They set the DH parameters to the values defined in RFC5114. The rfc5114 parameter must be 1, 2 or 3 corresponding to RFC5114 sections 2.1, 2.2 and 2.3. or 0 to clear the stored value. This macro can be called during parameter generation. The ctx must have a key type of EVP_PKEY_DHX. The rfc5114 parameter and the nid parameter are mutually exclusive.
-            var dhKey : OpaquePointer? = nil
-            switch parameterSpec {
-                case 0:
-                    Log.verbose( "Using DH_get_1024_160" )
-                    dhKey = DH_get_1024_160()
-                case 1:
-                    Log.verbose( "Using DH_get_2048_224" )
-                    dhKey = DH_get_2048_224()
-                case 2:
-                    Log.verbose( "Using DH_get_2048_256" )
-                    dhKey = DH_get_2048_256()
-                default:
-                    // Error
-                    break
-            }
-            guard dhKey != nil else {
-                throw NFCPassportReaderError.InvalidDataPassed("Unable to create DH mapping key")
-            }
-            defer{ DH_free( dhKey ) }
+        switch try getKeyAgreementAlgorithm() {
+            case "DH":
+                Log.debug( "Generating DH mapping keys")
+                //The EVP_PKEY_CTX_set_dh_rfc5114() and EVP_PKEY_CTX_set_dhx_rfc5114() macros are synonymous. They set the DH parameters to the values defined in RFC5114. The rfc5114 parameter must be 1, 2 or 3 corresponding to RFC5114 sections 2.1, 2.2 and 2.3. or 0 to clear the stored value. This macro can be called during parameter generation. The ctx must have a key type of EVP_PKEY_DHX. The rfc5114 parameter and the nid parameter are mutually exclusive.
+                var dhKey : OpaquePointer? = nil
+                switch try getParameterSpec() {
+                    case 0:
+                        Log.verbose( "Using DH_get_1024_160" )
+                        dhKey = DH_get_1024_160()
+                    case 1:
+                        Log.verbose( "Using DH_get_2048_224" )
+                        dhKey = DH_get_2048_224()
+                    case 2:
+                        Log.verbose( "Using DH_get_2048_256" )
+                        dhKey = DH_get_2048_256()
+                    default:
+                        // Error
+                        break
+                }
+                guard dhKey != nil else {
+                    throw NFCPassportReaderError.InvalidDataPassed("Unable to create DH mapping key")
+                }
+                defer{ DH_free( dhKey ) }
+                
+                DH_generate_key(dhKey)
+                EVP_PKEY_set1_DH(mappingKey, dhKey)
             
-            DH_generate_key(dhKey)
-            EVP_PKEY_set1_DH(mappingKey, dhKey)
-            
-        } else if agreementAlgorithm == "ECDH" {
-            Log.debug( "Generating ECDH mapping keys from parameterSpec - \(parameterSpec)")
-            guard let ecKey = EC_KEY_new_by_curve_name(parameterSpec) else {
-                throw NFCPassportReaderError.InvalidDataPassed("Unable to create EC mapping key")
-             }
-            defer{ EC_KEY_free( ecKey ) }
-            
-            EC_KEY_generate_key(ecKey)
-            EVP_PKEY_set1_EC_KEY(mappingKey, ecKey)
-        } else {
-            throw NFCPassportReaderError.InvalidDataPassed("Unsupported agreement algorithm")
+            case "ECDH":
+                let parameterSpec = try getParameterSpec()
+                Log.debug( "Generating ECDH mapping keys from parameterSpec - \(parameterSpec)")
+                guard let ecKey = EC_KEY_new_by_curve_name(parameterSpec) else {
+                    throw NFCPassportReaderError.InvalidDataPassed("Unable to create EC mapping key")
+                 }
+                defer{ EC_KEY_free( ecKey ) }
+                
+                EC_KEY_generate_key(ecKey)
+                EVP_PKEY_set1_EC_KEY(mappingKey, ecKey)
+            default:
+                throw NFCPassportReaderError.InvalidDataPassed("Unsupported agreement algorithm")
         }
 
         return mappingKey

@@ -43,38 +43,37 @@ public class PACEHandler {
     private static let PIN_PACE_KEY_REFERENCE : UInt8 = 0x03 // Not currently supported
     private static let CUK_PACE_KEY_REFERENCE : UInt8 = 0x04 // Not currently supported
 
-    var tagReader : TagReader?
-
-    var paceInfo : PACEInfo?
+    var tagReader : TagReader
+    var paceInfo : PACEInfo
     
     var completedHandler : ((Bool)->())?
-    
     var isPACESupported : Bool = false
+    var paceError : String = ""
     
     // Params used
-    var paceKey : [UInt8] = []
-    var paceKeyType : UInt8 = 0
-    var paceOID : String = ""
-    var parameterSpec : Int32 = -1
-    var mappingType : PACEMappingType!
-    var agreementAlg : String = ""
-    var cipherAlg : String = ""
-    var digestAlg : String = ""
-    var keyLength : Int = -1
+    private var paceKey : [UInt8] = []
+    private var paceKeyType : UInt8 = 0
+    private var paceOID : String = ""
+    private var parameterSpec : Int32 = -1
+    private var mappingType : PACEMappingType!
+    private var agreementAlg : String = ""
+    private var cipherAlg : String = ""
+    private var digestAlg : String = ""
+    private var keyLength : Int = -1
     
-    var decryptedNonce: [UInt8]?
-
-    public init(cardAccess : CardAccess, tagReader: TagReader) {
+    public init(cardAccess : CardAccess, tagReader: TagReader) throws {
         self.tagReader = tagReader
         
-        if let pi = cardAccess.securityInfos.first as? PACEInfo {
-            self.paceInfo = pi
-            isPACESupported = true
+        guard let pi = cardAccess.securityInfos.first as? PACEInfo else {
+            throw NFCPassportReaderError.NotYetSupported( "PACE not supported" )
         }
+
+        self.paceInfo = pi
+        isPACESupported = true
     }
     
     public func doPACE( mrzKey : String, completed: @escaping (Bool)->() ) {
-        guard isPACESupported, let paceInfo = self.paceInfo else {
+        guard isPACESupported else {
             completed( false )
             return
         }
@@ -87,13 +86,13 @@ public class PACEHandler {
             paceOID = paceInfo.getObjectIdentifier()
             parameterSpec = try paceInfo.getParameterSpec()
             
-            mappingType = try PACEInfo.toMappingType(oid: paceOID); /* Either GM, CAM, or IM. */
-            agreementAlg = try PACEInfo.toKeyAgreementAlgorithm(oid: paceOID); /* Either DH or ECDH. */
-            cipherAlg  = try PACEInfo.toCipherAlgorithm(oid: paceOID); /* Either DESede or AES. */
-            digestAlg = try PACEInfo.toDigestAlgorithm(oid: paceOID); /* Either SHA-1 or SHA-256. */
-            keyLength = try PACEInfo.toKeyLength(oid: paceOID); /* Of the enc cipher. Either 128, 192, or 256. */
+            mappingType = try paceInfo.getMappingType()  // Either GM, CAM, or IM.
+            agreementAlg = try paceInfo.getKeyAgreementAlgorithm()  // Either DH or ECDH.
+            cipherAlg  = try paceInfo.getCipherAlgorithm()  // Either DESede or AES.
+            digestAlg = try paceInfo.getDigestAlgorithm()  // Either SHA-1 or SHA-256.
+            keyLength = try paceInfo.getKeyLength()  // Get key length  the enc cipher. Either 128, 192, or 256.
 
-            paceKeyType = PACEHandler.MRZ_PACE_KEY_REFERENCE;
+            paceKeyType = PACEHandler.MRZ_PACE_KEY_REFERENCE
             paceKey = try createPaceKey( from: mrzKey )
             
             // Temporary logging
@@ -109,7 +108,7 @@ public class PACEHandler {
             Log.verbose("paceKey - \(binToHexRep(paceKey, asArray:true))" )
 
             // First start the initial auth call
-            tagReader?.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType, completed: { [unowned self] response, error in
+            tagReader.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType, completed: { [unowned self] response, error in
                 if let error = error {
                     return handleError( "MSESatATMutualAuth", "Error - \(error.localizedDescription)" )
                 }
@@ -122,16 +121,23 @@ public class PACEHandler {
         }
     }
     
+    /// Handles an error during the PACE process
+    /// Logs and stoes the error and returns false to the caller
+    /// - Parameters:
+    ///   - stage: Where in the PACE process the error occurred
+    ///   - error: The error message
     func handleError( _ stage: String, _ error: String ) {
         Log.error( "PACEHandler: \(stage) - \(error)" )
         Log.error( "   OpenSSLError: \(OpenSSLUtils.getOpenSSLError())" )
+        self.paceError = "\(stage) - \(error)"
         completedHandler?( false )
 
     }
     
+    /// Performs PACE Step 1- receives an encrypted nonce from the passport and decypts it with the  PACE key - derived from MRZ, CAN (not yet supported)
     func doStep1() {
         Log.debug("Doing PACE Step1...")
-        tagReader?.sendGeneralAuthenticate(data: [], isLast: false, completed: { [unowned self] response, error in
+        tagReader.sendGeneralAuthenticate(data: [], isLast: false, completed: { [unowned self] response, error in
             if let error = error {
                 return handleError( "Step1", "Failed to send General Authenticate Step1 - \(error.localizedDescription)" )
             }
@@ -141,17 +147,20 @@ public class PACEHandler {
                 let encryptedNonce = try unwrapDO(tag: 0x80, wrappedData: data)
                 Log.verbose( "Encrypted nonce - \(binToHexRep(encryptedNonce, asArray:true))" )
 
+                let decryptedNonce: [UInt8]
                 if self.cipherAlg == "DESede" {
                     let iv = [UInt8](repeating:0, count: 8)
-                    self.decryptedNonce = tripleDESDecrypt(key: self.paceKey, message: encryptedNonce, iv: iv)
+                    decryptedNonce = tripleDESDecrypt(key: self.paceKey, message: encryptedNonce, iv: iv)
                 } else if self.cipherAlg == "AES" {
                     let iv = [UInt8](repeating:0, count: 16)
-                    self.decryptedNonce = AESDecrypt(key: self.paceKey, message: encryptedNonce, iv: iv)
+                    decryptedNonce = AESDecrypt(key: self.paceKey, message: encryptedNonce, iv: iv)
+                } else {
+                    return self.handleError( "Step1", "Unsupported cipher algorithm requested - \(cipherAlg)" )
                 }
 
-                Log.verbose( "Decrypted nonce - \(binToHexRep(self.decryptedNonce ?? [], asArray:true) )" )
+                Log.verbose( "Decrypted nonce - \(binToHexRep(decryptedNonce, asArray:true) )" )
                 
-                self.doStep2()
+                self.doStep2(passportNonce: decryptedNonce)
 
             } catch {
                 return handleError( "Step1", "Unable to get encryptedNonce - \(error.localizedDescription)" )
@@ -160,26 +169,37 @@ public class PACEHandler {
     }
     
     
-    func doStep2() {
+    /// Performs PACE Step 2 - computes ephemeral parameters by mapping the nonce received from the passport
+    ///  (and if IM used the nonce generated by us)
+    ///
+    /// Using the supported
+    /// - Parameters:
+    ///   - passportNonce: The decrypted nonce received from the passport
+    func doStep2( passportNonce: [UInt8]) {
         Log.debug( "Doing PACE Step2...")
         switch(mappingType) {
             case .CAM, .GM:
                 Log.debug( "   Using General Mapping (GM)...")
-                return doPACEStep2GM(agreementAlg: agreementAlg, parameterSpec: parameterSpec, piccNonce: self.decryptedNonce!);
+                return doPACEStep2GM(passportNonce: passportNonce)
             case .IM:
                 Log.debug( "   Using Integrated Mapping (IM)...")
-                return doPACEStep2IM(agreementAlg: agreementAlg, parameterSpec: parameterSpec, piccNonce: self.decryptedNonce!, cipherAlg: cipherAlg);
+                return doPACEStep2IM(passportNonce: passportNonce)
             default:
-                self.completedHandler?( false )
+                return self.handleError( "doStep2", "Unsupported mapping type" )
         }
 
     }
     
-    func doPACEStep2GM(agreementAlg: String, parameterSpec : Int32, piccNonce : [UInt8]) {
+    /// Performs PACEStep 2 using Generic Mapping
+    ///
+    /// Using the supported
+    /// - Parameters:
+    ///   - passportNonce: The decrypted nonce received from the passport
+    func doPACEStep2GM(passportNonce : [UInt8]) {
         
         let mappingKey : OpaquePointer
         do {
-            mappingKey = try PACEInfo.createMappingKey( agreementAlgorithm: agreementAlg, parameterSpec: parameterSpec )
+            mappingKey = try self.paceInfo.createMappingKey( )
         } catch {
             return self.handleError( "Step2GM", "Error - \(error.localizedDescription)" )
         }
@@ -191,8 +211,8 @@ public class PACEHandler {
 
 
         Log.debug( "Sending public mapping key to passport..")
-        let step2Data = wrapDO(b:0x81, arr:pcdMappingEncodedPublicKey);
-        tagReader?.sendGeneralAuthenticate(data:step2Data, isLast:false, completed: { [weak self] response, error in
+        let step2Data = wrapDO(b:0x81, arr:pcdMappingEncodedPublicKey)
+        tagReader.sendGeneralAuthenticate(data:step2Data, isLast:false, completed: { [weak self] response, error in
             guard let sself = self else { return }
             
             if let error = error {
@@ -201,7 +221,6 @@ public class PACEHandler {
 
             guard let step2Response = response?.data,
                   let piccMappingEncodedPublicKey = try? unwrapDO(tag: 0x82, wrappedData: step2Response) else { //,
-//                  let piccMappingPublicKey = OpenSSLUtils.decodePublicKeyFromBytes(pubKeyData: piccMappingEncodedPublicKey, params: mappingKey) else {
                 return sself.handleError( "Step2GM", "Unable to decode passport public mapping key" )
             }
             
@@ -211,7 +230,7 @@ public class PACEHandler {
             // Do mapping agreement
 
             // First, Convert nonce to BIGNUM
-            guard let bn_nonce = BN_bin2bn(piccNonce, Int32(piccNonce.count), nil) else {
+            guard let bn_nonce = BN_bin2bn(passportNonce, Int32(passportNonce.count), nil) else {
                 return sself.handleError( "Step2GM", "Unable to convert picc nonce to bignum" )
             }
             defer { BN_free(bn_nonce) }
@@ -219,10 +238,10 @@ public class PACEHandler {
             // ephmeralParams are free'd in stage 3
             let ephemeralParams : OpaquePointer
             do {
-                if agreementAlg == "DH" {
+                if sself.agreementAlg == "DH" {
                     Log.debug( "Doing DH Mapping agreement")
                     ephemeralParams = try sself.doDHMappingAgreement(mappingKey: mappingKey, passportPublicKeyData: piccMappingEncodedPublicKey, nonce: bn_nonce )
-                } else if agreementAlg == "ECDH" {
+                } else if sself.agreementAlg == "ECDH" {
                     Log.debug( "Doing ECDH Mapping agreement")
                     ephemeralParams = try sself.doECDHMappingAgreement(mappingKey: mappingKey, passportPublicKeyData: piccMappingEncodedPublicKey, nonce: bn_nonce )
                 } else {
@@ -234,17 +253,21 @@ public class PACEHandler {
 
             // Need to free the mapping key we created now
             EVP_PKEY_free(mappingKey)
-            sself.doStep3KeyExchange(agreementAlg: agreementAlg, ephemeralParams: ephemeralParams)
+            sself.doStep3KeyExchange(ephemeralParams: ephemeralParams)
         })
     }
     
-    func doPACEStep2IM(agreementAlg: String, parameterSpec : Int32, piccNonce: [UInt8], cipherAlg: String) {
+    func doPACEStep2IM( passportNonce: [UInt8] ) {
         // Not implemented yet
         return handleError( "Step2IM", "IM not yet implemented" )
 
     }
     
-    func doStep3KeyExchange(agreementAlg: String, ephemeralParams: OpaquePointer) {
+    /// Generates an ephemeral public/private key pair based on mapping parameters from step 2, and then sends
+    /// the public key to the passport and receives its ephmeral public key in exchange
+    /// - Parameters:
+    ///   - ephemeralParams: The ehpemeral mapping keys generated by step2
+    func doStep3KeyExchange(ephemeralParams: OpaquePointer) {
         Log.debug( "Doing PACE Step3 - Key Exchange")
 
         // Generate ephemeral keypair from ephemeralParams
@@ -266,8 +289,8 @@ public class PACEHandler {
 
         // exchange public keys
         Log.debug( "Sending ephemeral public key to passport")
-        let step3Data = wrapDO(b:0x83, arr:publicKey);
-        tagReader?.sendGeneralAuthenticate(data:step3Data, isLast:false, completed: { [weak self] response, error in
+        let step3Data = wrapDO(b:0x83, arr:publicKey)
+        tagReader.sendGeneralAuthenticate(data:step3Data, isLast:false, completed: { [weak self] response, error in
             guard let sself = self else { return }
             
             if let error = error {
@@ -284,6 +307,16 @@ public class PACEHandler {
         })
     }
     
+    /// This performs PACE Step 4 - Key Agreement.
+    /// Here the shared secret is computed from our ephemeral private key and the passports ephemeral public key
+    /// The new secure messaging (ksEnc and ksMac) keys are computed from the shared secret
+    /// An authentication token is generated from the passports public key and the computed ksMac key
+    /// Then, the authetication token is send to the passport, it returns its own computed authentication token
+    /// We then compute an expected authentication token from the ksMac key and our ephemeral public key
+    /// Finally we compare the recieved auth token to the expected token and if they are the same then PACE has succeeded!
+    /// - Parameters:
+    ///   - pcdKeyPair: our ephemeral key pair
+    ///   - passportPublicKey: passports ephemeral public key
     func doStep3KeyAgreement( pcdKeyPair: OpaquePointer, passportPublicKey: OpaquePointer) {
         Log.debug( "Doing PACE Step3 Key Agreement...")
 
@@ -300,14 +333,14 @@ public class PACEHandler {
 
         // Step 4 - generate authentication token
         Log.debug( "Generating authentication token")
-        guard let pcdAuthToken = try? generateAuthenticationToken( oid: self.paceOID, publicKey: passportPublicKey, macKey: macKey) else {
+        guard let pcdAuthToken = try? generateAuthenticationToken( publicKey: passportPublicKey, macKey: macKey) else {
             return self.handleError( "Step3 KeyAgreement", "Unable to generate authentication token using passports public key" )
         }
         Log.verbose( "authentication token - \(pcdAuthToken)")
 
         Log.debug( "Sending auth token to passport")
         let step4Data = wrapDO(b:0x85, arr:pcdAuthToken)
-        tagReader?.sendGeneralAuthenticate(data:step4Data, isLast:true, completed: { [weak self] response, error in
+        tagReader.sendGeneralAuthenticate(data:step4Data, isLast:true, completed: { [weak self] response, error in
             guard let sself = self else { return }
 
             if let error = error {
@@ -317,10 +350,10 @@ public class PACEHandler {
             
             let tvlResp = TKBERTLVRecord.sequenceOfRecords(from: Data(response!.data))!
             if tvlResp[0].tag != 0x86 {
-                Log.warning("Was expecting tag 0x86, found: \(binToHex(UInt8(tvlResp[0].tag)))");
+                Log.warning("Was expecting tag 0x86, found: \(binToHex(UInt8(tvlResp[0].tag)))")
             }
             // Calculate expected authentication token
-            guard let expectedPICCToken = try? sself.generateAuthenticationToken(oid: sself.paceOID, publicKey: pcdKeyPair, macKey: macKey) else {
+            guard let expectedPICCToken = try? sself.generateAuthenticationToken( publicKey: pcdKeyPair, macKey: macKey) else {
                 return sself.handleError( "Step3 KeyAgreement", "Unable to generate authentication token using our ephemeral key" )
             }
             Log.verbose( "Expecting authentication token from passport - \(expectedPICCToken)")
@@ -336,30 +369,35 @@ public class PACEHandler {
             
             Log.debug( "Auth token from passport matches expected token!" )
             
-            var encryptedChipAuthenticationData : [UInt8]? = nil
-            if (sself.mappingType == PACEMappingType.CAM) {
-                if tvlResp[1].tag != 0x8A {
-                    Log.warning("CAM: Was expecting tag 0x86, found: \(binToHex(UInt8(tvlResp[1].tag)))");
-                }
-                encryptedChipAuthenticationData = [UInt8](tvlResp[1].value)
-            }
+            // This will be added for CAM when supported
+            // var encryptedChipAuthenticationData : [UInt8]? = nil
+            // if (sself.mappingType == PACEMappingType.CAM) {
+            //    if tvlResp[1].tag != 0x8A {
+            //        Log.warning("CAM: Was expecting tag 0x86, found: \(binToHex(UInt8(tvlResp[1].tag)))")
+            //    }
+            //    encryptedChipAuthenticationData = [UInt8](tvlResp[1].value)
+            // }
             
             // We're done!
             sself.paceCompleted( ksEnc: encKey, ksMac: macKey )
         })
     }
     
+    /// Called once PACE has completed with the newly generated ksEnc and ksMac keys for restarting secure messaging
+    /// - Parameters:
+    ///   - ksEnc: the computed encryption key derived from the key agreement
+    ///   - ksMac: the computed mac key derived from the key agreement
     func paceCompleted( ksEnc: [UInt8], ksMac: [UInt8] ) {
         // Restart secure messaging
         let ssc = withUnsafeBytes(of: 0.bigEndian, Array.init)
         if (cipherAlg.hasPrefix("DESede")) {
             Log.info( "Restarting secure messaging using DESede encryption")
             let sm = SecureMessaging(encryptionAlgorithm: .DES, ksenc: ksEnc, ksmac: ksMac, ssc: ssc)
-            tagReader?.secureMessaging = sm
+            tagReader.secureMessaging = sm
         } else if (cipherAlg.hasPrefix("AES")) {
             Log.info( "Restarting secure messaging using AES encryption")
             let sm = SecureMessaging(encryptionAlgorithm: .AES, ksenc: ksEnc, ksmac: ksMac, ssc: ssc)
-            tagReader?.secureMessaging = sm
+            tagReader.secureMessaging = sm
         } else {
             return self.handleError( "PACECompleted", "Not restarting secure messaging as unsupported cipher algorithm requested - \(cipherAlg)" )
         }
@@ -383,24 +421,14 @@ extension PACEHandler {
         }
         
         // Compute the shared secret using the mapping key and the passports public mapping key
-        let bn = BN_bin2bn(passportPublicKeyData, Int32(passportPublicKeyData.count), nil);
+        let bn = BN_bin2bn(passportPublicKeyData, Int32(passportPublicKeyData.count), nil)
         defer { BN_free( bn ) }
         
         var secret = [UInt8](repeating: 0, count: Int(DH_size(dh_mapping_key)))
         DH_compute_key( &secret, bn, dh_mapping_key)
         
-        /*
-         let picc_pub_key_dh = EVP_PKEY_get1_DH(piccMappingPublicKey)
-         defer{ DH_free(picc_pub_key_dh) }
-         var picc_pub_key : OpaquePointer?
-         DH_get0_key(picc_pub_key_dh, &picc_pub_key, nil)
-         var secret = [UInt8](repeating: 0, count: Int(DH_size(picc_pub_key_dh)))
-         DH_compute_key( &secret, picc_pub_key, dh_mapping_key)
-         */
-//       let secret = OpenSSLUtils.computeSharedSecret(privateKeyPair: mappingKey, publicKey: piccMappingPublicKey)
-        
         // Convert the secret to a bignum
-        let bn_h = BN_bin2bn(secret, Int32(secret.count), nil);
+        let bn_h = BN_bin2bn(secret, Int32(secret.count), nil)
         defer { BN_clear_free(bn_h) }
         
         // Initialize ephemeral parameters with parameters from the mapping key
@@ -413,7 +441,7 @@ extension PACEHandler {
         var p : OpaquePointer? = nil
         var q : OpaquePointer? = nil
         var g : OpaquePointer? = nil
-        DH_get0_pqg(dh_mapping_key, &p, &q, &g);
+        DH_get0_pqg(dh_mapping_key, &p, &q, &g)
         
         // map to new generator
         guard let bn_g = BN_new() else {
@@ -459,11 +487,11 @@ extension PACEHandler {
     /// - Returns the EVP_PKEY containing the mapped ephemeral parameters
     func doECDHMappingAgreement( mappingKey : OpaquePointer, passportPublicKeyData: [UInt8], nonce: OpaquePointer ) throws -> OpaquePointer {
 
-        let ec_mapping_key = EVP_PKEY_get1_EC_KEY(mappingKey);
+        let ec_mapping_key = EVP_PKEY_get1_EC_KEY(mappingKey)
         
         guard let group = EC_GROUP_dup(EC_KEY_get0_group(ec_mapping_key)) else {
             // Error
-            throw PACEHandlerError.ECDHKeyAgreementError( "Unable to get EC mapping key" )
+            throw PACEHandlerError.ECDHKeyAgreementError( "Unable to get EC group" )
         }
         defer { EC_GROUP_free(group) }
         
@@ -485,22 +513,25 @@ extension PACEHandler {
             throw PACEHandlerError.ECDHKeyAgreementError( "Unable to get order or cofactor from group" )
         }
         
-        // complete the ECDH and get the resulting point h
-        guard let ecp_h = self.computeECDHKeyPoint(key: mappingKey, inputKey: passportPublicKeyData) else {
+        // Create the shared secret in the form of a ECPoint
+
+        // Ideally I'd use OpenSSLUtls.computeSharedSecret for this but for reasons as yet unknown, it only returns the first 32 bytes
+        // NOT the full 64 bytes (would then convert to 65 with e header of 4 for uncompressed)
+        guard let sharedSecretMappingPoint = self.computeECDHMappingKeyPoint(privateKey: mappingKey, inputKey: passportPublicKeyData) else {
             // Error
-            throw PACEHandlerError.ECDHKeyAgreementError( "Failed to compute new ECDH key point from mapping key and passport public mapping key" )
+            throw PACEHandlerError.ECDHKeyAgreementError( "Failed to compute new shared secret mapping point from mapping key and passport public mapping key" )
         }
-        defer { EC_POINT_free( ecp_h ) }
-        
-        /* map to new generator */
-        guard let ecp_g = EC_POINT_new(group) else {
+        defer { EC_POINT_free( sharedSecretMappingPoint ) }
+
+        // Map the nonce using Generic mapping to get the new parameters (inc a new generator)
+        guard let newGenerater = EC_POINT_new(group) else {
             throw PACEHandlerError.ECDHKeyAgreementError( "Unable to create new mapping generator point" )
         }
-        defer{ EC_POINT_free(ecp_g) }
+        defer{ EC_POINT_free(newGenerater) }
         
-        /* g' = g*s + h*1 */
-        guard EC_POINT_mul(group, ecp_g, nonce, ecp_h, BN_value_one(), nil) == 1 else {
-            throw PACEHandlerError.ECDHKeyAgreementError( "Failed to multipl mapping generator params" )
+        // g = (generator * nonce) + (sharedSecretMappingPoint * 1)
+        guard EC_POINT_mul(group, newGenerater, nonce, sharedSecretMappingPoint, BN_value_one(), nil) == 1 else {
+            throw PACEHandlerError.ECDHKeyAgreementError( "Failed to map nonce to get new generator params" )
         }
         
         // Initialize ephemeral parameters with parameters from the mapping key
@@ -508,12 +539,12 @@ extension PACEHandler {
             throw PACEHandlerError.ECDHKeyAgreementError( "Unable to create ephemeral params" )
         }
 
-        let ephemeral_key = EC_KEY_dup(ec_mapping_key);
+        let ephemeral_key = EC_KEY_dup(ec_mapping_key)
         defer{ EC_KEY_free(ephemeral_key) }
         
         // configure the new EC_KEY
         guard EVP_PKEY_set1_EC_KEY(ephemeralParams, ephemeral_key) == 1,
-              EC_GROUP_set_generator(group, ecp_g, order, cofactor) == 1,
+              EC_GROUP_set_generator(group, newGenerater, order, cofactor) == 1,
               EC_GROUP_check(group, nil) == 1,
               EC_KEY_set_group(ephemeral_key, group) == 1 else {
             // Error
@@ -524,7 +555,13 @@ extension PACEHandler {
         return ephemeralParams
     }
     
-    func generateAuthenticationToken( oid : String, publicKey: OpaquePointer, macKey: [UInt8] ) throws -> [UInt8] {
+    /// Generate Authentication token from a publicKey and and a mac key
+    /// - Parameters:
+    ///   - publicKey: An EVP_PKEY structure containing a public key data which will be used to generate the auth code
+    ///   - macKey: The mac key derived from the key agreement
+    /// - Throws: An error if we are unable to encode the public key data
+    /// - Returns: The authentication token (8 bytes)
+    func generateAuthenticationToken( publicKey: OpaquePointer, macKey: [UInt8] ) throws -> [UInt8] {
         var encodedPublicKeyData = try encodePublicKey(oid:self.paceOID, key:publicKey)
         
         if cipherAlg == "DESede" {
@@ -543,7 +580,13 @@ extension PACEHandler {
         Log.verbose( "Generated authToken = \(binToHexRep(authToken, asArray: true))" )
         return authToken
     }
-
+    
+    /// Encodes a PublicKey as an TLV strucuture based on TR-SAC 1.01 4.5.1 and 4.5.2
+    /// - Parameters:
+    ///   - oid: The object identifier specifying the key type
+    ///   - key: The ECP_PKEY public key to encode
+    /// - Throws: Error if unable to encode
+    /// - Returns: the encoded public key in tlv format
     func encodePublicKey( oid : String, key : OpaquePointer ) throws -> [UInt8] {
         let encodedOid = oidToBytes(oid:oid, replaceTag: false)
         guard let pubKeyData = OpenSSLUtils.getPublicKeyData(from: key) else {
@@ -569,9 +612,6 @@ extension PACEHandler {
         return [UInt8](data)
     }
 
-
-
-
     /// Computes a key seed based on an MRZ key
     /// - Parameter the mrz key
     /// - Returns a encoded key based on the mrz key that can be used for PACE
@@ -583,13 +623,18 @@ extension PACEHandler {
         let key = try smskg.deriveKey(keySeed: hash, cipherAlgName: cipherAlg, keyLength: keyLength, nonce: nil, mode: .PACE_MODE, paceKeyReference: paceKeyType)
         return key
     }
-
-    func computeECDHKeyPoint( key : OpaquePointer, inputKey : [UInt8] ) -> OpaquePointer? {
+    
+    /// Performs the ECDH PACE GM key agreement protocol by multiplying a private key with a public key
+    /// - Parameters:
+    ///   - key: an EVP_PKEY structure containng a ECDH private key
+    ///   - inputKey: a public key
+    /// - Returns: a new EC_POINT
+    func computeECDHMappingKeyPoint( privateKey : OpaquePointer, inputKey : [UInt8] ) -> OpaquePointer? {
         
-        let ecdh = EVP_PKEY_get1_EC_KEY(key)
+        let ecdh = EVP_PKEY_get1_EC_KEY(privateKey)
         defer { EC_KEY_free(ecdh) }
 
-        let privateKey = EC_KEY_get0_private_key(ecdh)
+        let privateECKey = EC_KEY_get0_private_key(ecdh) // BIGNUM
 
         // decode public key
         guard let group = EC_KEY_get0_group(ecdh) else{ return nil }
@@ -598,12 +643,12 @@ extension PACEHandler {
         guard EC_POINT_oct2point(group, ecp, inputKey, inputKey.count,nil) != 0 else { return nil }
                 
         // create our output point
-        let output = EC_POINT_new(group);
+        let output = EC_POINT_new(group)
 
         // Multiply our private key with the passports public key to get a new point
-        EC_POINT_mul(group, output, nil, ecp, privateKey, nil)
+        EC_POINT_mul(group, output, nil, ecp, privateECKey, nil)
         
-        return output;
+        return output
     }
 }
 

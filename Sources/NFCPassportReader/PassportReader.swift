@@ -206,7 +206,10 @@ extension PassportReader {
                     print( "Error reading CardAccess - \(error)" )
                 }
             }
+            
+            // If we managed to read the CardAccess the PACE should be supported otherwise drop back to BAC
             if let cardAccess = ca {
+                passport.PACESupported = true
                 self.doPACEAuthentication( cardAccess: cardAccess)
             } else {
                 tagReader?.selectPassportApplication(completed: { response, error in
@@ -220,9 +223,12 @@ extension PassportReader {
         self.handlePACE(cardAccess:cardAccess, completed: { [weak self] error in
             if error == nil {
                 Log.info( "PACE Successful" )
+                self?.passport.PACESuccessful = true
+
                 // At this point, BAC Has been done and the TagReader has been set up with the SecureMessaging
                 // session keys
                 self?.tagReader?.selectPassportApplication(completed: { response, error in
+                    
                     self?.startReadingDataGroups()
                 })
 
@@ -231,17 +237,14 @@ extension PassportReader {
                 let displayMessage = NFCViewDisplayMessage.error(error)
                 self?.invalidateSession(errorMessage: displayMessage, error: error)
             }
-
-//            self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
-//            self?.readerSession?.invalidate()
-//            self?.scanCompletedHandler( self?.passport, nil )
         })
     }
     
     func doBACAuthentication() {
         elementReadAttempts = 0
         self.currentlyReadingDataGroup = nil
-        // Set Chip authentication to be unsuccessful - either we haven't done it yet or we have done it but it failed for some reason
+        // Set PACE and Chip authentication to be unsuccessful - either we haven't done it yet or we have done it but it failed for some reason
+        passport.PACESuccessful = false
         passport.chipAuthenticationSuccessful = false
         self.handleBAC(completed: { [weak self] error in
             if error == nil {
@@ -339,14 +342,20 @@ extension PassportReader {
         
         Log.info( "Starting Password Authenticated Connection Establishment (PACE)" )
         
-        self.paceHandler = PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
-        paceHandler?.doPACE(mrzKey: mrzKey ) { paceSucceeded in
-            if paceSucceeded {
-                completed(nil)
-            } else {
-                self.paceHandler = nil
-                completed(NFCPassportReaderError.InvalidDataPassed("PACE Failed"))
+        do {
+            self.paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
+            paceHandler?.doPACE(mrzKey: mrzKey ) { paceSucceeded in
+                if paceSucceeded {
+                    completed(nil)
+                } else {
+                    self.paceHandler = nil
+                    completed(NFCPassportReaderError.InvalidDataPassed("PACE Failed"))
+                }
             }
+        } catch let error as NFCPassportReaderError {
+            completed( error )
+        } catch {
+            completed( NFCPassportReaderError.InvalidDataPassed(error.localizedDescription) )
         }
     }
     

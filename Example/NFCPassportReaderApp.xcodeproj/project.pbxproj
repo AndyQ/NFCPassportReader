@@ -17,6 +17,7 @@
 		A16EB23D22A9E9E20008F53F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A16EB23B22A9E9E20008F53F /* LaunchScreen.storyboard */; };
 		A17134BE22C8EF7200C457C3 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17134BD22C8EF7100C457C3 /* MainView.swift */; };
 		A17134C022C8F0A600C457C3 /* PassportUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17134BF22C8F0A600C457C3 /* PassportUtils.swift */; };
+		A17375F525F78B0D005995DA /* PACETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17375F425F78B0C005995DA /* PACETests.swift */; };
 		A1769DF725D3E318006002D1 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1769DF625D3E318006002D1 /* SettingsStore.swift */; };
 		A1816E9C22C9059F00F546A0 /* PassportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1816E9B22C9059F00F546A0 /* PassportView.swift */; };
 		A18248C22369D17300581384 /* DetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18248C12369D17300581384 /* DetailsView.swift */; };
@@ -63,6 +64,7 @@
 		A16EB24422A9EA000008F53F /* NFCPassportReader.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NFCPassportReader.entitlements; sourceTree = "<group>"; };
 		A17134BD22C8EF7100C457C3 /* MainView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		A17134BF22C8F0A600C457C3 /* PassportUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PassportUtils.swift; sourceTree = "<group>"; };
+		A17375F425F78B0C005995DA /* PACETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PACETests.swift; sourceTree = "<group>"; };
 		A1769DF625D3E318006002D1 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		A1816E9B22C9059F00F546A0 /* PassportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassportView.swift; sourceTree = "<group>"; };
 		A18248C12369D17300581384 /* DetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailsView.swift; sourceTree = "<group>"; };
@@ -209,6 +211,7 @@
 				A1EBC5212370BAB2004DD19E /* DataGroupParsingTests.swift */,
 				A1EBC5222370BAB2004DD19E /* NFCPassportReaderTests.swift */,
 				A1EBC5112370B88D004DD19E /* Info.plist */,
+				A17375F425F78B0C005995DA /* PACETests.swift */,
 			);
 			path = NFCPassportReaderAppTests;
 			sourceTree = "<group>";
@@ -420,6 +423,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1EBC5252370BAB2004DD19E /* NFCPassportReaderTests.swift in Sources */,
+				A17375F525F78B0D005995DA /* PACETests.swift in Sources */,
 				A1EBC5242370BAB2004DD19E /* DataGroupParsingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

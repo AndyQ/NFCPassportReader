@@ -35,7 +35,7 @@ public enum NFCPassportReaderError: Error {
     case MoreThanOneTagFound
     case InvalidHashAlgorithmSpecified
     case InvalidDataPassed(String)
-    case NotYetUnsupported(String)
+    case NotYetSupported(String)
 
     var value: String {
         switch self {
@@ -63,7 +63,7 @@ public enum NFCPassportReaderError: Error {
             case .MoreThanOneTagFound: return "MoreThanOneTagFound"
             case .InvalidHashAlgorithmSpecified: return "InvalidHashAlgorithmSpecified"
             case .InvalidDataPassed(let reason) : return "Invalid data passed - \(reason)"
-            case .NotYetUnsupported(let reason) : return "Not yet supported - \(reason)"
+            case .NotYetSupported(let reason) : return "Not yet supported - \(reason)"
         }
     }
 }

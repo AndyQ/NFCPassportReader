@@ -88,6 +88,9 @@ public class NFCPassportModel {
     public private(set) var dataGroupsRead : [DataGroupId:DataGroup] = [:]
     public private(set) var dataGroupHashes = [DataGroupId: DataGroupHash]()
 
+    public internal(set) var PACESupported : Bool = false
+    public internal(set) var PACESuccessful : Bool = false
+
     public internal(set) var chipAuthenticationSupported : Bool = false
     public internal(set) var chipAuthenticationSuccessful : Bool = false
     public private(set) var passportCorrectlySigned : Bool = false
