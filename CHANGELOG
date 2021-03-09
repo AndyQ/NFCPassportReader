@@ -1,11 +1,12 @@
 v1.1.2
     Implemented PACE
-       Currently only GM mapping is supported (IM and CAM not yet), and also only ECDH encryption
+       Currently only GM mapping is supported (IM and CAM not yet), but supports both ECDH and DH encryption
+            Many thanks to @filom again for really helping me debug and fix the DH implementation!
     Added ability to select MasterFile and also reselect the eMRTD application record
     Now tries to read the CardAccess file (in master record) - required for PACE
     Fix to use extended length if the size of the protected APDU is more than 255 chars
        Changed wrapDO/unwrapDO to use TKBERTLVRecord to handle the encoding/decoding rather than doing it manually
-       Thanks to @filom for this fix.
+       Thanks again to @filom for this fix.
     Some fixes to Chip Authentication not freeing up some objects correctly
     binToHexRep can now optionally output hex as array text (default to existing behaviour)
     
