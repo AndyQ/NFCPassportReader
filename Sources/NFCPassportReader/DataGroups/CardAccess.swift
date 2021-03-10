@@ -17,6 +17,12 @@ public class CardAccess {
     private var asn1 : ASN1Item!
     public private(set) var securityInfos : [SecurityInfo] = [SecurityInfo]()
     
+    var paceInfo : PACEInfo? {
+        get {
+            return (securityInfos.filter { ($0 as? PACEInfo) != nil }).first as? PACEInfo
+        }
+    }
+    
     required init( _ data : [UInt8] ) throws {
         let p = SimpleASN1DumpParser()
         asn1 = try p.parse(data: Data(data))

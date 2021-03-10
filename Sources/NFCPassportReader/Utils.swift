@@ -240,7 +240,7 @@ public func intToBytes( val: Int, removePadding:Bool) -> [UInt8] {
     return data
 }
 
-@available(iOS 13, *)
+@available(iOS 13, macOS 10.15, *)
 public func oidToBytes(oid : String, replaceTag : Bool) -> [UInt8] {
     var encOID = OpenSSLUtils.asn1EncodeOID(oid: oid)
     

@@ -8,13 +8,14 @@
 
 import Foundation
 
-#if !os(macOS)
-import CoreNFC
-
 public enum SecureMessagingSupportedAlgorithms {
     case DES
     case AES
 }
+
+#if !os(macOS)
+import CoreNFC
+
 
 /// This class implements the secure messaging protocol.
 /// The class is a new layer that comes between the reader and the iso7816.

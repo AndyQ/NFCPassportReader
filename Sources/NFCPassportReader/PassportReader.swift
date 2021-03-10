@@ -35,6 +35,10 @@ public class PassportReader : NSObject {
     private var masterListURL : URL?
     private var shouldNotReportNextReaderSessionInvalidationErrorUserCanceled : Bool = false
 
+    // By default, Passive Authentication uses the new RFS5652 method to verify the SOD, but can be switched to use
+    // the previous OpenSSL CMS verification if necessary
+    public var passiveAuthenticationUsesOpenSSL : Bool = false
+
     public init( logLevel: LogLevel = .info, masterListURL: URL? = nil ) {
         super.init()
         
@@ -53,19 +57,21 @@ public class PassportReader : NSObject {
     public func overrideNFCDataAmountToRead( amount: Int ) {
         dataAmountToReadOverride = amount
     }
-    
-    // By default, Passive Authentication uses the new RFS5652 method to verify the SOD, but can be switched to use
-    // the previous OpenSSL CMS verification if necessary
-    public var passiveAuthenticationUsesOpenSSL : Bool = false
-    
+        
     public func readPassport( mrzKey : String, tags: [DataGroupId] = [], skipSecureElements :Bool = true, customDisplayMessage: ((NFCViewDisplayMessage) -> String?)? = nil, completed: @escaping (NFCPassportModel?, NFCPassportReaderError?)->()) {
         self.passport = NFCPassportModel()
         self.mrzKey = mrzKey
+        
         self.dataGroupsToRead.removeAll()
         self.dataGroupsToRead.append( contentsOf:tags)
         self.scanCompletedHandler = completed
         self.nfcViewDisplayMessageHandler = customDisplayMessage
         self.skipSecureElements = skipSecureElements
+        self.currentlyReadingDataGroup = nil
+        self.elementReadAttempts = 0
+        self.bacHandler = nil
+        self.caHandler = nil
+        self.paceHandler = nil
         
         // If no tags specified, read all
         if self.dataGroupsToRead.count == 0 {
@@ -209,7 +215,7 @@ extension PassportReader {
             
             // If we managed to read the CardAccess the PACE should be supported otherwise drop back to BAC
             if let cardAccess = ca {
-                passport.PACESupported = true
+                passport.cardAccess = cardAccess
                 self.doPACEAuthentication( cardAccess: cardAccess)
             } else {
                 tagReader?.selectPassportApplication(completed: { response, error in
@@ -223,7 +229,7 @@ extension PassportReader {
         self.handlePACE(cardAccess:cardAccess, completed: { [weak self] error in
             if error == nil {
                 Log.info( "PACE Successful" )
-                self?.passport.PACESuccessful = true
+                self?.passport.PACEStatus = .success
 
                 // At this point, BAC Has been done and the TagReader has been set up with the SecureMessaging
                 // session keys
@@ -244,16 +250,22 @@ extension PassportReader {
         elementReadAttempts = 0
         self.currentlyReadingDataGroup = nil
         // Set PACE and Chip authentication to be unsuccessful - either we haven't done it yet or we have done it but it failed for some reason
-        passport.PACESuccessful = false
-        passport.chipAuthenticationSuccessful = false
+        if passport.PACEStatus != .notDone {
+            passport.PACEStatus = .failed
+        }
+        if passport.chipAuthenticationStatus != .notDone {
+            passport.chipAuthenticationStatus = .failed
+        }
         self.handleBAC(completed: { [weak self] error in
             if error == nil {
                 Log.info( "BAC Successful" )
+                self?.passport.BACStatus = .success
                 // At this point, BAC Has been done and the TagReader has been set up with the SecureMessaging
                 // session keys
                 self?.startReadingDataGroups()
             } else if let error = error {
                 Log.info( "BAC Failed" )
+                self?.passport.BACStatus = .failed
                 let displayMessage = NFCViewDisplayMessage.error(error)
                 self?.invalidateSession(errorMessage: displayMessage, error: error)
             }
@@ -407,9 +419,9 @@ extension PassportReader {
                             
                             // Do Chip authentication and then continue reading datagroups
                             readNextDG = false
-                            self.passport.chipAuthenticationSupported = true
                             self.caHandler?.doChipAuthentication() { [unowned self] (success) in
-                                self.passport.chipAuthenticationSuccessful = success
+                                self.passport.chipAuthenticationStatus = .success
+
                                 self.readNextDataGroup(completedReadingGroups: completed)
                             }
                         }

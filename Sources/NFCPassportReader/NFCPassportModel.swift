@@ -12,6 +12,13 @@ import Foundation
 import UIKit
 #endif
 
+
+public enum PassportAuthenticationStatus {
+    case notDone
+    case success
+    case failed
+}
+
 @available(iOS 13, macOS 10.15, *)
 public class NFCPassportModel {
     
@@ -88,11 +95,11 @@ public class NFCPassportModel {
     public private(set) var dataGroupsRead : [DataGroupId:DataGroup] = [:]
     public private(set) var dataGroupHashes = [DataGroupId: DataGroupHash]()
 
-    public internal(set) var PACESupported : Bool = false
-    public internal(set) var PACESuccessful : Bool = false
+    public internal(set) var cardAccess : CardAccess?
+    public internal(set) var BACStatus : PassportAuthenticationStatus = .notDone
+    public internal(set) var PACEStatus : PassportAuthenticationStatus = .notDone
+    public internal(set) var chipAuthenticationStatus : PassportAuthenticationStatus = .notDone
 
-    public internal(set) var chipAuthenticationSupported : Bool = false
-    public internal(set) var chipAuthenticationSuccessful : Bool = false
     public private(set) var passportCorrectlySigned : Bool = false
     public private(set) var documentSigningCertificateVerified : Bool = false
     public private(set) var passportDataNotTampered : Bool = false
@@ -100,6 +107,33 @@ public class NFCPassportModel {
     public private(set) var activeAuthenticationChallenge : [UInt8] = []
     public private(set) var activeAuthenticationSignature : [UInt8] = []
     public private(set) var verificationErrors : [Error] = []
+
+    public var isPACESupported : Bool {
+        get {
+            if cardAccess?.paceInfo != nil {
+                return true
+            } else {
+                // We may not have stored the cardAccess so check the DG14
+                if let dg14 = dataGroupsRead[.DG14] as? DataGroup14,
+                   (dg14.securityInfos.filter { ($0 as? PACEInfo) != nil }).count > 0 {
+                    return true
+                }
+                return false
+            }
+        }
+    }
+    
+    public var isChipAuthenticationSupported : Bool {
+        get {
+            if let dg14 = dataGroupsRead[.DG14] as? DataGroup14,
+               (dg14.securityInfos.filter { ($0 as? ChipAuthenticationInfo) != nil }).count > 0 {
+                
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 
 #if os(iOS)
     public var passportImage : UIImage? {

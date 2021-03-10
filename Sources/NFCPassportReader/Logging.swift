@@ -22,19 +22,19 @@ public class Log {
     public static var storeLogs = false
     public static var logData = [String]()
 
-    public class func verbose( _ msg : String ) {
+    public class func verbose( _ msg : @autoclosure () -> String ) {
         log( .verbose, msg )
     }
-    public class func debug( _ msg : String ) {
+    public class func debug( _ msg : @autoclosure () -> String ) {
         log( .debug, msg )
     }
-    public class func info( _ msg : String ) {
+    public class func info( _ msg : @autoclosure () -> String ) {
         log( .info, msg )
     }
-    public class func warning( _ msg : String ) {
+    public class func warning( _ msg : @autoclosure () -> String ) {
         log( .warning, msg )
     }
-    public class func error( _ msg : String ) {
+    public class func error( _ msg : @autoclosure () -> String ) {
         log( .error, msg )
     }
     
@@ -42,12 +42,13 @@ public class Log {
         logData.removeAll()
     }
     
-    class func log( _ logLevel : LogLevel, _ msg : String ) {
+    class func log( _ logLevel : LogLevel, _ msg : () -> String ) {
         if self.logLevel.rawValue <= logLevel.rawValue {
-            print( msg )
+            let message = msg()
+            print( message )
             
             if storeLogs {
-                logData.append( msg)
+                logData.append( message )
             }
         }
     }

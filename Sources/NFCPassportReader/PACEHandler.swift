@@ -64,7 +64,7 @@ public class PACEHandler {
     public init(cardAccess : CardAccess, tagReader: TagReader) throws {
         self.tagReader = tagReader
         
-        guard let pi = cardAccess.securityInfos.first as? PACEInfo else {
+        guard let pi = cardAccess.paceInfo else {
             throw NFCPassportReaderError.NotYetSupported( "PACE not supported" )
         }
 
