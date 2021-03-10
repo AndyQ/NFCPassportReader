@@ -63,22 +63,42 @@ struct DetailsView : View {
             activeAuth = passport.activeAuthenticationPassed ? "SUCCESS\nSignature verified" : "FAILED\nCould not verify signature"
         }
         var chipAuth : String = "Not supported"
-        if passport.chipAuthenticationSupported {
-            chipAuth = passport.chipAuthenticationSuccessful ? "SUCCESS\nSignature verified" : "FAILED\nCould not verify signature"
+        if passport.isChipAuthenticationSupported {
+            switch( passport.chipAuthenticationStatus ) {
+                case .notDone:
+                    chipAuth = "Supported"
+                case .success:
+                    chipAuth = "SUCCESS\nSignature verified"
+                case .failed:
+                    chipAuth = "FAILED\nCould not verify signature"
+            }
         }
         
-        let authType : String = passport.PACESuccessful ? "PACE" : "BAC"
-
-        var optionalItems : [Item] = []
-        if passport.PACESupported && !passport.PACESuccessful {
-            optionalItems.append( Item(title: "PACE ", value: "FAILED\nPACE unsuccessful") )
-        } else if !passport.PACESupported {
-            optionalItems.append( Item(title: "PACE ", value: "PACE not Supported") )
+        var authType : String = "Authentication not done"
+        if passport.PACEStatus == .success {
+            authType = "PACE"
+        } else if passport.BACStatus == .success {
+            authType = "BAC"
+        }
+        
+        // Do PACE Info
+        var paceStatus = "Not Supported"
+        if passport.isPACESupported {
+            switch( passport.PACEStatus ) {
+                case .notDone:
+                    paceStatus = "Supported"
+                case .success:
+                    paceStatus = "SUCCESS"
+                case .failed:
+                    paceStatus = "FAILED"
+            }
         }
 
-        let verificationDetails : [Item] = [Item(title: "Access Control", value: authType)] + optionalItems + [
-            Item(title: "Active Authentication", value: activeAuth),
+        let verificationDetails : [Item] = [
+            Item(title: "Access Control", value: authType),
+            Item(title: "PACE", value: paceStatus),
             Item(title: "Chip Authentication", value: chipAuth),
+            Item(title: "Active Authentication", value: activeAuth),
             Item(title: "Document Signing Certificate", value: passport.documentSigningCertificateVerified ? "SUCCESS\nSOD Signature verified" : "FAILED\nCouldn't verify SOD signature"),
             Item(title: "Country signing Certificate", value: passport.passportCorrectlySigned ? "SUCCESS\nmatched to country signing certificate" : "FAILED\nCouldn't build trust chain"),
             Item(title: "Data group hashes", value: passport.passportDataNotTampered ? "SUCCESS\nAll hashes match" : "FAILED\nCouldn't match hashes" )

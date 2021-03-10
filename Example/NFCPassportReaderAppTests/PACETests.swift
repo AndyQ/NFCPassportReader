@@ -107,6 +107,6 @@ class PACETests {
         
         let len = DH_compute_key(&out, bn, dh);
         
-        return true
+        return
     }
 }
