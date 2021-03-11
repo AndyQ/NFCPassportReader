@@ -419,6 +419,8 @@ public class OpenSSLUtils {
         let digestType = digestType.lowercased()
         if digestType.contains( "sha1" ) {
             digest = "sha1"
+        } else if digestType.contains( "sha224" ) {
+            digest = "sha224"
         } else if digestType.contains( "sha256" ) || digestType.contains( "rsassapss" ) {
             digest = "sha256"
         } else if digestType.contains( "sha384" ) {

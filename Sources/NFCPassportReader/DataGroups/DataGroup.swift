@@ -62,6 +62,8 @@ public class DataGroup {
         var ret : [UInt8] = []
         if hashAlgorythm == "SHA1" {
             ret = calcSHA1Hash(self.data)
+        } else if hashAlgorythm == "SHA224" {
+            ret = calcSHA224Hash(self.data)
         } else if hashAlgorythm == "SHA256" {
             ret = calcSHA256Hash(self.data)
         } else if hashAlgorythm == "SHA384" {

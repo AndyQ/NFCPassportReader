@@ -25,8 +25,8 @@ class ChipAuthenticationHandler {
     var tagReader : TagReader?
     var gaSegments = [[UInt8]]()
     
-    var chipAuthInfos = [ChipAuthenticationInfo]()
-    var chipAuthPublicKeyInfos = [Int:ChipAuthenticationPublicKeyInfo]()
+    var chipAuthInfos = [Int:ChipAuthenticationInfo]()
+    var chipAuthPublicKeyInfos = [ChipAuthenticationPublicKeyInfo]()
     
     var completedHandler : ((Bool)->())?
 
@@ -37,14 +37,14 @@ class ChipAuthenticationHandler {
         
         for secInfo in dg14.securityInfos {
             if let cai = secInfo as? ChipAuthenticationInfo {
-                chipAuthInfos.append(cai)
+                let keyId = cai.getKeyId()
+                chipAuthInfos[keyId] = cai
             } else if let capki = secInfo as? ChipAuthenticationPublicKeyInfo {
-                let keyId = capki.getKeyId()
-                chipAuthPublicKeyInfos[keyId] = capki
+                chipAuthPublicKeyInfos.append(capki)
             }
         }
         
-        if chipAuthInfos.count > 0 && chipAuthPublicKeyInfos.count > 0 {
+        if chipAuthPublicKeyInfos.count > 0 {
             isChipAuthenticationSupported = true
         }
     }
@@ -63,25 +63,33 @@ class ChipAuthenticationHandler {
     }
     
     private func doChipAuthenticationForNextPublicKey( ) {
-        guard chipAuthInfos.count > 0 else {
+        // If no more public keys to try then we've failed
+        guard chipAuthPublicKeyInfos.count > 0 else {
             completedHandler?( true )
             return
         }
         
-        // Grab the next ChipAuthInfo, and get the key id
-        // From that, get the associated ChipAuthPublicKeyInfo (contains the publc key) and then do Chip Authentication
-        // If that works, we're done, otherwise go on to the next key  (if available) and try that
-        let chipAuthInfo = chipAuthInfos.removeFirst()
-        let keyId = chipAuthInfo.getKeyId()
-        guard let chipAuthPublicKeyInfo = chipAuthPublicKeyInfos[keyId] else {
-            self.doChipAuthenticationForNextPublicKey()
-            return
+        // So it turns out that some passports don't have ChipAuthInfo items.
+        // So if we do have a ChipAuthInfo the we take the keyId (if present) and OID from there,
+        // BUT if we don't then we will try to infer the OID from the public key
+        let chipAuthPublicKeyInfo = chipAuthPublicKeyInfos.removeFirst()
+        let keyId = chipAuthPublicKeyInfo.keyId
+        let chipAuthInfoOID : String
+        if let chipAuthInfo = chipAuthInfos[keyId ?? 0] {
+            chipAuthInfoOID = chipAuthInfo.oid
+        } else {
+            if let oid = inferOID( fromPublicKeyOID:chipAuthPublicKeyInfo.oid) {
+                chipAuthInfoOID = oid
+            } else {
+                self.doChipAuthenticationForNextPublicKey()
+                return
+            }
         }
-
+        
         do {
             Log.info("Starting Chip Authentication!")
             // For each public key, do chipauth
-            try self.doCA( keyId: chipAuthInfo.keyId, encryptionDetailsOID: chipAuthInfo.oid, publicKey: chipAuthPublicKeyInfo.pubKey, completed: { [unowned self] (success) in
+            try self.doCA( keyId: keyId, encryptionDetailsOID: chipAuthInfoOID, publicKey: chipAuthPublicKeyInfo.pubKey, completed: { [unowned self] (success) in
                 
                 Log.info("Finished Chip Authentication - success - \(success)")
                 if !success {
@@ -97,6 +105,20 @@ class ChipAuthenticationHandler {
         }
     }
     
+    /// Infer OID from public key type - Best guess seems to be to use 3DES_CBC_CBC for both ECDH and DH keys
+    /// Apparently works for French passports
+    private func inferOID(fromPublicKeyOID: String ) -> String? {
+        if fromPublicKeyOID == SecurityInfo.ID_PK_ECDH_OID {
+            Log.warning("No ChipAuthenticationInfo - guessing its id-CA-ECDH-3DES-CBC-CBC");
+            return SecurityInfo.ID_CA_ECDH_3DES_CBC_CBC_OID
+        } else if fromPublicKeyOID == SecurityInfo.ID_PK_DH_OID {
+            Log.warning("No ChipAuthenticationInfo - guessing its id-CA-DH-3DES-CBC-CBC");
+            return SecurityInfo.ID_CA_DH_3DES_CBC_CBC_OID
+        }
+        
+        Log.warning("No ChipAuthenticationInfo and unsupported ChipAuthenticationPublicKeyInfo public key OID \(fromPublicKeyOID)")
+        return nil;
+    }
     
     private func doCA( keyId: Int?, encryptionDetailsOID oid: String, publicKey: OpaquePointer, completed: @escaping (Bool)->() ) throws {
         

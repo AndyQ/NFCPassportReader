@@ -126,7 +126,7 @@ public class NFCPassportModel {
     public var isChipAuthenticationSupported : Bool {
         get {
             if let dg14 = dataGroupsRead[.DG14] as? DataGroup14,
-               (dg14.securityInfos.filter { ($0 as? ChipAuthenticationInfo) != nil }).count > 0 {
+               (dg14.securityInfos.filter { ($0 as? ChipAuthenticationPublicKeyInfo) != nil }).count > 0 {
                 
                 return true
             } else {
@@ -234,12 +234,16 @@ public class NFCPassportModel {
         var ret = [DataGroupId:[UInt8]]()
         
         for (key, value) in dataGroupsRead {
-            if hashAlgorythm == "SHA256" {
+            if hashAlgorythm == "SHA1" {
+                ret[key] = calcSHA1Hash(value.body)
+            } else if hashAlgorythm == "SHA224" {
+                ret[key] = calcSHA224Hash(value.body)
+            } else if hashAlgorythm == "SHA256" {
                 ret[key] = calcSHA256Hash(value.body)
             } else if hashAlgorythm == "SHA384" {
-                ret[key] = calcSHA1Hash(value.body)
-            } else if hashAlgorythm == "SHA1" {
-                ret[key] = calcSHA1Hash(value.body)
+                ret[key] = calcSHA384Hash(value.body)
+            } else if hashAlgorythm == "SHA512" {
+                ret[key] = calcSHA512Hash(value.body)
             }
         }
         
@@ -292,7 +296,7 @@ public class NFCPassportModel {
                 // if the last byte of the digest is 0xBC, then this uses dedicated hash function 3 (SHA-1),
                 // If the last byte is 0xCC, then the preceding byte tells you which hash function
                 // should be used (currently not yet implemented!)
-                // See ISO/IEC9796-2 for details on the verificatin and ISO/IEC 10118-3 for the dedicated hash functions!
+                // See ISO/IEC9796-2 for details on the verification and ISO/IEC 10118-3 for the dedicated hash functions!
                 var hashTypeByte = decryptedSig.popLast() ?? 0x00
                 if hashTypeByte == 0xCC {
                     hashTypeByte = decryptedSig.popLast() ?? 0x00
@@ -461,6 +465,8 @@ public class NFCPassportModel {
             if line.contains( "d=2" ) && line.contains( "OBJECT" ) {
                 if line.contains( "sha1" ) {
                     sodHashAlgo = "SHA1"
+                } else if line.contains( "sha224" ) {
+                    sodHashAlgo = "SHA224"
                 } else if line.contains( "sha256" ) {
                     sodHashAlgo = "SHA256"
                 } else if line.contains( "sha384" ) {

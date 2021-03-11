@@ -317,7 +317,7 @@ public func toAsn1Length(_ data : Int) throws -> [UInt8] {
 
 /// This function calculates a  Hash of the input data based on the input algorithm
 /// @param data: a byte array of data
-/// @param hashAlgorithm: the hash algorithm to be used - supported ones are SHA1, SHA256, SHA384 and SHA512
+/// @param hashAlgorithm: the hash algorithm to be used - supported ones are SHA1, SHA224, SHA256, SHA384 and SHA512
 ///        Currently specifying any others return empty array
 /// @return: A hash of the data
 @available(iOS 13, macOS 10.15, *)
@@ -327,6 +327,8 @@ public func calcHash( data: [UInt8], hashAlgorithm: String ) throws -> [UInt8] {
     let hashAlgorithm = hashAlgorithm.lowercased()
     if hashAlgorithm == "sha1" {
         ret = calcSHA1Hash(data)
+    } else if hashAlgorithm == "sha224" {
+        ret = calcSHA224Hash(data)
     } else if hashAlgorithm == "sha256" {
         ret = calcSHA256Hash(data)
     } else if hashAlgorithm == "sha384" {
@@ -345,7 +347,7 @@ public func calcHash( data: [UInt8], hashAlgorithm: String ) throws -> [UInt8] {
 /// @param data: a byte array of data
 /// @return: A SHA1 hash of the data
 @available(iOS 13, macOS 10.15, *)
-func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
+public func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
     #if canImport(CryptoKit)
     var sha1 = Insecure.SHA1()
     sha1.update(data: data)
@@ -357,15 +359,29 @@ func calcSHA1Hash( _ data: [UInt8] ) -> [UInt8] {
     #endif
 }
 
+/// This function calculates a SHA224 Hash of the input data
+/// @param data: a byte array of data
+/// @return: A SHA224 hash of the data
+@available(iOS 13, macOS 10.15, *)
+public func calcSHA224Hash( _ data: [UInt8] ) -> [UInt8] {
+    
+    var digest = [UInt8](repeating: 0, count:Int(CC_SHA224_DIGEST_LENGTH))
+    
+    data.withUnsafeBytes {
+        _ = CC_SHA224($0.baseAddress, CC_LONG(data.count), &digest)
+    }
+    return digest
+}
+
 /// This function calculates a SHA256 Hash of the input data
 /// @param data: a byte array of data
 /// @return: A SHA256 hash of the data
 @available(iOS 13, macOS 10.15, *)
-func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
+public func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
     #if canImport(CryptoKit)
-    var sha1 = SHA256()
-    sha1.update(data: data)
-    let hash = sha1.finalize()
+    var sha256 = SHA256()
+    sha256.update(data: data)
+    let hash = sha256.finalize()
     
     return Array(hash)
     #else
@@ -377,11 +393,11 @@ func calcSHA256Hash( _ data: [UInt8] ) -> [UInt8] {
 /// @param data: a byte array of data
 /// @return: A SHA512 hash of the data
 @available(iOS 13, macOS 10.15, *)
-func calcSHA512Hash( _ data: [UInt8] ) -> [UInt8] {
+public func calcSHA512Hash( _ data: [UInt8] ) -> [UInt8] {
     #if canImport(CryptoKit)
-    var sha1 = SHA512()
-    sha1.update(data: data)
-    let hash = sha1.finalize()
+    var sha512 = SHA512()
+    sha512.update(data: data)
+    let hash = sha512.finalize()
     
     return Array(hash)
     #else
@@ -393,7 +409,7 @@ func calcSHA512Hash( _ data: [UInt8] ) -> [UInt8] {
 /// @param data: a byte array of data
 /// @return: A SHA384 hash of the data
 @available(iOS 13, macOS 10.15, *)
-func calcSHA384Hash( _ data: [UInt8] ) -> [UInt8] {
+public func calcSHA384Hash( _ data: [UInt8] ) -> [UInt8] {
     #if canImport(CryptoKit)
     var sha384 = SHA384()
     sha384.update(data: data)
