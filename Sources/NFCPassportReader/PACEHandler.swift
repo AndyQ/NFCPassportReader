@@ -277,12 +277,16 @@ public class PACEHandler {
         EVP_PKEY_keygen(pctx, &ephemeralKeyPair)
         EVP_PKEY_CTX_free(pctx)
         
+        guard let ephemeralKeyPair = ephemeralKeyPair else {
+            return self.handleError( "Step3 KeyEx", "Unable to get create ephermeral key pair" )
+        }
+        
         Log.debug( "Generated Ephemeral key pair")
 
         // We've finished with the ephemeralParams now - we can now free it
         EVP_PKEY_free( ephemeralParams )
 
-        guard let publicKey = OpenSSLUtils.getPublicKeyData( from: ephemeralKeyPair! ) else {
+        guard let publicKey = OpenSSLUtils.getPublicKeyData( from: ephemeralKeyPair ) else {
             return self.handleError( "Step3 KeyEx", "Unable to get public key from ephermeral key pair" )
         }
         Log.verbose( "Ephemeral public key - \(binToHexRep(publicKey, asArray: true))")
@@ -299,11 +303,13 @@ public class PACEHandler {
 
             let step3Response = response!.data
             let passportEncodedPublicKey = try? unwrapDO(tag: 0x84, wrappedData: step3Response)
-            let passportPublicKey = OpenSSLUtils.decodePublicKeyFromBytes(pubKeyData: passportEncodedPublicKey!, params: ephemeralKeyPair!)
+            guard let passportPublicKey = OpenSSLUtils.decodePublicKeyFromBytes(pubKeyData: passportEncodedPublicKey!, params: ephemeralKeyPair) else {
+                return sself.handleError( "Step3 KeyEx", "Unable to decode passports ephemeral key" )
+            }
 
             Log.verbose( "Received passports ephemeral public key - \(binToHexRep(passportEncodedPublicKey!, asArray: true))" )
 
-            sself.doStep3KeyAgreement( pcdKeyPair: ephemeralKeyPair!, passportPublicKey: passportPublicKey!)
+            sself.doStep3KeyAgreement( pcdKeyPair: ephemeralKeyPair, passportPublicKey: passportPublicKey)
         })
     }
     

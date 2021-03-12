@@ -539,7 +539,6 @@ public class OpenSSLUtils {
     public static func decodePublicKeyFromBytes(pubKeyData: [UInt8], params: OpaquePointer) -> OpaquePointer? {
         var pubKey : OpaquePointer?
         
-        var error : Int32 = -1
         let keyType = EVP_PKEY_base_id( params )
         if keyType == EVP_PKEY_DH || keyType == EVP_PKEY_DHX {
             
@@ -551,7 +550,9 @@ public class OpenSSLUtils {
             DH_set0_key(dhKey, bn, nil)
 
             pubKey = EVP_PKEY_new()
-            error = EVP_PKEY_set1_DH(pubKey, dhKey)
+            guard EVP_PKEY_set1_DH(pubKey, dhKey) == 1 else {
+                return nil
+            }
         } else {
             let ec = EVP_PKEY_get1_EC_KEY(params)
             let group = EC_KEY_get0_group(ec);
@@ -564,13 +565,17 @@ public class OpenSSLUtils {
             }
             
             // Read EC_Point from public key data
-            error = EC_POINT_oct2point(group, ecp, pubKeyData, pubKeyData.count, nil)
-            
-            error = EC_KEY_set_group(key, group)
-            error = EC_KEY_set_public_key(key, ecp);
+            guard EC_POINT_oct2point(group, ecp, pubKeyData, pubKeyData.count, nil) == 1,
+                EC_KEY_set_group(key, group) == 1,
+                EC_KEY_set_public_key(key, ecp) == 1 else {
+                
+                return nil
+            }
             
             pubKey = EVP_PKEY_new()
-            error = EVP_PKEY_set1_EC_KEY(pubKey, key);
+            guard EVP_PKEY_set1_EC_KEY(pubKey, key) == 1 else {
+                return nil
+            }
         }
         
         return pubKey
