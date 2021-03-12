@@ -271,13 +271,13 @@ public class PACEHandler {
         Log.debug( "Doing PACE Step3 - Key Exchange")
 
         // Generate ephemeral keypair from ephemeralParams
-        var ephemeralKeyPair : OpaquePointer? = nil
-        let pctx = EVP_PKEY_CTX_new(ephemeralParams, nil)
+        var ephKeyPair : OpaquePointer? = nil
+        let pctx = EVP_PKEY_CTX_new(ephKeyPair, nil)
         EVP_PKEY_keygen_init(pctx)
-        EVP_PKEY_keygen(pctx, &ephemeralKeyPair)
+        EVP_PKEY_keygen(pctx, &ephKeyPair)
         EVP_PKEY_CTX_free(pctx)
         
-        guard let ephemeralKeyPair = ephemeralKeyPair else {
+        guard let ephemeralKeyPair = ephKeyPair else {
             return self.handleError( "Step3 KeyEx", "Unable to get create ephermeral key pair" )
         }
         
