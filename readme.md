@@ -12,6 +12,7 @@ Supported features:
 * Passive Authentication
 * Active Authentication
 * Chip Authentication (ECDH DES and AES keys tested, DH DES AES keys implemented ad should work but currently not tested)
+* PACE - currently only Generic Mapping (GM) supported
 * Ability to dump passport stream and read it back in
 
 This is still very early days - the code is by no means perfect and there are still some rough edges  - there ARE most definitely bugs and I'm sure I'm not doing things perfectly. 
@@ -127,7 +128,7 @@ e.g. 12345678<870052332507237 would be the key used.
 
 ## To do
 There are a number of things I'd like to implement in no particular order:
- * Implement PACE authentication
+ * Finish off PACE authentication (IM and CAM)
  
 
 ## Thanks
@@ -136,3 +137,4 @@ I'd like to thank the writers of pypassport (Jean-Francois Houzard and Olivier R
 The EPassport section on YobiWiki (http://wiki.yobi.be/wiki/EPassport)  This has been an invaluable resource especially around Passive Authentication.
 
 Marcin Krzyżanowski for his OpenSSL-Universal repo.
+

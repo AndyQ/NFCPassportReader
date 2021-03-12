@@ -14,9 +14,6 @@ public enum PACEMappingType {
     case CAM // Chip Authentication Mapping
 }
 
-/** Standardized domain parameters. Based on Table 6. */
-
-
 @available(iOS 13, macOS 10.15, *)
 public class PACEInfo : SecurityInfo {
     
