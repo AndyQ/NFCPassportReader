@@ -7,8 +7,10 @@ v1.1.2
     Fix to use extended length if the size of the protected APDU is more than 255 chars
        Changed wrapDO/unwrapDO to use TKBERTLVRecord to handle the encoding/decoding rather than doing it manually
        Thanks again to @filom for this fix.
-    Some fixes to Chip Authentication not freeing up some objects correctly
-    binToHexRep can now optionally output hex as array text (default to existing behaviour)
+    Some fixes to Chip Authentication not freeing up some objects correctly,
+        and also fixes where no ChipAuthenticationInfo sections are included, try to guess what oid it would be.)
+    binToHexRep can now optionally output hex as array text (defaults to existing behaviour)
+    SHA224 hashes should now be supported
     
 v1.1.1
     Implemented ChipAuthentication - currently only ECDH DES and AES based keys are tested.  DH DES & AES keys should work though
