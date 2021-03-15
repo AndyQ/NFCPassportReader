@@ -240,8 +240,12 @@ extension PassportReader {
 
             } else if let error = error {
                 Log.info( "PACE Failed" )
-                let displayMessage = NFCViewDisplayMessage.error(error)
-                self?.invalidateSession(errorMessage: displayMessage, error: error)
+                self?.passport.PACEStatus = .failed
+                self?.tagReader?.selectPassportApplication(completed: { response, error in
+                    self?.doBACAuthentication()
+                })
+//                let displayMessage = NFCViewDisplayMessage.error(error)
+//                self?.invalidateSession(errorMessage: displayMessage, error: error)
             }
         })
     }

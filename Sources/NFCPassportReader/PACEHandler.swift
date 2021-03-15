@@ -272,7 +272,7 @@ public class PACEHandler {
 
         // Generate ephemeral keypair from ephemeralParams
         var ephKeyPair : OpaquePointer? = nil
-        let pctx = EVP_PKEY_CTX_new(ephemeralParams, nil)
+        let pctx = EVP_PKEY_CTX_new(nil, nil)
         EVP_PKEY_keygen_init(pctx)
         EVP_PKEY_keygen(pctx, &ephKeyPair)
         EVP_PKEY_CTX_free(pctx)
