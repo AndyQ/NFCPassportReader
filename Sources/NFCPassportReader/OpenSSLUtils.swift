@@ -7,6 +7,7 @@
 
 import Foundation
 import OpenSSL
+import CryptoTokenKit
 
 @available(iOS 13, macOS 10.15, *)
 public class OpenSSLUtils {
@@ -429,6 +430,40 @@ public class OpenSSLUtils {
             digest = "sha512"
         }
         
+        // Fix for some invalid ECDSA based signatures
+        // An ECDSA signature comprises of a Sequence of 2 big integers (R & S) and the verification
+        // is a linear equation of these two integers, the data hash and the public key
+        // However, in some passports the encoding of the integers is incorrect and has a leading 00
+        // causing the verification to fail.
+        // So in this case, we'll remove the leading 00
+        // If no leading 0 or an other signature type then we just use the passed in signature unchanged
+        var fixedSignature = signature
+        if digestType.contains( "ecdsa" ) {
+            // Decode signature
+            if let sequence = TKBERTLVRecord(from:Data(signature)),
+               sequence.tag == 0x30,
+               let intRecords = TKBERTLVRecord.sequenceOfRecords(from: sequence.value),
+               intRecords.count == 2 {
+                
+                var newIntRecords = [TKTLVRecord]()
+                // Remove leaving 00 from integer bytes
+                if intRecords[0].value[0] == 0x00 {
+                    newIntRecords.append( TKBERTLVRecord( tag: intRecords[0].tag, value: intRecords[0].value[1...]) )
+                }
+                if intRecords[1].value[0] == 0x00 {
+                    newIntRecords.append( TKBERTLVRecord( tag: intRecords[1].tag, value: intRecords[1].value[1...]) )
+                }
+
+                // We only reencode if we changed BOTH integers, otherwise assume they were actually
+                // correctly encoded
+                if newIntRecords.count == 2 {
+                    // re-encode
+                    let newSequence = TKBERTLVRecord( tag: sequence.tag, records: newIntRecords)
+                    fixedSignature = [UInt8](newSequence.data)
+                }
+            }
+        }
+        
         let md = EVP_get_digestbyname(digest)
         
         let ctx = EVP_MD_CTX_new()
@@ -451,7 +486,7 @@ public class OpenSSLUtils {
             return false;
         }
         
-        nRes = EVP_DigestVerifyFinal(ctx, signature, signature.count);
+        nRes = EVP_DigestVerifyFinal(ctx, fixedSignature, fixedSignature.count);
         if (nRes != 1) {
             return false;
         }

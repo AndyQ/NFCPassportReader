@@ -151,7 +151,7 @@ class SOD : DataGroup {
         // The first byte will be 0xA0 -> as its a explicit tag for a contextual item which we need to convert
         // for the hash to calculate correctly
         // We know that the actual tag is a SET (0x31) - See section 5.4 of https://tools.ietf.org/html/rfc5652
-        // So we need to change this from 0xA0 to 0x30
+        // So we need to change this from 0xA0 to 0x31
         if bytes[0] == 0xA0 {
             bytes[0] = 0x31
         }
