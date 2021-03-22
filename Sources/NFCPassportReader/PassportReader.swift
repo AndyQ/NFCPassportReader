@@ -239,7 +239,7 @@ extension PassportReader {
                 })
 
             } else if let error = error {
-                Log.info( "PACE Failed" )
+                Log.info( "PACE Failed - \(error.localizedDescription)" )
                 self?.passport.PACEStatus = .failed
                 self?.tagReader?.selectPassportApplication(completed: { response, error in
                     self?.doBACAuthentication()
