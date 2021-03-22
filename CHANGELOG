@@ -1,3 +1,8 @@
+v1.1.3
+    Fix for some ECDSA based message digests which seem to have invalid format (0x00 prefixed on the integers)
+       See OpenSSLUtils :: verifySignature for details on the fix
+       Thanks to @wellbranding for the report and helping test
+
 v1.1.2
     Implemented PACE
        Currently only GM mapping is supported (IM and CAM not yet), but supports both ECDH and DH encryption
