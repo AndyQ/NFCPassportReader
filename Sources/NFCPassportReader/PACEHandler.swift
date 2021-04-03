@@ -126,12 +126,24 @@ public class PACEHandler {
     /// - Parameters:
     ///   - stage: Where in the PACE process the error occurred
     ///   - error: The error message
-    func handleError( _ stage: String, _ error: String ) {
+    func handleError( _ stage: String, _ error: String, needToTerminateGA: Bool = false ) {
         Log.error( "PACEHandler: \(stage) - \(error)" )
         Log.error( "   OpenSSLError: \(OpenSSLUtils.getOpenSSLError())" )
         self.paceError = "\(stage) - \(error)"
-        completedHandler?( false )
+        self.completedHandler?( false )
 
+/*
+        if needToTerminateGA {
+            // This is to fix some passports that don't automatically terminate command chaining!
+            // No idea if this is the correct way to do it but testing.....
+            let terminateGA = wrapDO(b:0x83, arr:[0x00])
+            tagReader.sendGeneralAuthenticate(data:terminateGA, isLast:true, completed: { [weak self] response, error in
+                self?.completedHandler?( false )
+            })
+        } else {
+            self.completedHandler?( false )
+        }
+*/
     }
     
     /// Performs PACE Step 1- receives an encrypted nonce from the passport and decypts it with the  PACE key - derived from MRZ, CAN (not yet supported)
@@ -272,11 +284,11 @@ public class PACEHandler {
 
         // Generate ephemeral keypair from ephemeralParams
         var ephKeyPair : OpaquePointer? = nil
-        let pctx = EVP_PKEY_CTX_new(nil, nil)
+        let pctx = EVP_PKEY_CTX_new(ephemeralParams, nil)
         EVP_PKEY_keygen_init(pctx)
         EVP_PKEY_keygen(pctx, &ephKeyPair)
         EVP_PKEY_CTX_free(pctx)
-        
+                
         guard let ephemeralKeyPair = ephKeyPair else {
             return self.handleError( "Step3 KeyEx", "Unable to get create ephermeral key pair" )
         }

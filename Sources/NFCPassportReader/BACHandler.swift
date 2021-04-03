@@ -112,6 +112,7 @@ public class BACHandler {
     func generateInitialKseed(kmrz : String ) -> [UInt8] {
         
         Log.verbose("Calculate the SHA-1 hash of MRZ_information")
+        Log.verbose("\tMRZ KEY - \(kmrz)")
         let hash = calcSHA1Hash( [UInt8](kmrz.data(using:.utf8)!) )
         
         Log.verbose("\tsha1(MRZ_information): \(binToHexRep(hash))")
