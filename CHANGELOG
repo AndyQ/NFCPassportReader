@@ -1,3 +1,8 @@
+v1.1.4
+   Fixed use of ephemeral params that managed to get reverted!
+   Added a couple of addition error messages to TagReader
+   Added MRZ key logging
+
 v1.1.3
     Fix for some ECDSA based message digests which seem to have invalid format (0x00 prefixed on the integers)
        See OpenSSLUtils :: verifySignature for details on the fix
