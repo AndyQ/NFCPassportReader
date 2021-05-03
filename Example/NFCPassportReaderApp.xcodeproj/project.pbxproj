@@ -35,6 +35,7 @@
 		A1FDC53225D3F19E00D22FF4 /* ViewModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FDC53125D3F19E00D22FF4 /* ViewModifiers.swift */; };
 		A1FDC53425D3F1DE00D22FF4 /* CheckBoxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FDC53325D3F1DE00D22FF4 /* CheckBoxView.swift */; };
 		A1FDC53625D43AB400D22FF4 /* MRZEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FDC53525D43AB400D22FF4 /* MRZEntryView.swift */; };
+		F6BB3B65264092C8008E30E7 /* CANEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6BB3B64264092C8008E30E7 /* CANEntryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -87,6 +88,7 @@
 		A7BD003B33886ED0F3F03325 /* Pods_NFCPassportReaderApp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_NFCPassportReaderApp.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B239DD4BD3AA9ECF4F595D22 /* Pods-NFCPassportReaderApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NFCPassportReaderApp.release.xcconfig"; path = "Target Support Files/Pods-NFCPassportReaderApp/Pods-NFCPassportReaderApp.release.xcconfig"; sourceTree = "<group>"; };
 		DA39DA603B1A7EBD8FC38112 /* Pods_NFCPassportReaderAppTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_NFCPassportReaderAppTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		F6BB3B64264092C8008E30E7 /* CANEntryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CANEntryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -194,6 +196,7 @@
 				A1298C9B25D539CD00F5713E /* HelperViews */,
 				A17134BD22C8EF7100C457C3 /* MainView.swift */,
 				A1FDC53525D43AB400D22FF4 /* MRZEntryView.swift */,
+				F6BB3B64264092C8008E30E7 /* CANEntryView.swift */,
 				A1FDC52D25D3F15D00D22FF4 /* SettingsView.swift */,
 				A1816E9B22C9059F00F546A0 /* PassportView.swift */,
 				A1C234C125DD19DE003FFD79 /* PassportSummaryView.swift */,
@@ -404,6 +407,7 @@
 				A1816E9C22C9059F00F546A0 /* PassportView.swift in Sources */,
 				A1769DF725D3E318006002D1 /* SettingsStore.swift in Sources */,
 				A1298C9F25D53A5C00F5713E /* ViewExt.swift in Sources */,
+				F6BB3B65264092C8008E30E7 /* CANEntryView.swift in Sources */,
 				A182DE6325DD730D00341204 /* FileManagerExt.swift in Sources */,
 				A1FDC52E25D3F15D00D22FF4 /* SettingsView.swift in Sources */,
 				A182DE6125DD6F1300341204 /* StoredPassportView.swift in Sources */,

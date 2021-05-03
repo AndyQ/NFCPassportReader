@@ -20,8 +20,9 @@ final class SettingsStore: ObservableObject {
         static let passportNumber = "passportNumber"
         static let dateOfBirth = "dateOfBirth"
         static let dateOfExpiry = "dateOfExpiry"
+        static let cardAccessNumber = "can"
         
-        static let allVals = [captureLog, logLevel, useNewVerification, passportNumber, dateOfBirth, dateOfExpiry]
+        static let allVals = [captureLog, logLevel, useNewVerification, passportNumber, dateOfBirth, dateOfExpiry, cardAccessNumber]
     }
     
     private let cancellable: Cancellable
@@ -41,6 +42,7 @@ final class SettingsStore: ObservableObject {
             Keys.passportNumber: "",
             Keys.dateOfBirth: Date().timeIntervalSince1970,
             Keys.dateOfExpiry: Date().timeIntervalSince1970,
+            Keys.cardAccessNumber: "",
         ])
         
         cancellable = NotificationCenter.default
@@ -101,6 +103,11 @@ final class SettingsStore: ObservableObject {
             let d = Date(timeIntervalSince1970: defaults.double(forKey: Keys.dateOfExpiry))
             return d
         }
+    }
+
+    var cardAccessNumber: String {
+        set { defaults.set(newValue, forKey: Keys.cardAccessNumber) }
+        get { defaults.string(forKey: Keys.cardAccessNumber) ?? "" }
     }
     
     @Published var passport : NFCPassportModel?
