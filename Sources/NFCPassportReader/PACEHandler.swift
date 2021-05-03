@@ -37,9 +37,9 @@ extension PACEHandlerError: LocalizedError {
 @available(iOS 13, *)
 public class PACEHandler {
     
-    
-    private static let MRZ_PACE_KEY_REFERENCE : UInt8 = 0x01
-    private static let CAN_PACE_KEY_REFERENCE : UInt8 = 0x02 // Not currently supported
+    public static let NO_PACE_KEY_REFERENCE : UInt8 = 0x00
+    public static let MRZ_PACE_KEY_REFERENCE : UInt8 = 0x01
+    public static let CAN_PACE_KEY_REFERENCE : UInt8 = 0x02
     private static let PIN_PACE_KEY_REFERENCE : UInt8 = 0x03 // Not currently supported
     private static let CUK_PACE_KEY_REFERENCE : UInt8 = 0x04 // Not currently supported
 
@@ -72,7 +72,7 @@ public class PACEHandler {
         isPACESupported = true
     }
     
-    public func doPACE( mrzKey : String, completed: @escaping (Bool)->() ) {
+    public func doPACE( paceKeySeed : String, paceKeyReference: UInt8, completed: @escaping (Bool)->() ) {
         guard isPACESupported else {
             completed( false )
             return
@@ -92,9 +92,18 @@ public class PACEHandler {
             digestAlg = try paceInfo.getDigestAlgorithm()  // Either SHA-1 or SHA-256.
             keyLength = try paceInfo.getKeyLength()  // Get key length  the enc cipher. Either 128, 192, or 256.
 
-            paceKeyType = PACEHandler.MRZ_PACE_KEY_REFERENCE
-            paceKey = try createPaceKey( from: mrzKey )
-            
+            switch paceKeyReference {
+            case PACEHandler.MRZ_PACE_KEY_REFERENCE:
+                paceKeyType = PACEHandler.MRZ_PACE_KEY_REFERENCE
+                paceKey = try createPaceKey( from: paceKeySeed )
+            case PACEHandler.CAN_PACE_KEY_REFERENCE:
+                paceKeyType = PACEHandler.CAN_PACE_KEY_REFERENCE
+                paceKey = try createPaceCanKey( from: paceKeySeed )
+            default:
+                return handleError( "PACE", "PACE Key Reference not supported (\(paceKeyReference)). Currently only 0x01 (MRZ) and 0x02 (CAN) may be used." )
+            }
+
+
             // Temporary logging
             Log.verbose("doPace - inpit parameters" )
             Log.verbose("paceOID - \(paceOID)" )
@@ -104,15 +113,14 @@ public class PACEHandler {
             Log.verbose("cipherAlg - \(cipherAlg)" )
             Log.verbose("digestAlg - \(digestAlg)" )
             Log.verbose("keyLength - \(keyLength)" )
-            Log.verbose("keyLength - \(mrzKey)" )
+            Log.verbose("paceKeyReference - \(paceKeyReference)" )
             Log.verbose("paceKey - \(binToHexRep(paceKey, asArray:true))" )
 
             // First start the initial auth call
             tagReader.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType, completed: { [unowned self] response, error in
                 if let error = error {
                     return handleError( "MSESatATMutualAuth", "Error - \(error.localizedDescription)" )
-                }
-                
+                }                
                 self.doStep1()
             })
             
@@ -637,8 +645,20 @@ extension PACEHandler {
         let buf: [UInt8] = Array(mrzKey.utf8)
         let hash = calcSHA1Hash(buf)
         
+        
         let smskg = SecureMessagingSessionKeyGenerator()
         let key = try smskg.deriveKey(keySeed: hash, cipherAlgName: cipherAlg, keyLength: keyLength, nonce: nil, mode: .PACE_MODE, paceKeyReference: paceKeyType)
+        return key
+    }
+
+    /// Computes a key seed based on an CAN key
+    /// - Parameter the CAN key
+    /// - Returns a encoded key based on the CAN key that can be used for PACE
+    func createPaceCanKey( from canKey: String ) throws -> [UInt8] {
+        var buf: [UInt8] = Array(canKey.utf8)
+
+        let smskg = SecureMessagingSessionKeyGenerator()
+        let key = try smskg.deriveKey(keySeed: buf, cipherAlgName: cipherAlg, keyLength: keyLength, nonce: nil, mode: .PACE_MODE, paceKeyReference: paceKeyType)
         return key
     }
     

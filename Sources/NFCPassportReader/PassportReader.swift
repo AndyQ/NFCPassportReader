@@ -27,7 +27,8 @@ public class PassportReader : NSObject {
     private var bacHandler : BACHandler?
     private var caHandler : ChipAuthenticationHandler?
     private var paceHandler : PACEHandler?
-    private var mrzKey : String = ""
+    private var accessKey : String = ""
+    private var paceKeyReference : UInt8?
     private var dataAmountToReadOverride : Int? = nil
     
     private var scanCompletedHandler: ((NFCPassportModel?, NFCPassportReaderError?)->())!
@@ -58,9 +59,10 @@ public class PassportReader : NSObject {
         dataAmountToReadOverride = amount
     }
         
-    public func readPassport( mrzKey : String, tags: [DataGroupId] = [], skipSecureElements :Bool = true, customDisplayMessage: ((NFCViewDisplayMessage) -> String?)? = nil, completed: @escaping (NFCPassportModel?, NFCPassportReaderError?)->()) {
+    public func readPassport( accessKey : String, paceKeyReference: UInt8, tags: [DataGroupId] = [], skipSecureElements :Bool = true, customDisplayMessage: ((NFCViewDisplayMessage) -> String?)? = nil, completed: @escaping (NFCPassportModel?, NFCPassportReaderError?)->()) {
         self.passport = NFCPassportModel()
-        self.mrzKey = mrzKey
+        self.accessKey = accessKey
+        self.paceKeyReference = paceKeyReference
         
         self.dataGroupsToRead.removeAll()
         self.dataGroupsToRead.append( contentsOf:tags)
@@ -212,7 +214,7 @@ extension PassportReader {
                     print( "Error reading CardAccess - \(error)" )
                 }
             }
-            
+
             // If we managed to read the CardAccess the PACE should be supported otherwise drop back to BAC
             if let cardAccess = ca {
                 passport.cardAccess = cardAccess
@@ -226,12 +228,12 @@ extension PassportReader {
     }
     
     func doPACEAuthentication(cardAccess:CardAccess) {
-        self.handlePACE(cardAccess:cardAccess, completed: { [weak self] error in
+        self.handlePACE(cardAccess:cardAccess, paceKeyReference: paceKeyReference ?? PACEHandler.NO_PACE_KEY_REFERENCE, completed: { [weak self] error in
             if error == nil {
                 Log.info( "PACE Successful" )
                 self?.passport.PACEStatus = .success
 
-                // At this point, BAC Has been done and the TagReader has been set up with the SecureMessaging
+                // At this point, PACE has been done and the TagReader has been set up with the SecureMessaging
                 // session keys
                 self?.tagReader?.selectPassportApplication(completed: { response, error in
                     
@@ -241,10 +243,18 @@ extension PassportReader {
             } else if let error = error {
                 Log.info( "PACE Failed - \(error.localizedDescription)" )
                 self?.passport.PACEStatus = .failed
-                self?.tagReader?.selectPassportApplication(completed: { response, error in
-                    self?.doBACAuthentication()
-                })
-//                let displayMessage = NFCViewDisplayMessage.error(error)
+
+                // Try BAC after failed PACE attempt. But only if MRZ is used as Key. BAC does not support CAN or similar.
+                // If BAC is no option, return an error
+                if (self?.paceKeyReference == PACEHandler.NO_PACE_KEY_REFERENCE || self?.paceKeyReference == PACEHandler.MRZ_PACE_KEY_REFERENCE) {
+                    self?.tagReader?.selectPassportApplication(completed: { response, error in
+                        self?.doBACAuthentication()
+                    })
+                } else {
+                    let displayMessage = NFCViewDisplayMessage.error(error)
+                    self?.invalidateSession(errorMessage: displayMessage, error: error)
+                }
+                //                let displayMessage = NFCViewDisplayMessage.error(error)
 //                self?.invalidateSession(errorMessage: displayMessage, error: error)
             }
         })
@@ -344,13 +354,13 @@ extension PassportReader {
         Log.info( "Starting Basic Access Control (BAC)" )
         
         self.bacHandler = BACHandler( tagReader: tagReader )
-        bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey ) { error in
+        bacHandler?.performBACAndGetSessionKeys( mrzKey: accessKey ) { error in
             self.bacHandler = nil
             completed(error)
         }
     }
     
-    func handlePACE( cardAccess:CardAccess, completed: @escaping (NFCPassportReaderError?)->()) {
+    func handlePACE( cardAccess:CardAccess, paceKeyReference: UInt8 ,completed: @escaping (NFCPassportReaderError?)->()) {
         guard let tagReader = self.tagReader else {
             completed(NFCPassportReaderError.NoConnectedTag)
             return
@@ -360,7 +370,8 @@ extension PassportReader {
         
         do {
             self.paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
-            paceHandler?.doPACE(mrzKey: mrzKey ) { paceSucceeded in
+
+            paceHandler?.doPACE(paceKeySeed: accessKey, paceKeyReference: paceKeyReference) { paceSucceeded in
                 if paceSucceeded {
                     completed(nil)
                 } else {
