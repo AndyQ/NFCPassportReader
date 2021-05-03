@@ -52,6 +52,8 @@ struct MainView : View {
                         }.padding([.top, .trailing])
                     }
                     MRZEntryView()
+                    Divider()
+                    CANEntryView()
                     
                     Button(action: {
                         self.scanPassport()
@@ -132,6 +134,8 @@ extension MainView {
         let dob = df.string(from:settings.dateOfBirth)
         let doe = df.string(from:settings.dateOfExpiry)
 
+        let can = settings.cardAccessNumber
+
         let passportUtils = PassportUtils()
         let mrzKey = passportUtils.getMRZKey( passportNumber: pptNr, dateOfBirth: dob, dateOfExpiry: doe)
 
@@ -149,9 +153,16 @@ extension MainView {
         Log.logLevel = settings.logLevel
         Log.storeLogs = settings.shouldCaptureLogs
         Log.clearStoredLogs()
-        
+
+        var accessKey = mrzKey
+        var paceKeyReference : UInt8 = PACEHandler.MRZ_PACE_KEY_REFERENCE
+        if (can != "") {
+            accessKey = can
+            paceKeyReference = PACEHandler.CAN_PACE_KEY_REFERENCE
+        }
+
         // This is also how you can override the default messages displayed by the NFC View Controller
-        passportReader.readPassport(mrzKey: mrzKey, customDisplayMessage: { (displayMessage) in
+        passportReader.readPassport(accessKey: accessKey, paceKeyReference: paceKeyReference, customDisplayMessage: { (displayMessage) in
             switch displayMessage {
                 case .requestPresentPassport:
                     return "Hold your iPhone near an NFC enabled passport."
