@@ -435,30 +435,62 @@ public class OpenSSLUtils {
         // is a linear equation of these two integers, the data hash and the public key
         // However, in some passports the encoding of the integers is incorrect and has a leading 00
         // causing the verification to fail.
-        // So in this case, we'll remove the leading 00
-        // If no leading 0 or an other signature type then we just use the passed in signature unchanged
+        // So in this case, we check to see if it is actually a valid BigInteger, and if not, we remove the
+        // leading prefix, check again and if a valid big integer this time then we use this otherwise
+        // we keep the original value
+        // If we change any values then we re-generate the signature and use this
         var fixedSignature = signature
         if digestType.contains( "ecdsa" ) {
             // Decode signature
             if let sequence = TKBERTLVRecord(from:Data(signature)),
                sequence.tag == 0x30,
-               let intRecords = TKBERTLVRecord.sequenceOfRecords(from: sequence.value),
+               var intRecords = TKBERTLVRecord.sequenceOfRecords(from: sequence.value),
                intRecords.count == 2 {
                 
-                var newIntRecords = [TKTLVRecord]()
-                // Remove leaving 00 from integer bytes
-                if intRecords[0].value[0] == 0x00 {
-                    newIntRecords.append( TKBERTLVRecord( tag: intRecords[0].tag, value: intRecords[0].value[1...]) )
-                }
-                if intRecords[1].value[0] == 0x00 {
-                    newIntRecords.append( TKBERTLVRecord( tag: intRecords[1].tag, value: intRecords[1].value[1...]) )
+                var didFix = false
+                for (idx, rec) in intRecords.enumerated() {
+                    // Only process if the first byte is a 0
+                    if rec.value[0] != 0 {
+                        continue
+                    }
+
+                    // There is a feature in TKBERTLVRecord.sequenceOfRecords where the 2nd record.data call
+                    // contains the data for the whole data not the actual record
+                    // (reported as FB9077037)
+                    // So for the moment, work aroud this and create a new record
+                    let fixedRec = TKBERTLVRecord( tag: rec.tag, value: rec.value)
+                    let data = [UInt8](fixedRec.data)
+                    
+                    // Check to see if a valid Big Integer (we need the whole record including tag and length for the d2i_ASN1_INTEGER call)
+                    data.withUnsafeBufferPointer { (ptr) in
+                        var address = ptr.baseAddress
+                        let v = d2i_ASN1_INTEGER(nil, &address, data.count)
+                        defer { ASN1_INTEGER_free(v) }
+                        if v == nil {
+                            // Not a valid BigInteger, so remove the first value and try again
+                            let newRec = TKBERTLVRecord( tag: rec.tag, value: rec.value[1...])
+
+                            let data2 = [UInt8](newRec.data)
+                            data2.withUnsafeBufferPointer { (ptr) in
+                                var address = ptr.baseAddress
+                                let v2 = d2i_ASN1_INTEGER(nil, &address, data2.count)
+                                defer { ASN1_INTEGER_free(v2) }
+                                if v2 != nil {
+                                    // OK, we have a valid BigInteger this time so replace the original
+                                    // record with the new one
+                                    intRecords[idx] = newRec
+                                    didFix = true
+                                }
+                            }
+                        }
+                    }
                 }
 
-                // We only reencode if we changed BOTH integers, otherwise assume they were actually
+                // We only reencode if we changed any of the integers, otherwise assume they were actually
                 // correctly encoded
-                if newIntRecords.count == 2 {
+                if didFix {
                     // re-encode
-                    let newSequence = TKBERTLVRecord( tag: sequence.tag, records: newIntRecords)
+                    let newSequence = TKBERTLVRecord( tag: sequence.tag, records: intRecords)
                     fixedSignature = [UInt8](newSequence.data)
                 }
             }

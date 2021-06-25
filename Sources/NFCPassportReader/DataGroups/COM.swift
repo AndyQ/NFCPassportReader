@@ -60,6 +60,6 @@ public class COM : DataGroup {
                 dataGroupsPresent.append( DataGroupParser.dataGroupNames[index] )
             }
         }
-        Log.info( "DG Found - \(dataGroupsPresent)" )
+        Log.debug( "DG Found - \(dataGroupsPresent)" )
     }
 }

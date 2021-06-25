@@ -283,6 +283,10 @@ public class NFCPassportModel {
         self.activeAuthenticationChallenge = challenge
         self.activeAuthenticationSignature = signature
         
+        Log.verbose( "Active Authentication")
+        Log.verbose( "   challange - \(binToHexRep(challenge))")
+        Log.verbose( "   signature - \(binToHexRep(signature))")
+
         // Get AA Public key
         self.activeAuthenticationPassed = false
         guard  let dg15 = self.dataGroupsRead[.DG15] as? DataGroup15 else { return }
@@ -334,7 +338,7 @@ public class NFCPassportModel {
                 // Check hashes match
                 if msgHash == digest {
                     self.activeAuthenticationPassed = true
-                    Log.info( "Active Authentication (RSA) successful" )
+                    Log.debug( "Active Authentication (RSA) successful" )
                 } else {
                     Log.error( "Error verifying Active Authentication RSA signature - Hash doesn't match" )
                 }
@@ -344,7 +348,7 @@ public class NFCPassportModel {
         } else if let ecdsaPublicKey = dg15.ecdsaPublicKey {
             if OpenSSLUtils.verifyECDSASignature( publicKey:ecdsaPublicKey, signature: signature, data: challenge ) {
                 self.activeAuthenticationPassed = true
-                Log.info( "Active Authentication (ECDSA) successful" )
+                Log.debug( "Active Authentication (ECDSA) successful" )
             } else {
                 Log.error( "Error verifying Active Authentication ECDSA signature" )
             }

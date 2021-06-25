@@ -157,8 +157,7 @@ extension PassportReader : NFCTagReaderSessionDelegate {
             self.invalidateSession(errorMessage:errorMessage, error: NFCPassportReaderError.TagNotValid)
             return
         }
-        
-        
+                
         // Connect to tag
         Log.debug( "tagReaderSession:connecting to tag - \(tag)" )
         session.connect(to: tag) { [unowned self] (error: Error?) in
@@ -325,9 +324,12 @@ extension PassportReader {
         Log.info( "Performing Active Authentication" )
 
         let challenge = generateRandomUInt8Array(8)
+        Log.verbose( "Generated Active Authentication challange - \(binToHexRep(challenge))")
         self.tagReader?.doInternalAuthentication(challenge: challenge, completed: { (response, err) in
             if let response = response {
                 self.passport.verifyActiveAuthentication( challenge:challenge, signature:response.data )
+            } else {
+                Log.error( "doInternalAuthentication failed - \(err?.localizedDescription ?? "")" )
             }
 
             completed()
