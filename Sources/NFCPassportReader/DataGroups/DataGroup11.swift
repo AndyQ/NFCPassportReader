@@ -57,7 +57,7 @@ public class DataGroup11 : DataGroup {
                 personalSummary = val
             } else if tag == 0x5F16 {
                 proofOfCitizenship = val
-            } else if tag == 0x5F18 {
+            } else if tag == 0x5F17 {
                 tdNumbers = val
             } else if tag == 0x5F18 {
                 custodyInfo = val
