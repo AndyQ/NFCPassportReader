@@ -34,6 +34,9 @@ public enum NFCPassportReaderError: Error {
     case InvalidMRZKey
     case MoreThanOneTagFound
     case InvalidHashAlgorithmSpecified
+    case UnsupportedCipherAlgorithm
+    case UnsupportedMappingType
+    case PACEError(String,String)
     case InvalidDataPassed(String)
     case NotYetSupported(String)
 
@@ -62,6 +65,9 @@ public enum NFCPassportReaderError: Error {
             case .InvalidMRZKey: return "InvalidMRZKey"
             case .MoreThanOneTagFound: return "MoreThanOneTagFound"
             case .InvalidHashAlgorithmSpecified: return "InvalidHashAlgorithmSpecified"
+            case .UnsupportedCipherAlgorithm: return "UnsupportedCipherAlgorithm"
+            case .UnsupportedMappingType: return "UnsupportedMappingType"
+            case .PACEError(let step, let reason): return "PACEError (\(step)) - \(reason)"
             case .InvalidDataPassed(let reason) : return "Invalid data passed - \(reason)"
             case .NotYetSupported(let reason) : return "Not yet supported - \(reason)"
         }
