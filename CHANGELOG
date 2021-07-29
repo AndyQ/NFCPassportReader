@@ -1,3 +1,10 @@
+V1.1.5
+   Fixed potential issue when checking for invalid ECDSA signatures. Now rather than assuming if both BigNums
+     have a zero prefix, we actually check the bignums for validity.
+   Added ability to skip Chip Authentication and PACE (use the new skipCA and skipPACE parameters on
+     readPassport)
+   Added some additional logging and changed some existing logging catagories 
+
 v1.1.4
    Fixed use of ephemeral params that managed to get reverted!
    Added a couple of addition error messages to TagReader
