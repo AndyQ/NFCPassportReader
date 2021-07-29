@@ -1,3 +1,9 @@
+V1.1.6
+   Fixed tag in DG11 - Thanks @Jusstas.
+   Fixed deploying to iOS 12 - added weak framework CryptoTokenKit to podspec - thanks @Jeroenbb94
+   Fixed crash in getNextTag when not enough data is present (happens with some passports) - thanks @Benny-iPhone
+   
+   
 V1.1.5
    Fixed potential issue when checking for invalid ECDSA signatures. Now rather than assuming if both BigNums
      have a zero prefix, we actually check the bignums for validity.
