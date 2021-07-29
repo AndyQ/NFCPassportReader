@@ -151,7 +151,7 @@ extension MainView {
         Log.clearStoredLogs()
         
         // This is also how you can override the default messages displayed by the NFC View Controller
-        passportReader.readPassport(mrzKey: mrzKey, skipPACE: true, customDisplayMessage: { (displayMessage) in
+        passportReader.readPassport(mrzKey: mrzKey, customDisplayMessage: { (displayMessage) in
             switch displayMessage {
                 case .requestPresentPassport:
                     return "Hold your iPhone near an NFC enabled passport."
