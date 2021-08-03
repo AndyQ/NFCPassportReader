@@ -47,11 +47,11 @@ class ChipAuthenticationHandler {
         }
     }
 
-    public func doChipAuthentication() async throws -> Bool {
+    public func doChipAuthentication() async throws  {
                 
         Log.info( "Performing Chip Authentication - number of public keys found - \(chipAuthPublicKeyInfos.count)" )
         guard isChipAuthenticationSupported else {
-            return false
+            throw NFCPassportReaderError.NotYetSupported( "ChipAuthentication not supported" )
         }
         
         var success = false
@@ -64,10 +64,12 @@ class ChipAuthenticationHandler {
             } catch {
                 // try next key
             }
-            
         }
-        return success
-         
+        
+        if !success {
+            throw NFCPassportReaderError.ChipAuthenticationFailed
+
+        }
     }
     
     private func doChipAuthentication( with chipAuthPublicKeyInfo : ChipAuthenticationPublicKeyInfo ) async throws -> Bool {

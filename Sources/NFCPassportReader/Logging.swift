@@ -15,6 +15,7 @@ public enum LogLevel : Int, CaseIterable {
     case info = 2
     case warning = 3
     case error = 4
+    case none = 5
 }
 
 public class Log {
@@ -43,6 +44,8 @@ public class Log {
     }
     
     class func log( _ logLevel : LogLevel, _ msg : () -> String ) {
+        guard  logLevel != .none else { return }
+        
         if self.logLevel.rawValue <= logLevel.rawValue {
             let message = msg()
             print( message )

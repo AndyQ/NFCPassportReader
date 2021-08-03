@@ -71,9 +71,9 @@ public class PACEHandler {
         isPACESupported = true
     }
     
-    public func doPACE( mrzKey : String ) async throws -> Bool {
+    public func doPACE( mrzKey : String ) async throws {
         guard isPACESupported else {
-            return false
+            throw NFCPassportReaderError.NotYetSupported( "PACE not supported" )
         }
         
         Log.info( "Performing PACE with \(paceInfo.getProtocolOIDString())" )
@@ -110,8 +110,6 @@ public class PACEHandler {
         let (ephemeralKeyPair, passportPublicKey) = try await self.doStep3KeyExchange(ephemeralParams: ephemeralParams)
         let (encKey, macKey) = try await self.doStep4KeyAgreement( pcdKeyPair: ephemeralKeyPair, passportPublicKey: passportPublicKey)
         try self.paceCompleted( ksEnc: encKey, ksMac: macKey )
-    
-        return true
     }
     
     /// Handles an error during the PACE process

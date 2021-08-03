@@ -37,6 +37,7 @@ public enum NFCPassportReaderError: Error {
     case UnsupportedCipherAlgorithm
     case UnsupportedMappingType
     case PACEError(String,String)
+    case ChipAuthenticationFailed
     case InvalidDataPassed(String)
     case NotYetSupported(String)
 
@@ -68,6 +69,7 @@ public enum NFCPassportReaderError: Error {
             case .UnsupportedCipherAlgorithm: return "UnsupportedCipherAlgorithm"
             case .UnsupportedMappingType: return "UnsupportedMappingType"
             case .PACEError(let step, let reason): return "PACEError (\(step)) - \(reason)"
+            case .ChipAuthenticationFailed: return "ChipAuthenticationFailed"
             case .InvalidDataPassed(let reason) : return "Invalid data passed - \(reason)"
             case .NotYetSupported(let reason) : return "Not yet supported - \(reason)"
         }
