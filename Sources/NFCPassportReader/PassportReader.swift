@@ -29,7 +29,8 @@ public class PassportReader : NSObject {
     private var bacHandler : BACHandler?
     private var caHandler : ChipAuthenticationHandler?
     private var paceHandler : PACEHandler?
-    private var mrzKey : String = ""
+    private var mrzKey : String?
+    private var bacHash : [UInt8]?
     private var dataAmountToReadOverride : Int? = nil
     
     private var scanCompletedHandler: ((NFCPassportModel?, NFCPassportReaderError?)->())!
@@ -59,10 +60,22 @@ public class PassportReader : NSObject {
     public func overrideNFCDataAmountToRead( amount: Int ) {
         dataAmountToReadOverride = amount
     }
+    
+    public func readPassport( bacHash : [UInt8], tags: [DataGroupId] = [], skipSecureElements :Bool = true, customDisplayMessage: ((NFCViewDisplayMessage) -> String?)? = nil, completed: @escaping (NFCPassportModel?, NFCPassportReaderError?)->()) {
         
-    public func readPassport( mrzKey : String, tags: [DataGroupId] = [], skipSecureElements :Bool = true, skipCA : Bool = false, skipPACE: Bool = false, customDisplayMessage: ((NFCViewDisplayMessage) -> String?)? = nil, completed: @escaping (NFCPassportModel?, NFCPassportReaderError?)->()) {
-        self.passport = NFCPassportModel()
+        self.bacHash = bacHash
+        readPassport(tags: tags, skipSecureElements: skipSecureElements, customDisplayMessage: customDisplayMessage, completed: completed)
+    }
+    
+    public func readPassport( mrzKey : String, tags: [DataGroupId] = [], skipSecureElements :Bool = true, customDisplayMessage: ((NFCViewDisplayMessage) -> String?)? = nil, completed: @escaping (NFCPassportModel?, NFCPassportReaderError?)->()) {
+        
         self.mrzKey = mrzKey
+        readPassport(tags: tags, skipSecureElements: skipSecureElements, customDisplayMessage: customDisplayMessage, completed: completed)
+    }
+        
+    private func readPassport(tags: [DataGroupId] = [], skipSecureElements :Bool = true, skipCA : Bool = true, skipPACE: Bool = false, customDisplayMessage: ((NFCViewDisplayMessage) -> String?)? = nil, completed: @escaping (NFCPassportModel?, NFCPassportReaderError?)->()) {
+        self.passport = NFCPassportModel()
+        //self.mrzKey = mrzKey
         self.skipCA = skipCA
         self.skipPACE = skipPACE
         
@@ -356,10 +369,22 @@ extension PassportReader {
         Log.info( "Starting Basic Access Control (BAC)" )
         
         self.bacHandler = BACHandler( tagReader: tagReader )
-        bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey ) { error in
+        if let bacHash = bacHash {
+            bacHandler?.performBACAndGetSessionKeys( bacHash: bacHash ) { error in
+                self.bacHandler = nil
+                completed(error)
+            }
+        }
+        else if let mrzKey = mrzKey {
+            bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey ) { error in
+                self.bacHandler = nil
+                completed(error)
+            }
+        }
+        /*bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey ) { error in
             self.bacHandler = nil
             completed(error)
-        }
+        }*/
     }
     
     func handlePACE( cardAccess:CardAccess, completed: @escaping (NFCPassportReaderError?)->()) {
@@ -372,14 +397,28 @@ extension PassportReader {
         
         do {
             self.paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
-            paceHandler?.doPACE(mrzKey: mrzKey ) { paceSucceeded in
-                if paceSucceeded {
-                    completed(nil)
-                } else {
-                    self.paceHandler = nil
-                    completed(NFCPassportReaderError.InvalidDataPassed("PACE Failed"))
-                }
+           
+            if let mrzKey = self.mrzKey {
+                paceHandler?.doPace(mrzKey: mrzKey, completed: { paceSucceeded in
+                  
+                    if paceSucceeded {
+                        completed(nil)
+                    } else {
+                        self.paceHandler = nil
+                        completed(NFCPassportReaderError.InvalidDataPassed("PACE Failed"))
+                    }
+                })
+            } else if let bacHash = self.bacHash {
+                paceHandler?.doPace(bacHash: bacHash, completed: { paceSucceeded in
+                    if paceSucceeded {
+                        completed(nil)
+                    } else {
+                        self.paceHandler = nil
+                        completed(NFCPassportReaderError.InvalidDataPassed("PACE Failed"))
+                    }
+                })
             }
+            
         } catch let error as NFCPassportReaderError {
             completed( error )
         } catch {
