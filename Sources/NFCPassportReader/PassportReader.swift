@@ -381,10 +381,6 @@ extension PassportReader {
                 completed(error)
             }
         }
-        /*bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey ) { error in
-            self.bacHandler = nil
-            completed(error)
-        }*/
     }
     
     func handlePACE( cardAccess:CardAccess, completed: @escaping (NFCPassportReaderError?)->()) {
