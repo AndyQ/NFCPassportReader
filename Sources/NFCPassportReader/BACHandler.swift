@@ -122,11 +122,7 @@ public class BACHandler {
         let smskg = SecureMessagingSessionKeyGenerator()
         self.ksenc = try smskg.deriveKey(keySeed: kseed, mode: .ENC_MODE)
         self.ksmac = try smskg.deriveKey(keySeed: kseed, mode: .MAC_MODE)
-        //let (kenc, kmac) = computeKeysFromKseed(Kseed: kseed)
-        //self.ksenc = kenc
-        //self.ksmac = kmac
-        debugPrint("ertejkjtberjbktjbketrbjterbjbejejrejrt")
-                
+           
         return (ksenc, ksmac)
     }
     
