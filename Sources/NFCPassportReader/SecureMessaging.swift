@@ -57,7 +57,7 @@ public class SecureMessaging {
             tmp += " and DO87"
             do87 = try self.buildD087(apdu: apdu)
         }
-        if apdu.expectedResponseLength > 0 && apdu.expectedResponseLength < 256 {
+        if apdu.expectedResponseLength > 0 {
             tmp += " and DO97"
             do97 = try self.buildD097(apdu: apdu)
         }
