@@ -12,7 +12,7 @@ import NFCPassportReader
 struct SettingsView: View {
     @EnvironmentObject var settings: SettingsStore
     
-    private var logLevels = ["Verbose", "Debug", "Info", "Warning", "Error"]
+    private var logLevels = ["Verbose", "Debug", "Info", "Warning", "Error", "None"]
 
     var body: some View {
         Form {
