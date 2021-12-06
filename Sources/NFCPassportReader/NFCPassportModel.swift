@@ -321,6 +321,9 @@ public class NFCPassportModel {
                     case 0x36:
                         hashType = "SHA384"
                         hashLength = 48  // 384 bits for SHA-384 -> 48 bytes
+                    case 0x38:
+                        hashType = "SHA224"
+                        hashLength = 28
                     default:
                         Log.error( "Error identifying Active Authentication RSA message digest hash algorithm" )
                         return
