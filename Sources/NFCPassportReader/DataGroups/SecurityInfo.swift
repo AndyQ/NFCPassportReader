@@ -91,7 +91,7 @@ public class SecurityInfo {
                 if optionalData == nil {
                     return ChipAuthenticationPublicKeyInfo(oid:oid, pubKey:subjectPublicKeyInfo);
                 } else {
-                    let keyId = Int(optionalData!.value)
+                    let keyId = Int(optionalData!.value, radix: 16)
                     return ChipAuthenticationPublicKeyInfo(oid:oid, pubKey:subjectPublicKeyInfo, keyId: keyId);
                 }
                 
@@ -99,7 +99,7 @@ public class SecurityInfo {
         } else if ChipAuthenticationInfo.checkRequiredIdentifier(oid) {
             let version = Int(requiredData.value) ?? -1
             if let optionalData = optionalData {
-                let keyId = Int(optionalData.value)
+                let keyId = Int(optionalData.value, radix: 16)
                 return ChipAuthenticationInfo(oid: oid, version: version, keyId: keyId);
             } else {
                 return ChipAuthenticationInfo(oid: oid, version: version);
