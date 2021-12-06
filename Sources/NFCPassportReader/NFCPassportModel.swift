@@ -349,7 +349,13 @@ public class NFCPassportModel {
                 Log.error( "Error verifying Active Authentication RSA signature - \(error)" )
             }
         } else if let ecdsaPublicKey = dg15.ecdsaPublicKey {
-            if OpenSSLUtils.verifyECDSASignature( publicKey:ecdsaPublicKey, signature: signature, data: challenge ) {
+            var digestType = ""
+            if let dg14 = dataGroupsRead[.DG14] as? DataGroup14,
+               let aa = dg14.securityInfos.compactMap({ $0 as? ActiveAuthenticationInfo }).first {
+                digestType = aa.getSignatureAlgorithmOIDString() ?? ""
+            }
+            
+            if OpenSSLUtils.verifyECDSASignature( publicKey:ecdsaPublicKey, signature: signature, data: challenge, digestType: digestType ) {
                 self.activeAuthenticationPassed = true
                 Log.debug( "Active Authentication (ECDSA) successful" )
             } else {
