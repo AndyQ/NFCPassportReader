@@ -395,7 +395,7 @@ public class OpenSSLUtils {
         sigData.withUnsafeBufferPointer { (unsafeBufPtr) in
             let unsafePointer = unsafeBufPtr.baseAddress!
             let r = BN_bin2bn(unsafePointer, Int32(l), nil)
-            let s = BN_bin2bn((unsafePointer + l), Int32(32), nil)
+            let s = BN_bin2bn((unsafePointer + l), Int32(l), nil)
             ECDSA_SIG_set0(ecsig, r, s)
         }
         let sigSize = i2d_ECDSA_SIG(ecsig, nil)
