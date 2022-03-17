@@ -21,7 +21,7 @@ public class DataGroup12 : DataGroup {
     
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
-        datagroupType = .DG11
+        datagroupType = .DG12
     }
     
     override func parse(_ data: [UInt8]) throws {
