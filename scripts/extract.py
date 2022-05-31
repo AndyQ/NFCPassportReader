@@ -94,7 +94,10 @@ def extractCertsFromMasterlist( masterList ):
     # Run openssl cms to verify and extract the signed data
     cmd = f"openssl cms -inform der -noverify -verify"
     (signedData, err) = execute( cmd, masterList )
-    if err.decode("utf8").strip() != "Verification successful":
+
+    err = err.decode("utf8").strip().replace("CMS ", "")
+
+    if err != "Verification successful":
         print( f"[{err.decode('utf8')}]" )
         raise Exception( "Verification of Masterlist data failed" )
 

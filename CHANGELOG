@@ -1,12 +1,14 @@
 v1.1.7
    Retrieves personal  number from DG11 (if its present) otherwise fall back to DG1 (as per ICAO Docs) - thanks @TerjeLon
    Added support for BDC Date/time encoding for DG12 - thanks @jakub-vallo 
+   Fixed wrong type in DG12 - thanks @jakub-vallo and @markus-mohemian
+   Fixed extract of ICAO Masterlist extract - openssl cms verify and extract signed command output format changed
+        thanks @georgepadayatti
    
 V1.1.6
    Fixed tag in DG11 - Thanks @Jusstas.
    Fixed deploying to iOS 12 - added weak framework CryptoTokenKit to podspec - thanks @Jeroenbb94
    Fixed crash in getNextTag when not enough data is present (happens with some passports) - thanks @Benny-iPhone
-   
    
 V1.1.5
    Fixed potential issue when checking for invalid ECDSA signatures. Now rather than assuming if both BigNums
