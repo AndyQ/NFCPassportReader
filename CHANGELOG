@@ -1,3 +1,7 @@
+v1.1.7
+   Retrieves personal  number from DG11 (if its present) otherwise fall back to DG1 (as per ICAO Docs) - thanks @TerjeLon
+   Added support for BDC Date/time encoding for DG12 - thanks @jakub-vallo 
+   
 V1.1.6
    Fixed tag in DG11 - Thanks @Jusstas.
    Fixed deploying to iOS 12 - added weak framework CryptoTokenKit to podspec - thanks @Jeroenbb94
