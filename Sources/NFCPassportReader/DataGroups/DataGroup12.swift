@@ -9,15 +9,15 @@ import Foundation
 @available(iOS 13, macOS 10.15, *)
 class DataGroup12 : DataGroup {
     
-    private(set) var issuingAuthority : String?
-    private(set) var dateOfIssue : String?
-    private(set) var otherPersonsDetails : String?
-    private(set) var endorsementsOrObservations : String?
-    private(set) var taxOrExitRequirements : String?
-    private(set) var frontImage : [UInt8]?
-    private(set) var rearImage : [UInt8]?
-    private(set) var personalizationTime : String?
-    private(set) var personalizationDeviceSerialNr : String?
+    public private(set) var issuingAuthority : String?
+    public private(set) var dateOfIssue : String?
+    public private(set) var otherPersonsDetails : String?
+    public private(set) var endorsementsOrObservations : String?
+    public private(set) var taxOrExitRequirements : String?
+    public private(set) var frontImage : [UInt8]?
+    public private(set) var rearImage : [UInt8]?
+    public private(set) var personalizationTime : String?
+    public private(set) var personalizationDeviceSerialNr : String?
     
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
