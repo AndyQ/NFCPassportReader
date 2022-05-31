@@ -24,7 +24,6 @@ public class NFCPassportModel {
     
     public private(set) lazy var documentType : String = { return String( passportDataElements?["5F03"]?.first ?? "?" ) }()
     public private(set) lazy var documentSubType : String = { return String( passportDataElements?["5F03"]?.last ?? "?" ) }()
-    public private(set) lazy var personalNumber : String = { return (passportDataElements?["53"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
     public private(set) lazy var documentNumber : String = { return (passportDataElements?["5A"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
     public private(set) lazy var issuingAuthority : String = { return passportDataElements?["5F28"] ?? "?" }()
     public private(set) lazy var documentExpiryDate : String = { return passportDataElements?["59"] ?? "?" }()
@@ -68,6 +67,14 @@ public class NFCPassportModel {
         guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
               let telephone = dg11.telephone else { return nil }
         return telephone
+    }()
+    
+    /// personal number
+    public private(set) lazy var personalNumber : String? = {
+        if let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
+           let personalNumber = dg11.personalNumber { return personalNumber }
+        
+        return (passportDataElements?["53"] ?? "?").replacingOccurrences(of: "<", with: "" )
     }()
 
     public private(set) lazy var documentSigningCertificate : X509Wrapper? = {
