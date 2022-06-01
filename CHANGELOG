@@ -1,4 +1,4 @@
-v1.1.7
+v1.1.8
    Retrieves personal  number from DG11 (if its present) otherwise fall back to DG1 (as per ICAO Docs) - thanks @TerjeLon
    Added support for BDC Date/time encoding for DG12 - thanks @jakub-vallo 
    Fixed wrong type in DG12 - thanks @jakub-vallo and @markus-mohemian
@@ -6,6 +6,9 @@ v1.1.7
         thanks @georgepadayatti
    Fixed issue with continuing scan after read session has been invalidated - thanks @markus-mohemian
    
+V1.1.7
+   Fix for SecureMessaging - buildD097 where we ignored if length was >= 256 - thanks to @pmitche
+
 V1.1.6
    Fixed tag in DG11 - Thanks @Jusstas.
    Fixed deploying to iOS 12 - added weak framework CryptoTokenKit to podspec - thanks @Jeroenbb94
