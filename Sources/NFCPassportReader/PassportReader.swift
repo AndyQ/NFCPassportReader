@@ -287,6 +287,8 @@ extension PassportReader {
     
     func startReadingDataGroups() {
         self.readNextDataGroup( ) { [weak self] error in
+            guard self?.readerSession != nil else { return }
+
             if self?.dataGroupsToRead.count != 0 {
                 // OK we've got more datagroups to go - we've probably failed security verification
                 // So lets re-establish BAC and try again
@@ -388,6 +390,8 @@ extension PassportReader {
     }
     
     func readNextDataGroup( completedReadingGroups completed : @escaping (NFCPassportReaderError?)->() ) {
+        guard readerSession != nil else { return }
+
         guard let tagReader = self.tagReader else { completed(NFCPassportReaderError.NoConnectedTag ); return }
         if dataGroupsToRead.count == 0 {
             completed(nil)
