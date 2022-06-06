@@ -30,14 +30,12 @@ public class NFCPassportModel {
     public private(set) lazy var dateOfBirth : String = { return passportDataElements?["5F57"] ?? "?" }()
     public private(set) lazy var gender : String = { return passportDataElements?["5F35"] ?? "?" }()
     public private(set) lazy var nationality : String = { return passportDataElements?["5F2C"] ?? "?" }()
-
+    
     public private(set) lazy var lastName : String = {
-        let names = (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<")
         return names[0].replacingOccurrences(of: "<", with: " " )
     }()
     
     public private(set) lazy var firstName : String = {
-        let names = (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<")
         var name = ""
         for i in 1 ..< names.count {
             let fn = names[i].replacingOccurrences(of: "<", with: " " ).trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
@@ -49,6 +47,12 @@ public class NFCPassportModel {
     public private(set) lazy var passportMRZ : String = { return passportDataElements?["5F1F"] ?? "NOT FOUND" }()
     
     // Extract fields from DG11 if present
+    private lazy var names : [String] = {
+        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
+              let fullName = dg11.fullName?.components(separatedBy: " ") else { return (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<") }
+        return fullName
+    }()
+    
     public private(set) lazy var placeOfBirth : String? = {
         guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
               let placeOfBirth = dg11.placeOfBirth else { return nil }
