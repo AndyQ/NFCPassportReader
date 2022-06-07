@@ -22,7 +22,6 @@ private enum PACEHandlerError {
         switch self {
             case .DHKeyAgreementError(let errMsg): return errMsg
             case .ECDHKeyAgreementError(let errMsg): return errMsg
-
         }
     }
 }
@@ -61,6 +60,9 @@ public class PACEHandler {
     private var digestAlg : String = ""
     private var keyLength : Int = -1
     
+    private var mrzKey: String?
+    private var bacHash: [UInt8]?
+    
     public init(cardAccess : CardAccess, tagReader: TagReader) throws {
         self.tagReader = tagReader
         
@@ -72,7 +74,18 @@ public class PACEHandler {
         isPACESupported = true
     }
     
-    public func doPACE( mrzKey : String, completed: @escaping (Bool)->() ) {
+    public func doPace(mrzKey: String, completed: @escaping (Bool)->()) {
+        
+        self.mrzKey = mrzKey
+        doPACE(completed: completed)
+    }
+    
+    public func doPace(bacHash: [UInt8], completed: @escaping (Bool)->()) {
+        self.bacHash = bacHash
+        doPACE(completed: completed)
+    }
+    
+    private func doPACE(completed: @escaping (Bool)->() ) {
         guard isPACESupported else {
             completed( false )
             return
@@ -93,7 +106,12 @@ public class PACEHandler {
             keyLength = try paceInfo.getKeyLength()  // Get key length  the enc cipher. Either 128, 192, or 256.
 
             paceKeyType = PACEHandler.MRZ_PACE_KEY_REFERENCE
-            paceKey = try createPaceKey( from: mrzKey )
+            
+            if let mrzKey = mrzKey {
+                paceKey = try createPaceKey( from: mrzKey )
+            } else if let bacHash = bacHash {
+                paceKey = try createPaceKey(from: bacHash)
+            }
             
             // Temporary logging
             Log.verbose("doPace - inpit parameters" )
@@ -636,6 +654,15 @@ extension PACEHandler {
     func createPaceKey( from mrzKey: String ) throws -> [UInt8] {
         let buf: [UInt8] = Array(mrzKey.utf8)
         let hash = calcSHA1Hash(buf)
+        
+        let smskg = SecureMessagingSessionKeyGenerator()
+        let key = try smskg.deriveKey(keySeed: hash, cipherAlgName: cipherAlg, keyLength: keyLength, nonce: nil, mode: .PACE_MODE, paceKeyReference: paceKeyType)
+        return key
+    }
+    
+    func createPaceKey( from bacHash: [UInt8] ) throws -> [UInt8] {
+        //let buf: [UInt8] = bacHash//Array(bacHash[0..<16])
+        let hash = bacHash//Array(bacHash[0..<16])//calcSHA1Hash(bacHash)
         
         let smskg = SecureMessagingSessionKeyGenerator()
         let key = try smskg.deriveKey(keySeed: hash, cipherAlgName: cipherAlg, keyLength: keyLength, nonce: nil, mode: .PACE_MODE, paceKeyReference: paceKeyType)

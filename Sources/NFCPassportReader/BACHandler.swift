@@ -32,25 +32,43 @@ public class BACHandler {
     public init(tagReader: TagReader) {
         self.tagReader = tagReader
     }
-
+    
     public func performBACAndGetSessionKeys( mrzKey : String, completed: @escaping (_ error : NFCPassportReaderError?)->() ) {
+        guard let tagReader = self.tagReader else {
+            completed(.NoConnectedTag)
+            return
+        }
+        
+        _ = try? self.deriveDocumentBasicAccessKeys(mrz: mrzKey)
+        
+        // Make sure we clear secure messaging (could happen if we read an invalid DG or we hit a secure error
+        tagReader.secureMessaging = nil
+        
+        // get Challenge
+        getChallenge(completed: completed)
+    }
+    
+    public func performBACAndGetSessionKeys( bacHash : [UInt8], completed: @escaping (_ error : NFCPassportReaderError?)->() ) {
+        guard let tagReader = self.tagReader else {
+            completed(.NoConnectedTag)
+            return
+        }
+        
+        _ = try? deriveDocumentBasicAccessKeys(bacHash: bacHash)
+        
+        // Make sure we clear secure messaging (could happen if we read an invalid DG or we hit a secure error
+        tagReader.secureMessaging = nil
+        
+        // get Challenge
+        getChallenge(completed: completed)
+    }
+
+    private func getChallenge(completed: @escaping (_ error : NFCPassportReaderError?)->() ) {
+        
         guard let tagReader = self.tagReader else {
             completed( NFCPassportReaderError.NoConnectedTag)
             return
         }
-        
-        Log.debug( "BACHandler - deriving Document Basic Access Keys" )
-        do {
-            _ = try self.deriveDocumentBasicAccessKeys(mrz: mrzKey)
-        } catch {
-            Log.error( "ERROR - \(error.localizedDescription)" )
-            completed( NFCPassportReaderError.InvalidDataPassed("Unable to derive BAC Keys - \(error.localizedDescription)") )
-            return
-
-        }
-        
-        // Make sure we clear secure messaging (could happen if we read an invalid DG or we hit a secure error
-        tagReader.secureMessaging = nil
         
         // get Challenge
         Log.debug( "BACHandler - Getting initial challenge" )
@@ -95,6 +113,16 @@ public class BACHandler {
         self.ksenc = try smskg.deriveKey(keySeed: kseed, mode: .ENC_MODE)
         self.ksmac = try smskg.deriveKey(keySeed: kseed, mode: .MAC_MODE)
                 
+        return (ksenc, ksmac)
+    }
+    
+    func deriveDocumentBasicAccessKeys(bacHash: [UInt8]) throws -> ([UInt8], [UInt8]) {
+
+        let kseed = Array(bacHash[0..<16])
+        let smskg = SecureMessagingSessionKeyGenerator()
+        self.ksenc = try smskg.deriveKey(keySeed: kseed, mode: .ENC_MODE)
+        self.ksmac = try smskg.deriveKey(keySeed: kseed, mode: .MAC_MODE)
+           
         return (ksenc, ksmac)
     }
     
