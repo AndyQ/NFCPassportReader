@@ -441,7 +441,8 @@ extension PassportReader {
                                 // Do Chip authentication and then continue reading datagroups
                                 readNextDG = false
                                 self.caHandler?.doChipAuthentication() { [unowned self] (success) in
-                                    self.passport.chipAuthenticationStatus = .success
+                                    
+                                    self.passport.chipAuthenticationStatus = success ? .success : .failed
 
                                     self.readNextDataGroup(completedReadingGroups: completed)
                                 }

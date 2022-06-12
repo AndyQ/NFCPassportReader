@@ -1,5 +1,7 @@
 v1.1.9
    Retrieves names from DG11 if present otherwise fall back to DG1 - thanks @TerjeLon
+   Fixed bug with Chip Authentication - thanks @pauphi and @jennytellne-cygni 
+   This will be the last < iOS 13 version as will be moving to async/await
 
 v1.1.8
    Retrieves personal  number from DG11 (if its present) otherwise fall back to DG1 (as per ICAO Docs) - thanks @TerjeLon

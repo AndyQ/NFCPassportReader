@@ -65,7 +65,7 @@ class ChipAuthenticationHandler {
     private func doChipAuthenticationForNextPublicKey( ) {
         // If no more public keys to try then we've failed
         guard chipAuthPublicKeyInfos.count > 0 else {
-            completedHandler?( true )
+            completedHandler?( false )
             return
         }
         
