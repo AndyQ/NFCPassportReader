@@ -53,7 +53,7 @@ public class BACHandler {
         Log.debug( "BACHandler - Doing mutual authentication" )
         let cmd_data = self.authentication(rnd_icc: [UInt8](response.data))
         let maResponse = try await tagReader.doMutualAuthentication(cmdData: Data(cmd_data))
-        Log.verbose( "DATA - \(maResponse.data)" )
+        Log.debug( "DATA - \(maResponse.data)" )
         
         let (KSenc, KSmac, ssc) = try self.sessionKeys(data: [UInt8](maResponse.data))
         tagReader.secureMessaging = SecureMessaging(ksenc: KSenc, ksmac: KSmac, ssc: ssc)
@@ -158,7 +158,7 @@ public class BACHandler {
     /// @param data: the data received from the mutual authenticate command send to the chip.
     /// @type data: a binary string
     /// @return: A set of two 16 bytes keys (KSenc, KSmac) and the SSC
-    public func sessionKeys(data : [UInt8] ) throws -> ([UInt8], [UInt8], [UInt8])  {
+    public func sessionKeys(data : [UInt8] ) throws -> ([UInt8], [UInt8], [UInt8]) {
         Log.verbose("Decrypt and verify received data and compare received RND.IFD with generated RND.IFD \(binToHexRep(self.ksmac))" )
         
         let response = tripleDESDecrypt(key: self.ksenc, message: [UInt8](data[0..<32]), iv: [0,0,0,0,0,0,0,0] )
