@@ -193,7 +193,13 @@ extension PassportReader : NFCTagReaderSessionDelegate {
                 nfcContinuation = nil
 
                 
-            } catch {
+            } catch let error as NFCPassportReaderError {
+                let errorMessage = NFCViewDisplayMessage.error(error)
+                self.invalidateSession(errorMessage: errorMessage, error: error)
+            } catch let error {
+
+                nfcContinuation?.resume(throwing: error)
+                nfcContinuation = nil
                 Log.debug( "tagReaderSession:failed to connect to tag - \(error.localizedDescription)" )
                 let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.ConnectionError)
                 self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.ConnectionError)
@@ -223,8 +229,10 @@ extension PassportReader {
                 let paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
                 try await paceHandler.doPACE(mrzKey: mrzKey )
                 passport.PACEStatus = .success
+                Log.debug( "PACE Succeeded" )
             } catch {
                 passport.PACEStatus = .failed
+                Log.error( "PACE Failed - falling back to BAC" )
             }
             
             _ = try await tagReader.selectPassportApplication()

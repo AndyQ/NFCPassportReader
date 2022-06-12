@@ -57,7 +57,9 @@ public class SecureMessaging {
             tmp += " and DO87"
             do87 = try self.buildD087(apdu: apdu)
         }
-        if apdu.expectedResponseLength > 0 {
+        
+        let isMSE = apdu.instructionCode == 0x22
+        if apdu.expectedResponseLength > 0 && (isMSE ? apdu.expectedResponseLength < 256 : true) {
             tmp += " and DO97"
             do97 = try self.buildD097(apdu: apdu)
         }

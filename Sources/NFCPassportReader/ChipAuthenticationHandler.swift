@@ -68,7 +68,6 @@ class ChipAuthenticationHandler {
         
         if !success {
             throw NFCPassportReaderError.ChipAuthenticationFailed
-
         }
     }
     

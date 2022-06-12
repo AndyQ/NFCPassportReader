@@ -385,16 +385,17 @@ public class OpenSSLUtils {
     /// - Parameter signature: The ECDSA signature to verify
     /// - Parameter data: The data used to generate the signature
     /// - Returns: True if the signature was verified
-    static func verifyECDSASignature( publicKey:OpaquePointer, signature: [UInt8], data: [UInt8] ) -> Bool {
+    static func verifyECDSASignature( publicKey:OpaquePointer, signature: [UInt8], data: [UInt8], digestType: String = "" ) -> Bool {
                 
         // We first need to convert the signature from PLAIN ECDSA to ASN1 DER encoded
         let ecsig = ECDSA_SIG_new()
         defer { ECDSA_SIG_free(ecsig) }
         let sigData = signature
+        let l = sigData.count / 2
         sigData.withUnsafeBufferPointer { (unsafeBufPtr) in
             let unsafePointer = unsafeBufPtr.baseAddress!
-            let r = BN_bin2bn(unsafePointer, 32, nil)
-            let s = BN_bin2bn(unsafePointer + 32, 32, nil)
+            let r = BN_bin2bn(unsafePointer, Int32(l), nil)
+            let s = BN_bin2bn((unsafePointer + l), Int32(l), nil)
             ECDSA_SIG_set0(ecsig, r, s)
         }
         let sigSize = i2d_ECDSA_SIG(ecsig, nil)
@@ -404,7 +405,7 @@ public class OpenSSLUtils {
             let _ = i2d_ECDSA_SIG(ecsig, &unsafePointer)
         }
         
-        let rc = verifySignature(data: data, signature: derBytes, pubKey: publicKey, digestType: "")
+        let rc = verifySignature(data: data, signature: derBytes, pubKey: publicKey, digestType: digestType)
         return rc
     }
     

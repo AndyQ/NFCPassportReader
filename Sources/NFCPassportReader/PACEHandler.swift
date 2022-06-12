@@ -110,6 +110,7 @@ public class PACEHandler {
         let (ephemeralKeyPair, passportPublicKey) = try await self.doStep3KeyExchange(ephemeralParams: ephemeralParams)
         let (encKey, macKey) = try await self.doStep4KeyAgreement( pcdKeyPair: ephemeralKeyPair, passportPublicKey: passportPublicKey)
         try self.paceCompleted( ksEnc: encKey, ksMac: macKey )
+        Log.debug("PACE SUCCESSFUL" )
     }
     
     /// Handles an error during the PACE process

@@ -10,7 +10,18 @@ import OpenSSL
 
 @available(iOS 13, macOS 10.15,*)
 public class SecurityInfo {
+    // Active Authentication OID
     static let ID_AA_OID = "2.23.136.1.1.5"
+
+    // Active Authentication Signature Algorithm OIDS
+    // Specified in BSI TR 03111 Section 5.2.1.
+    static let ECDSA_PLAIN_SIGNATURES = "0.4.0.127.0.7.1.1.4.1";
+    static let ECDSA_PLAIN_SHA1_OID = ECDSA_PLAIN_SIGNATURES + ".1"; // 0.4.0.127.0.7.1.1.4.1.1, ecdsa-plain-SHA1
+    static let ECDSA_PLAIN_SHA224_OID = ECDSA_PLAIN_SIGNATURES + ".2"; // 0.4.0.127.0.7.1.1.4.1.2, ecdsa-plain-SHA224
+    static let ECDSA_PLAIN_SHA256_OID = ECDSA_PLAIN_SIGNATURES + ".3"; // 0.4.0.127.0.7.1.1.4.1.3, ecdsa-plain-SHA256
+    static let ECDSA_PLAIN_SHA384_OID = ECDSA_PLAIN_SIGNATURES + ".4"; // 0.4.0.127.0.7.1.1.4.1.4, ecdsa-plain-SHA384
+    static let ECDSA_PLAIN_SHA512_OID = ECDSA_PLAIN_SIGNATURES + ".5"; // 0.4.0.127.0.7.1.1.4.1.5, ecdsa-plain-SHA512
+    static let ECDSA_PLAIN_RIPEMD160_OID = ECDSA_PLAIN_SIGNATURES + ".6"; // 0.4.0.127.0.7.1.1.4.1.6, ecdsa-plain-RIPEMD160
     
     // Chip Authentication Public Key OIDS
     static let ID_PK_DH_OID = "0.4.0.127.0.7.2.2.1.1"
@@ -91,7 +102,7 @@ public class SecurityInfo {
                 if optionalData == nil {
                     return ChipAuthenticationPublicKeyInfo(oid:oid, pubKey:subjectPublicKeyInfo);
                 } else {
-                    let keyId = Int(optionalData!.value)
+                    let keyId = Int(optionalData!.value, radix: 16)
                     return ChipAuthenticationPublicKeyInfo(oid:oid, pubKey:subjectPublicKeyInfo, keyId: keyId);
                 }
                 
@@ -99,7 +110,7 @@ public class SecurityInfo {
         } else if ChipAuthenticationInfo.checkRequiredIdentifier(oid) {
             let version = Int(requiredData.value) ?? -1
             if let optionalData = optionalData {
-                let keyId = Int(optionalData.value)
+                let keyId = Int(optionalData.value, radix: 16)
                 return ChipAuthenticationInfo(oid: oid, version: version, keyId: keyId);
             } else {
                 return ChipAuthenticationInfo(oid: oid, version: version);
@@ -112,8 +123,14 @@ public class SecurityInfo {
                 parameterId = Int(optionalData.value, radix:16)
             }
             return PACEInfo(oid: oid, version: version, parameterId: parameterId);
+        } else if ActiveAuthenticationInfo.checkRequiredIdentifier(oid) {
+            let version = Int(requiredData.value) ?? -1
+            if let optionalData = optionalData {
+                return ActiveAuthenticationInfo(oid: oid, version: version, signatureAlgorithmOID: optionalData.value)
+            } else {
+                return ActiveAuthenticationInfo(oid: oid, version: version)
+            }
         }
-        
         return nil
     }
 }
