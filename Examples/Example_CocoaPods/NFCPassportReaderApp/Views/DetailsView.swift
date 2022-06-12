@@ -66,7 +66,7 @@ struct DetailsView : View {
         if passport.isChipAuthenticationSupported {
             switch( passport.chipAuthenticationStatus ) {
                 case .notDone:
-                    chipAuth = "Supported"
+                    chipAuth = "Supported - Not done"
                 case .success:
                     chipAuth = "SUCCESS\nSignature verified"
                 case .failed:
@@ -86,7 +86,7 @@ struct DetailsView : View {
         if passport.isPACESupported {
             switch( passport.PACEStatus ) {
                 case .notDone:
-                    paceStatus = "Supported"
+                    paceStatus = "Supported - Not done"
                 case .success:
                     paceStatus = "SUCCESS"
                 case .failed:

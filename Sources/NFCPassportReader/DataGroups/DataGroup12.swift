@@ -7,7 +7,7 @@
 import Foundation
 
 @available(iOS 13, macOS 10.15, *)
-public class DataGroup12 : DataGroup {
+class DataGroup12 : DataGroup {
     
     public private(set) var issuingAuthority : String?
     public private(set) var dateOfIssue : String?
@@ -21,7 +21,7 @@ public class DataGroup12 : DataGroup {
     
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
-        datagroupType = .DG11
+        datagroupType = .DG12
     }
     
     override func parse(_ data: [UInt8]) throws {
@@ -40,7 +40,7 @@ public class DataGroup12 : DataGroup {
             if tag == 0x5F19 {
                 issuingAuthority = String( bytes:val, encoding:.utf8)
             } else if tag == 0x5F26 {
-                dateOfIssue = String( bytes:val, encoding:.utf8)
+                dateOfIssue = parseDateOfIssue(value: val)
             } else if tag == 0xA0 {
                 // Not yet handled
             } else if tag == 0x5F1B {
@@ -57,5 +57,21 @@ public class DataGroup12 : DataGroup {
                 personalizationDeviceSerialNr = String( bytes:val, encoding:.utf8)
             }
         } while pos < data.count
+    }
+    
+    private func parseDateOfIssue(value: [UInt8]) -> String? {
+        if value.count == 4 {
+            return decodeBCD(value: value)
+        } else {
+            return decodeASCII(value: value)
+        }
+    }
+    
+    private func decodeASCII(value: [UInt8]) -> String? {
+        return String(bytes:value, encoding:.utf8)
+    }
+    
+    private func decodeBCD(value: [UInt8]) -> String? {
+        value.map({ String(format: "%02X", $0) }).joined()
     }
 }

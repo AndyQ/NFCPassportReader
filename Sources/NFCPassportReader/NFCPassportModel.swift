@@ -24,21 +24,18 @@ public class NFCPassportModel {
     
     public private(set) lazy var documentType : String = { return String( passportDataElements?["5F03"]?.first ?? "?" ) }()
     public private(set) lazy var documentSubType : String = { return String( passportDataElements?["5F03"]?.last ?? "?" ) }()
-    public private(set) lazy var personalNumber : String = { return (passportDataElements?["53"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
     public private(set) lazy var documentNumber : String = { return (passportDataElements?["5A"] ?? "?").replacingOccurrences(of: "<", with: "" ) }()
     public private(set) lazy var issuingAuthority : String = { return passportDataElements?["5F28"] ?? "?" }()
     public private(set) lazy var documentExpiryDate : String = { return passportDataElements?["59"] ?? "?" }()
     public private(set) lazy var dateOfBirth : String = { return passportDataElements?["5F57"] ?? "?" }()
     public private(set) lazy var gender : String = { return passportDataElements?["5F35"] ?? "?" }()
     public private(set) lazy var nationality : String = { return passportDataElements?["5F2C"] ?? "?" }()
-
+    
     public private(set) lazy var lastName : String = {
-        let names = (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<")
         return names[0].replacingOccurrences(of: "<", with: " " )
     }()
     
     public private(set) lazy var firstName : String = {
-        let names = (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<")
         var name = ""
         for i in 1 ..< names.count {
             let fn = names[i].replacingOccurrences(of: "<", with: " " ).trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
@@ -50,6 +47,12 @@ public class NFCPassportModel {
     public private(set) lazy var passportMRZ : String = { return passportDataElements?["5F1F"] ?? "NOT FOUND" }()
     
     // Extract fields from DG11 if present
+    private lazy var names : [String] = {
+        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
+              let fullName = dg11.fullName?.components(separatedBy: " ") else { return (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<") }
+        return fullName
+    }()
+    
     public private(set) lazy var placeOfBirth : String? = {
         guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
               let placeOfBirth = dg11.placeOfBirth else { return nil }
@@ -68,6 +71,14 @@ public class NFCPassportModel {
         guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
               let telephone = dg11.telephone else { return nil }
         return telephone
+    }()
+    
+    /// personal number
+    public private(set) lazy var personalNumber : String? = {
+        if let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
+           let personalNumber = dg11.personalNumber { return personalNumber }
+        
+        return (passportDataElements?["53"] ?? "?").replacingOccurrences(of: "<", with: "" )
     }()
 
     public private(set) lazy var documentSigningCertificate : X509Wrapper? = {

@@ -336,6 +336,7 @@ extension PassportReader {
     }
     
     func readDataGroup( tagReader : TagReader, dgId : DataGroupId ) async throws -> DataGroup?  {
+
         self.currentlyReadingDataGroup = dgId
         Log.info( "Reading tag - \(dgId)" )
         var readAttempts = 0
