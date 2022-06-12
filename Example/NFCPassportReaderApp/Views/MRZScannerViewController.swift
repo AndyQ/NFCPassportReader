@@ -37,7 +37,7 @@ struct MRZScanner: UIViewControllerRepresentable {
         
         func mrzScannerView(_ mrzScannerView: QKMRZScannerView, didFind scanResult: QKMRZScanResult) {
             print(scanResult)
-            if let dob = scanResult.birthDate, let doe = scanResult.expiryDate {
+            if let dob = scanResult.birthdate, let doe = scanResult.expiryDate {
                 completionHandler(scanResult.documentNumber, dob, doe)
             }
         }

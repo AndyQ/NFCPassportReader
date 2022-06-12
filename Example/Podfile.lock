@@ -1,11 +1,11 @@
 PODS:
-  - NFCPassportReader (1.1.6):
+  - NFCPassportReader (1.1.9):
     - OpenSSL-Universal (= 1.1.180)
   - OpenSSL-Universal (1.1.180)
-  - QKMRZParser (1.0.1)
-  - QKMRZScanner (2.2.1):
-    - QKMRZParser
-    - SwiftyTesseract
+  - QKMRZParser (2.0.0)
+  - QKMRZScanner (3.0.0):
+    - QKMRZParser (~> 2.0.0)
+    - SwiftyTesseract (~> 3.1.3)
   - SwiftyTesseract (3.1.3)
 
 DEPENDENCIES:
@@ -24,12 +24,12 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  NFCPassportReader: 98329180c6f7199ca52f15a81bd3344588e2b1bc
+  NFCPassportReader: 3a4b15d28c89a1f747c957f2bce1230c268dba25
   OpenSSL-Universal: 1aa4f6a6ee7256b83db99ec1ccdaa80d10f9af9b
-  QKMRZParser: 07921dbffa7e4064406113731bc0f1f5e6210bce
-  QKMRZScanner: 6c755fa2c36ec70179a1f94cb4b179223fa68ef8
+  QKMRZParser: 6b419b6f07d6bff6b50429b97de10846dc902c29
+  QKMRZScanner: cf2348fd6ce441e758328da4adf231ef2b51d769
   SwiftyTesseract: 1f3d96668ae92dc2208d9842c8a59bea9fad2cbb
 
 PODFILE CHECKSUM: 2a3c78726daaedcccdc61fa2fbbb6b1c168fd70d
 
-COCOAPODS: 1.10.1
+COCOAPODS: 1.11.3

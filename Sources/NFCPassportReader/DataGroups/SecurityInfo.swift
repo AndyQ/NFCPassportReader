@@ -130,7 +130,7 @@ public class SecurityInfo {
             } else {
                 return ActiveAuthenticationInfo(oid: oid, version: version)
             }
-        
+        }
         return nil
     }
 }
