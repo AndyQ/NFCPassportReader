@@ -2,7 +2,7 @@
 
 This package handles reading an NFC Enabled passport using iOS 13 CoreNFC APIS
 
-** Version 2 (and the main branch) now uses Swift Async/Await for communication.  If you need an earlier version, please use 1.1.9 or below! **
+**Version 2 (and the main branch) now uses Swift Async/Await for communication.  If you need an earlier version, please use 1.1.9 or below!**
 
 Supported features:
 * Basic Access Control (BAC)
