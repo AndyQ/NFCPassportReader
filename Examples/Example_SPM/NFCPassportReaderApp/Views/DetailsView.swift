@@ -38,7 +38,7 @@ struct DetailsView : View {
     var body: some View {
         VStack {
             List {
-                ForEach( 0 ..< self.sectionNames.count ) { i in
+                ForEach( 0 ..< self.sectionNames.count, id: \.self) { i in
                     if self.sections[i].count > 0 {
                         SectionGroup(sectionTitle: self.sectionNames[i], items: self.sections[i])
                     }

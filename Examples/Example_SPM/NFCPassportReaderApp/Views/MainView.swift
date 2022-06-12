@@ -116,7 +116,7 @@ extension MainView {
     func parse( mrz:String ) -> (String, Date, Date)? {
         print( "mrz = \(mrz)")
         
-        let parser = MRZParser()
+        let parser = MRZParser(isOCRCorrectionEnabled: true)
         if let result = parser.parse(mrzString: mrz),
            let docNr = result.documentNumber,
            let dob = result.birthdate,
