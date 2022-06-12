@@ -150,6 +150,10 @@ struct DetailsView : View {
             } else if let pacei = secInfo as? PACEInfo {
                 title = "PACEInfo"
                 value = "\(pacei.getProtocolOIDString())\n\(pacei.getObjectIdentifier())\nParameter ID: \(pacei.getParameterId() ?? -1)"
+            } else if let activeAuthInfo = secInfo as? ActiveAuthenticationInfo {
+                title = "ActiveAuthenticationInfo"
+                value =
+                    "\(activeAuthInfo.getProtocolOIDString())\n\(activeAuthInfo.getSignatureAlgorithmOIDString() ?? "")"
             }
 
             items.append( Item(title:title, value: value))
