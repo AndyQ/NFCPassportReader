@@ -32,7 +32,7 @@ public class NFCPassportModel {
     public private(set) lazy var nationality : String = { return passportDataElements?["5F2C"] ?? "?" }()
     
     public private(set) lazy var lastName : String = {
-        return names[0].replacingOccurrences(of: "<", with: " " )
+        return names[0].replacingOccurrences(of: "<", with: " ")
     }()
     
     public private(set) lazy var firstName : String = {
@@ -49,7 +49,7 @@ public class NFCPassportModel {
     // Extract fields from DG11 if present
     private lazy var names : [String] = {
         guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
-              let fullName = dg11.fullName?.components(separatedBy: " ") else { return (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<") }
+              let fullName = dg11.fullName?.components(separatedBy: "<<") else { return (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<") }
         return fullName
     }()
     
