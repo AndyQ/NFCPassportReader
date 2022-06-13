@@ -11,7 +11,7 @@ import Foundation
 #if !os(macOS)
 import CoreNFC
 
-@available(iOS 13, *)
+@available(iOS 15, *)
 public class BACHandler {
     let KENC : [UInt8] = [0,0,0,1]
     let KMAC : [UInt8] = [0,0,0,2]
@@ -33,57 +33,34 @@ public class BACHandler {
         self.tagReader = tagReader
     }
 
-    public func performBACAndGetSessionKeys( mrzKey : String, completed: @escaping (_ error : NFCPassportReaderError?)->() ) {
+    public func performBACAndGetSessionKeys( mrzKey : String ) async throws {
         guard let tagReader = self.tagReader else {
-            completed( NFCPassportReaderError.NoConnectedTag)
-            return
+            throw NFCPassportReaderError.NoConnectedTag
         }
         
         Log.debug( "BACHandler - deriving Document Basic Access Keys" )
-        do {
-            _ = try self.deriveDocumentBasicAccessKeys(mrz: mrzKey)
-        } catch {
-            Log.error( "ERROR - \(error.localizedDescription)" )
-            completed( NFCPassportReaderError.InvalidDataPassed("Unable to derive BAC Keys - \(error.localizedDescription)") )
-            return
-
-        }
+        _ = try self.deriveDocumentBasicAccessKeys(mrz: mrzKey)
         
         // Make sure we clear secure messaging (could happen if we read an invalid DG or we hit a secure error
         tagReader.secureMessaging = nil
         
         // get Challenge
         Log.debug( "BACHandler - Getting initial challenge" )
-        tagReader.getChallenge() { [unowned self] (response, error) in
-            
-            guard let response = response else {
-                Log.error( "ERROR - \(error?.localizedDescription ?? "")" )
-                completed( error )
-                return
-            }
-            Log.verbose( "DATA - \(response.data)" )
-            
-            Log.debug( "BACHandler - Doing mutual authentication" )
-            let cmd_data = self.authentication(rnd_icc: [UInt8](response.data))
-            tagReader.doMutualAuthentication(cmdData: Data(cmd_data)) { [unowned self] (response, error) in
-                guard let response = response else {
-                    Log.error( "ERROR - \(error?.localizedDescription ?? "")" )
-                    completed( error )
-                    return
-                }
-                Log.verbose( "DATA - \(response.data)" )
-                
-                do {
-                    let (KSenc, KSmac, ssc) = try self.sessionKeys(data: [UInt8](response.data))
-                    tagReader.secureMessaging = SecureMessaging(ksenc: KSenc, ksmac: KSmac, ssc: ssc)
-                    Log.debug( "BACHandler - complete" )
-                    completed( nil)
-                } catch {
-                    Log.error( "ERROR - \(error.localizedDescription)" )
-                    completed( NFCPassportReaderError.InvalidDataPassed("Unable to derive BAC Keys - \(error.localizedDescription)") )
-                }
-            }
+        let response = try await tagReader.getChallenge()
+    
+        Log.verbose( "DATA - \(response.data)" )
+        
+        Log.debug( "BACHandler - Doing mutual authentication" )
+        let cmd_data = self.authentication(rnd_icc: [UInt8](response.data))
+        let maResponse = try await tagReader.doMutualAuthentication(cmdData: Data(cmd_data))
+        Log.debug( "DATA - \(maResponse.data)" )
+        guard maResponse.data.count > 0 else {
+            throw NFCPassportReaderError.InvalidMRZKey
         }
+        
+        let (KSenc, KSmac, ssc) = try self.sessionKeys(data: [UInt8](maResponse.data))
+        tagReader.secureMessaging = SecureMessaging(ksenc: KSenc, ksmac: KSmac, ssc: ssc)
+        Log.debug( "BACHandler - complete" )
     }
 
 
@@ -184,7 +161,7 @@ public class BACHandler {
     /// @param data: the data received from the mutual authenticate command send to the chip.
     /// @type data: a binary string
     /// @return: A set of two 16 bytes keys (KSenc, KSmac) and the SSC
-    public func sessionKeys(data : [UInt8] ) throws -> ([UInt8], [UInt8], [UInt8])  {
+    public func sessionKeys(data : [UInt8] ) throws -> ([UInt8], [UInt8], [UInt8]) {
         Log.verbose("Decrypt and verify received data and compare received RND.IFD with generated RND.IFD \(binToHexRep(self.ksmac))" )
         
         let response = tripleDESDecrypt(key: self.ksenc, message: [UInt8](data[0..<32]), iv: [0,0,0,0,0,0,0,0] )

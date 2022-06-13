@@ -11,7 +11,7 @@ import Foundation
 #if !os(macOS)
 import CoreNFC
 
-@available(iOS 13, *)
+@available(iOS 15, *)
 public class TagReader {
     var tag : NFCISO7816Tag
     var secureMessaging : SecureMessaging?
@@ -34,33 +34,32 @@ public class TagReader {
     }
 
 
-    func readDataGroup( dataGroup: DataGroupId, completed: @escaping ([UInt8]?, NFCPassportReaderError?)->() )  {
+    func readDataGroup( dataGroup: DataGroupId ) async throws -> [UInt8]  {
         guard let tag = dataGroup.getFileIDTag() else {
-            completed(nil, NFCPassportReaderError.UnsupportedDataGroup)
-            return
+            throw NFCPassportReaderError.UnsupportedDataGroup
         }
         
-        selectFileAndRead(tag: tag, completed:completed )
+        return try await selectFileAndRead(tag: tag )
     }
     
-    func getChallenge( completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+    func getChallenge() async throws -> ResponseAPDU{
         let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x84, p1Parameter: 0, p2Parameter: 0, data: Data(), expectedResponseLength: 8)
         
-        send( cmd: cmd, completed: completed )
+        return try await send( cmd: cmd )
     }
     
-    func doInternalAuthentication( challenge: [UInt8], completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+    func doInternalAuthentication( challenge: [UInt8] ) async throws -> ResponseAPDU {
         let randNonce = Data(challenge)
         
         let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 256)
 
-        send( cmd: cmd, completed: completed )
+        return try await send( cmd: cmd )
     }
 
-    func doMutualAuthentication( cmdData : Data, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+    func doMutualAuthentication( cmdData : Data ) async throws -> ResponseAPDU{
         let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x82, p1Parameter: 0, p2Parameter: 0, data: cmdData, expectedResponseLength: 256)
 
-        send( cmd: cmd, completed: completed )
+        return try await send( cmd: cmd )
     }
     
     /// The MSE KAT APDU, see EAC 1.11 spec, Section B.1.
@@ -68,7 +67,7 @@ public class TagReader {
     /// - Parameter keyData key data object (tag 0x91)
     /// - Parameter idData key id data object (tag 0x84), can be null
     /// - Parameter completed the complete handler - returns the success response or an error
-    func sendMSEKAT( keyData : Data, idData: Data?, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+    func sendMSEKAT( keyData : Data, idData: Data? ) async throws -> ResponseAPDU {
         
         var data = keyData
         if let idData = idData {
@@ -77,7 +76,7 @@ public class TagReader {
         
         let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x22, p1Parameter: 0x41, p2Parameter: 0xA6, data: data, expectedResponseLength: 256)
         
-        send( cmd: cmd, completed: completed )
+        return try await send( cmd: cmd )
     }
     
     /// The  MSE Set AT for Chip Authentication.
@@ -88,7 +87,7 @@ public class TagReader {
     /// - Parameter oid the OID
     /// - Parameter keyId the keyId or {@code null}
     /// - Parameter completed the complete handler - returns the success response or an error
-    func sendMSESetATIntAuth( oid: String, keyId: Int?, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+    func sendMSESetATIntAuth( oid: String, keyId: Int? ) async throws -> ResponseAPDU {
         
         let cmd : NFCISO7816APDU
         let oidBytes = oidToBytes(oid: oid, replaceTag: true)
@@ -103,10 +102,10 @@ public class TagReader {
             cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x22, p1Parameter: 0x41, p2Parameter: 0xA4, data: Data(oidBytes), expectedResponseLength: 256)
         }
         
-        send( cmd: cmd, completed: completed )
+        return try await send( cmd: cmd )
     }
     
-    func sendMSESetATMutualAuth( oid: String, keyType: UInt8, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+    func sendMSESetATMutualAuth( oid: String, keyType: UInt8 ) async throws -> ResponseAPDU {
         
         let oidBytes = oidToBytes(oid: oid, replaceTag: true)
         let keyTypeBytes = wrapDO( b: 0x83, arr:[keyType])
@@ -115,7 +114,7 @@ public class TagReader {
             
         let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x22, p1Parameter: 0xC1, p2Parameter: 0xA4, data: Data(data), expectedResponseLength: 256)
         
-        send( cmd: cmd, completed: completed )
+        return try await send( cmd: cmd )
     }
     
 
@@ -125,7 +124,7 @@ public class TagReader {
     /// - Parameter lengthExpected the expected length defaults to 256
     /// - Parameter isLast indicates whether this is the last command in the chain
     /// - Parameter completed the complete handler - returns the dynamic authentication data without the {@code 0x7C} prefix (this method will remove it) or an error
-    func sendGeneralAuthenticate( data : [UInt8], lengthExpected : Int = 256, isLast: Bool, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+    func sendGeneralAuthenticate( data : [UInt8], lengthExpected : Int = 256, isLast: Bool) async throws -> ResponseAPDU {
 
         let wrappedData = wrapDO(b:0x7C, arr:data)
         let commandData = Data(wrappedData)
@@ -139,89 +138,80 @@ public class TagReader {
         let INS_BSI_GENERAL_AUTHENTICATE : UInt8 = 0x86
         
         let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: instructionClass, instructionCode: INS_BSI_GENERAL_AUTHENTICATE, p1Parameter: 0x00, p2Parameter: 0x00, data: commandData, expectedResponseLength: lengthExpected)
-        send( cmd: cmd, completed: { [unowned self] (response, error) in
-            // Check for error
-            if let error = error {
-                // If wrong length error
-                if case NFCPassportReaderError.ResponseError(_, let sw1, let sw2) = error,
-                   sw1 == 0x67, sw2 == 0x00 {
-                    
-                    // Resend
-                    let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: instructionClass, instructionCode: INS_BSI_GENERAL_AUTHENTICATE, p1Parameter: 0x00, p2Parameter: 0x00, data: commandData, expectedResponseLength: 256)
-                    send( cmd: cmd, completed: { (response, error) in
-                        if let response = response {
-                            // Success
-                            do {
-                                var retResponse = response
-                                retResponse.data = try unwrapDO( tag:0x7c, wrappedData:retResponse.data)
-
-                                completed( retResponse, nil)
-                            } catch {
-                                completed( nil, NFCPassportReaderError.InvalidASN1Value)
-                            }
-                        } else {
-                            completed( nil, error)
-                        }
-                    })
-                } else {
-                    completed( nil, error)
-                }
+        var response : ResponseAPDU
+        do {
+            response = try await send( cmd: cmd )
+            response.data = try unwrapDO( tag:0x7c, wrappedData:response.data)
+        } catch {
+            // If wrong length error
+            if case NFCPassportReaderError.ResponseError(_, let sw1, let sw2) = error,
+               sw1 == 0x67, sw2 == 0x00 {
+                
+                // Resend
+                let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: instructionClass, instructionCode: INS_BSI_GENERAL_AUTHENTICATE, p1Parameter: 0x00, p2Parameter: 0x00, data: commandData, expectedResponseLength: 256)
+                response = try await send( cmd: cmd )
+                response.data = try unwrapDO( tag:0x7c, wrappedData:response.data)
             } else {
-                // Success
-                if let response = response {
-                    do {
-                        var retResponse = response
-                        retResponse.data = try unwrapDO( tag:0x7c, wrappedData:retResponse.data)
-                        
-                        completed( retResponse, nil)
-                    } catch {
-                        completed( nil, NFCPassportReaderError.InvalidASN1Value)
-                    }
-                } else {
-                    completed( nil, error)
-                }
+                throw error
             }
-        })
+        }
+        return response
     }
     
 
-    var header = [UInt8]()
-    func selectFileAndRead( tag: [UInt8], completed: @escaping ([UInt8]?, NFCPassportReaderError?)->() ) {
-        selectFile(tag: tag ) { [unowned self] (resp,err) in
-            if let error = err {
-                completed( nil, error)
-                return
-            }
+    func selectFileAndRead( tag: [UInt8]) async throws -> [UInt8] {
+        var resp = try await selectFile(tag: tag )
             
-            // Read first 4 bytes of header to see how big the data structure is
-            let data : [UInt8] = [0x00, 0xB0, 0x00, 0x00, 0x00, 0x00,0x04]
-            //print( "--------------------------------------\nSending \(binToHexRep(data))" )
-            let cmd = NFCISO7816APDU(data:Data(data))!
-            self.send( cmd: cmd ) { [unowned self] (resp,err) in
-                guard let response = resp else {
-                    completed( nil, err)
-                    return
-                }
-                // Header looks like:  <tag><length of data><nextTag> e.g.60145F01 -
-                // the total length is the 2nd value plus the two header 2 bytes
-                // We've read 4 bytes so we now need to read the remaining bytes from offset 4
-                var leftToRead = 0
-                
-                let (len, o) = try! asn1Length([UInt8](response.data[1..<4]))
-                leftToRead = Int(len)
-                let offset = o + 1
-                
-                //print( "Got \(binToHexRep(response.data)) which is \(leftToRead) bytes with offset \(o)" )
-                self.header = [UInt8](response.data[..<offset])//response.data
-
-                Log.debug( "TagReader - Number of data bytes to read - \(leftToRead)" )
-                self.readBinaryData(leftToRead: leftToRead, amountRead: offset, completed: completed)
-
-            }
+        // Read first 4 bytes of header to see how big the data structure is
+        guard let readHeaderCmd = NFCISO7816APDU(data:Data([0x00, 0xB0, 0x00, 0x00, 0x00, 0x00,0x04])) else {
+            throw NFCPassportReaderError.UnexpectedError
         }
+        resp = try await self.send( cmd: readHeaderCmd )
+
+        // Header looks like:  <tag><length of data><nextTag> e.g.60145F01 -
+        // the total length is the 2nd value plus the two header 2 bytes
+        // We've read 4 bytes so we now need to read the remaining bytes from offset 4
+        let (len, o) = try! asn1Length([UInt8](resp.data[1..<4]))
+        var remaining = Int(len)
+        var amountRead = o + 1
+        
+        var data = [UInt8](resp.data[..<amountRead])
+        
+        Log.debug( "TagReader - Number of data bytes to read - \(remaining)" )
+        
+        var readAmount : Int = maxDataLengthToRead
+        while remaining > 0 {
+            if maxDataLengthToRead != 256 && remaining < maxDataLengthToRead {
+                readAmount = remaining
+            }
+
+            self.progress?( Int(Float(amountRead) / Float(remaining+amountRead ) * 100))
+            let offset = intToBin(amountRead, pad:4)
+
+            Log.verbose( "TagReader - data bytes remaining: \(remaining), will read : \(readAmount)" )
+            let cmd = NFCISO7816APDU(
+                instructionClass: 00,
+                instructionCode: 0xB0,
+                p1Parameter: offset[0],
+                p2Parameter: offset[1],
+                data: Data(),
+                expectedResponseLength: readAmount
+            )
+            resp = try await self.send( cmd: cmd )
+
+            Log.verbose( "TagReader - got resp - \(binToHexRep(resp.data, asArray: true)), sw1 : \(resp.sw1), sw2 : \(resp.sw2)" )
+            data += resp.data
+            
+            remaining -= resp.data.count
+            amountRead += resp.data.count
+            Log.verbose( "TagReader - Amount of data left to read - \(remaining)" )
+        }
+        
+        return data
     }
 
-    func readCardAccess( completed: @escaping ([UInt8]?, NFCPassportReaderError?)->() ) {
+
+    func readCardAccess() async throws -> [UInt8]{
         // Info provided by @smulu
         // By default NFCISO7816Tag requirers a list of ISO/IEC 7816 applets (AIDs). Upon discovery of NFC tag the first found applet from this list is automatically selected (and you have no way of changing this).
         // This is a problem for PACE protocol becaues it requires reading parameters from file EF.CardAccess which lies outside of eMRTD applet (AID: A0000002471001) in the master file.
@@ -234,130 +224,66 @@ public class TagReader {
         // First select master file
         let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 0x00, instructionCode: 0xA4, p1Parameter: 0x00, p2Parameter: 0x0C, data: Data([0x3f,0x00]), expectedResponseLength: 256)
         
-        send( cmd: cmd) { response, error in
-            if let error = error {
-                completed( nil, error )
-                return
-            }
+        _ = try await send( cmd: cmd)
             
-            // Now read EC.CardAccess
-            self.selectFileAndRead(tag: [0x01,0x1C]) { data, error in
-                completed( data, error)
-            }
-        }
+        // Now read EC.CardAccess
+        let data = try await self.selectFileAndRead(tag: [0x01,0x1C])
+        return data
     }
     
-    func selectPassportApplication( completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+    func selectPassportApplication() async throws -> ResponseAPDU {
         // Finally reselect the eMRTD application so the rest of the reading works as normal
         Log.debug( "Re-selecting eMRTD Application" )
         let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 0x00, instructionCode: 0xA4, p1Parameter: 0x04, p2Parameter: 0x0C, data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]), expectedResponseLength: 256)
         
-        self.send( cmd: cmd) { response, error in
-            completed( response, nil)
-        }
-
+        let response = try await self.send( cmd: cmd)
+        return response
     }
     
-
-    func selectFile( tag: [UInt8], completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
+    func selectFile( tag: [UInt8] ) async throws -> ResponseAPDU {
         
         let data : [UInt8] = [0x00, 0xA4, 0x02, 0x0C, 0x02] + tag
         let cmd = NFCISO7816APDU(data:Data(data))!
         
-        send( cmd: cmd, completed: completed )
-    }
-    
-    func readBinaryData( leftToRead: Int, amountRead : Int, completed: @escaping ([UInt8]?, NFCPassportReaderError?)->() ) {
-        var readAmount : Int = maxDataLengthToRead
-        if maxDataLengthToRead != 256 && leftToRead < maxDataLengthToRead {
-            readAmount = leftToRead
-        }
-        
-        self.progress?( Int(Float(amountRead) / Float(leftToRead+amountRead ) * 100))
-        let offset = intToBin(amountRead, pad:4)
-
-        let cmd = NFCISO7816APDU(
-            instructionClass: 00,
-            instructionCode: 0xB0,
-            p1Parameter: offset[0],
-            p2Parameter: offset[1],
-            data: Data(),
-            expectedResponseLength: readAmount
-        )
-
-        Log.verbose( "TagReader - data bytes remaining: \(leftToRead), will read : \(readAmount)" )
-        self.send( cmd: cmd ) { (resp,err) in
-            guard let response = resp else {
-                completed( nil, err)
-                return
-            }
-            Log.verbose( "TagReader - got resp - \(response)" )
-            self.header += response.data
-            
-            let remaining = leftToRead - response.data.count
-            Log.verbose( "TagReader - Amount of data left to read - \(remaining)" )
-            if remaining > 0 {
-                self.readBinaryData(leftToRead: remaining, amountRead: amountRead + response.data.count, completed: completed )
-            } else {
-                completed( self.header, err )
-            }
-            
-        }
+        return try await send( cmd: cmd )
     }
 
-    
-    func send( cmd: NFCISO7816APDU, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
-        
+    func send( cmd: NFCISO7816APDU ) async throws -> ResponseAPDU {
         Log.verbose( "TagReader - sending \(cmd)" )
         var toSend = cmd
         if let sm = secureMessaging {
-            do {
-                toSend = try sm.protect(apdu:cmd)
-            } catch {
-                completed( nil, NFCPassportReaderError.UnableToProtectAPDU )
-            }
+            toSend = try sm.protect(apdu:cmd)
             Log.verbose("TagReader - [SM] \(toSend)" )
         }
-
-        tag.sendCommand(apdu: toSend) { [unowned self] (data, sw1, sw2, error) in
-            if let error = error {
-                Log.error( "TagReader - Error reading tag - \(error.localizedDescription))" )
-                completed( nil, NFCPassportReaderError.ResponseError( error.localizedDescription, sw1, sw2 ) )
-            } else {
-                Log.verbose( "TagReader - Received response" )
-                var rep = ResponseAPDU(data: [UInt8](data), sw1: sw1, sw2: sw2)
-
-                if let sm = self.secureMessaging {
-                    do {
-                        rep = try sm.unprotect(rapdu:rep)
-                        Log.verbose(String(format:"TagReader [SM - unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
-                    } catch {
-                        completed( nil, NFCPassportReaderError.UnableToUnprotectAPDU )
-                        return
-                    }
-                } else {
-                    Log.verbose(String(format:"TagReader [unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
-
-                }
-                
-                if rep.sw1 == 0x90 && rep.sw2 == 0x00 {
-                    completed( rep, nil )
-                } else {
-                    Log.error( "Error reading tag: sw1 - 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2))" )
-                    let tagError: NFCPassportReaderError
-                    if (rep.sw1 == 0x63 && rep.sw2 == 0x00) {
-                        tagError = NFCPassportReaderError.InvalidMRZKey
-                    } else {
-                        let errorMsg = self.decodeError(sw1: rep.sw1, sw2: rep.sw2)
-                        Log.error( "reason: \(errorMsg)" )
-                        tagError = NFCPassportReaderError.ResponseError( errorMsg, sw1, sw2 )
-                    }
-                    completed( nil, tagError)
-                }
-            }
+        
+        let (data, sw1, sw2) = try await tag.sendCommand(apdu: toSend)
+        Log.verbose( "TagReader - Received response" )
+        var rep = ResponseAPDU(data: [UInt8](data), sw1: sw1, sw2: sw2)
+        
+        if let sm = self.secureMessaging {
+            rep = try sm.unprotect(rapdu:rep)
+            Log.verbose(String(format:"TagReader [SM - unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
+        } else {
+            Log.verbose(String(format:"TagReader [unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
+            
         }
+        
+        if rep.sw1 != 0x90 && rep.sw2 != 0x00 {
+            Log.error( "Error reading tag: sw1 - 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2))" )
+            let tagError: NFCPassportReaderError
+            if (rep.sw1 == 0x63 && rep.sw2 == 0x00) {
+                tagError = NFCPassportReaderError.InvalidMRZKey
+            } else {
+                let errorMsg = self.decodeError(sw1: rep.sw1, sw2: rep.sw2)
+                Log.error( "reason: \(errorMsg)" )
+                tagError = NFCPassportReaderError.ResponseError( errorMsg, sw1, sw2 )
+            }
+            throw tagError
+        }
+
+        return rep
     }
-    
+
     private func decodeError( sw1: UInt8, sw2:UInt8 ) -> String {
 
         let errors : [UInt8 : [UInt8:String]] = [

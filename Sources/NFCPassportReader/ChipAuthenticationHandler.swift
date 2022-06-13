@@ -12,7 +12,7 @@ import OpenSSL
 import CoreNFC
 import CryptoKit
 
-@available(iOS 13, *)
+@available(iOS 15, *)
 class ChipAuthenticationHandler {
     
     private static let NO_PACE_KEY_REFERENCE : UInt8 = 0x00
@@ -28,8 +28,6 @@ class ChipAuthenticationHandler {
     var chipAuthInfos = [Int:ChipAuthenticationInfo]()
     var chipAuthPublicKeyInfos = [ChipAuthenticationPublicKeyInfo]()
     
-    var completedHandler : ((Bool)->())?
-
     var isChipAuthenticationSupported : Bool = false
     
     public init(dg14 : DataGroup14, tagReader: TagReader) {
@@ -49,30 +47,35 @@ class ChipAuthenticationHandler {
         }
     }
 
-    public func doChipAuthentication( completed: @escaping (Bool)->() ) {
-        
-        self.completedHandler = completed
-        
+    public func doChipAuthentication() async throws  {
+                
         Log.info( "Performing Chip Authentication - number of public keys found - \(chipAuthPublicKeyInfos.count)" )
         guard isChipAuthenticationSupported else {
-            completed( false )
-            return
+            throw NFCPassportReaderError.NotYetSupported( "ChipAuthentication not supported" )
         }
-         
-        self.doChipAuthenticationForNextPublicKey()
+        
+        var success = false
+        for pubKey in chipAuthPublicKeyInfos {
+            do {
+                success = try await self.doChipAuthentication( with: pubKey)
+                if success {
+                    break
+                }
+            } catch {
+                // try next key
+            }
+        }
+        
+        if !success {
+            throw NFCPassportReaderError.ChipAuthenticationFailed
+        }
     }
     
-    private func doChipAuthenticationForNextPublicKey( ) {
-        // If no more public keys to try then we've failed
-        guard chipAuthPublicKeyInfos.count > 0 else {
-            completedHandler?( true )
-            return
-        }
+    private func doChipAuthentication( with chipAuthPublicKeyInfo : ChipAuthenticationPublicKeyInfo ) async throws -> Bool {
         
         // So it turns out that some passports don't have ChipAuthInfo items.
         // So if we do have a ChipAuthInfo the we take the keyId (if present) and OID from there,
         // BUT if we don't then we will try to infer the OID from the public key
-        let chipAuthPublicKeyInfo = chipAuthPublicKeyInfos.removeFirst()
         let keyId = chipAuthPublicKeyInfo.keyId
         let chipAuthInfoOID : String
         if let chipAuthInfo = chipAuthInfos[keyId ?? 0] {
@@ -81,28 +84,12 @@ class ChipAuthenticationHandler {
             if let oid = inferOID( fromPublicKeyOID:chipAuthPublicKeyInfo.oid) {
                 chipAuthInfoOID = oid
             } else {
-                self.doChipAuthenticationForNextPublicKey()
-                return
+                return false
             }
         }
         
-        do {
-            Log.info("Starting Chip Authentication!")
-            // For each public key, do chipauth
-            try self.doCA( keyId: keyId, encryptionDetailsOID: chipAuthInfoOID, publicKey: chipAuthPublicKeyInfo.pubKey, completed: { [unowned self] (success) in
-                
-                Log.info("Finished Chip Authentication - success - \(success)")
-                if !success {
-                    self.doChipAuthenticationForNextPublicKey()
-                } else {
-                    completedHandler?( true )
-                }
-            })
-        } catch {
-            Log.error( "ERROR! - \(error)" )
-            doChipAuthenticationForNextPublicKey()
-
-        }
+        try await self.doCA( keyId: keyId, encryptionDetailsOID: chipAuthInfoOID, publicKey: chipAuthPublicKeyInfo.pubKey )
+        return true
     }
     
     /// Infer OID from public key type - Best guess seems to be to use 3DES_CBC_CBC for both ECDH and DH keys
@@ -120,7 +107,7 @@ class ChipAuthenticationHandler {
         return nil;
     }
     
-    private func doCA( keyId: Int?, encryptionDetailsOID oid: String, publicKey: OpaquePointer, completed: @escaping (Bool)->() ) throws {
+    private func doCA( keyId: Int?, encryptionDetailsOID oid: String, publicKey: OpaquePointer) async throws {
         
         // Generate Ephemeral Keypair from parameters from DG14 Public key
         // This should work for both EC and DH keys
@@ -131,36 +118,22 @@ class ChipAuthenticationHandler {
         EVP_PKEY_CTX_free(pctx)
         
         // Send the public key to the passport
-        try sendPublicKey(oid: oid, keyId: keyId, pcdPublicKey: ephemeralKeyPair!, completed: { [unowned self] (response, err) in
+        try await sendPublicKey(oid: oid, keyId: keyId, pcdPublicKey: ephemeralKeyPair!)
             
-            if let error = err {
-                print( "ERROR! - \(error.localizedDescription)" )
-                completed(false)
-                return
-            }
-            
-            Log.debug( "Public Key successfully sent to passport!" )
-            
-            // Use our ephemeral private key and the passports public key to generate a shared secret
-            // (the passport with do the same thing with their private key and our public key)
-            let sharedSecret = OpenSSLUtils.computeSharedSecret(privateKeyPair:ephemeralKeyPair!, publicKey:publicKey)
-            
-            // Now try to restart Secure Messaging using the new shared secret and
-            do {
-                try restartSecureMessaging( oid : oid, sharedSecret : sharedSecret, maxTranceiveLength : 1, shouldCheckMAC : true)
-                completed(true)
-            } catch {
-                Log.error( "Failed to restart secure messaging - \(error)" )
-                completed(false)
-            }
-        })
+        Log.debug( "Public Key successfully sent to passport!" )
+        
+        // Use our ephemeral private key and the passports public key to generate a shared secret
+        // (the passport with do the same thing with their private key and our public key)
+        let sharedSecret = OpenSSLUtils.computeSharedSecret(privateKeyPair:ephemeralKeyPair!, publicKey:publicKey)
+        
+        // Now try to restart Secure Messaging using the new shared secret and
+        try restartSecureMessaging( oid : oid, sharedSecret : sharedSecret, maxTranceiveLength : 1, shouldCheckMAC : true)
     }
     
-    private func sendPublicKey(oid : String, keyId : Int?, pcdPublicKey : OpaquePointer, completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->()) throws {
+    private func sendPublicKey(oid : String, keyId : Int?, pcdPublicKey : OpaquePointer) async throws {
         let cipherAlg = try ChipAuthenticationInfo.toCipherAlgorithm(oid: oid)
         guard let keyData = OpenSSLUtils.getPublicKeyData(from: pcdPublicKey) else {
-            completed(nil, NFCPassportReaderError.InvalidDataPassed("Unable to get public key data from public key" ))
-            return
+            throw NFCPassportReaderError.InvalidDataPassed("Unable to get public key data from public key" )
         }
         
         if cipherAlg.hasPrefix("DESede") {
@@ -171,40 +144,26 @@ class ChipAuthenticationHandler {
                 idData = wrapDO( b:0x84, arr:idData)
             }
             let wrappedKeyData = wrapDO( b:0x91, arr:keyData)
-            self.tagReader?.sendMSEKAT(keyData: Data(wrappedKeyData), idData: Data(idData), completed: completed)
+            _ = try await self.tagReader?.sendMSEKAT(keyData: Data(wrappedKeyData), idData: Data(idData))
         } else if cipherAlg.hasPrefix("AES") {
-            self.tagReader?.sendMSESetATIntAuth(oid: oid, keyId: keyId, completed: { [unowned self] response, error in
-                // Handle Error
-                if let error = error {
-                    completed(nil, error)
-                } else {
-                    let data = wrapDO(b: 0x80, arr:keyData)
-                    gaSegments = self.chunk(data: data, segmentSize: ChipAuthenticationHandler.COMMAND_CHAINING_CHUNK_SIZE )
-                    self.handleGeneralAuthentication( completed: completed )
-                }
-            })
+            _ = try await self.tagReader?.sendMSESetATIntAuth(oid: oid, keyId: keyId)
+            let data = wrapDO(b: 0x80, arr:keyData)
+            gaSegments = self.chunk(data: data, segmentSize: ChipAuthenticationHandler.COMMAND_CHAINING_CHUNK_SIZE )
+            try await self.handleGeneralAuthentication()
         } else {
-            completed( nil, NFCPassportReaderError.InvalidDataPassed("Cipher Algorithm \(cipherAlg) not supported"))
+            throw NFCPassportReaderError.InvalidDataPassed("Cipher Algorithm \(cipherAlg) not supported")
         }
     }
     
-    private func handleGeneralAuthentication( completed: @escaping (ResponseAPDU?, NFCPassportReaderError?)->() ) {
-        // Pull next segment from list
-        let segment = gaSegments.removeFirst()
-        let isLast = gaSegments.isEmpty
+    private func handleGeneralAuthentication() async throws {
+        repeat {
+            // Pull next segment from list
+            let segment = gaSegments.removeFirst()
+            let isLast = gaSegments.isEmpty
         
-        // send it
-        self.tagReader?.sendGeneralAuthenticate(data: segment, isLast: isLast, completed: { [unowned self] response, error in
-            if let error = error {
-                completed( nil, error )
-            } else {
-                if isLast {
-                    completed( response, error )
-                } else {
-                    self.handleGeneralAuthentication( completed: completed )
-                }
-            }
-        })
+            // send it
+            _ = try await self.tagReader?.sendGeneralAuthenticate(data: segment, isLast: isLast)
+        } while ( !gaSegments.isEmpty )
     }
         
     private func restartSecureMessaging( oid : String, sharedSecret : [UInt8], maxTranceiveLength : Int, shouldCheckMAC : Bool) throws  {

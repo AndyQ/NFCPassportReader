@@ -1,5 +1,10 @@
 v1.1.9
    Retrieves names from DG11 if present otherwise fall back to DG1 - thanks @TerjeLon
+   Fixed bug with Chip Authentication - thanks @pauphi and @jennytellne-cygni 
+   Fix Active Authentication with ECDSA signature - thanks @pauphi
+   Fix for CA when keyId is not nil - thanks @pauphi
+
+   This will be the last < iOS 13 version as will be moving to async/await
 
 v1.1.8
    Retrieves personal  number from DG11 (if its present) otherwise fall back to DG1 (as per ICAO Docs) - thanks @TerjeLon
@@ -28,6 +33,7 @@ v1.1.4
    Fixed use of ephemeral params that managed to get reverted!
    Added a couple of addition error messages to TagReader
    Added MRZ key logging
+   Added ability to turn off logging completely
 
 v1.1.3
     Fix for some ECDSA based message digests which seem to have invalid format (0x00 prefixed on the integers)
