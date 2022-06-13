@@ -114,6 +114,7 @@ extension PassportReader : NFCTagReaderSessionDelegate {
         // If necessary, you may handle the error. Note session is no longer valid.
         // You must create a new session to restart RF polling.
         Log.debug( "tagReaderSession:didInvalidateWithError - \(error.localizedDescription)" )
+        self.readerSession?.invalidate()
         self.readerSession = nil
 
         if let readerError = error as? NFCReaderError, readerError.code == NFCReaderError.readerSessionInvalidationErrorUserCanceled
