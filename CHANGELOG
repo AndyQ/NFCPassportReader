@@ -1,3 +1,8 @@
+v2.0.0
+   Switched app over to user async/await - makes the code paths much simpler
+   Added fix for DG11 names - thanks @TerjeLon 
+   Added fix for missing reader session invalidation - thanks @TerjeLon
+
 v1.1.9
    Retrieves names from DG11 if present otherwise fall back to DG1 - thanks @TerjeLon
    Fixed bug with Chip Authentication - thanks @pauphi and @jennytellne-cygni 
