@@ -12,7 +12,7 @@ import OpenSSL
 import CoreNFC
 import CryptoKit
 
-@available(iOS 15, *)
+@available(iOS 13, *)
 class ChipAuthenticationHandler {
     
     private static let NO_PACE_KEY_REFERENCE : UInt8 = 0x00
