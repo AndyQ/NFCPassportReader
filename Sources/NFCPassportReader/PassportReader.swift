@@ -31,7 +31,8 @@ public class PassportReader : NSObject {
     private var bacHandler : BACHandler?
     private var caHandler : ChipAuthenticationHandler?
     private var paceHandler : PACEHandler?
-    private var mrzKey : String = ""
+    private var accessKey : String = ""
+    private var paceKeyReference : UInt8?
     private var dataAmountToReadOverride : Int? = nil
     
     private var scanCompletedHandler: ((NFCPassportModel?, NFCPassportReaderError?)->())!
@@ -61,11 +62,12 @@ public class PassportReader : NSObject {
     public func overrideNFCDataAmountToRead( amount: Int ) {
         dataAmountToReadOverride = amount
     }
-    
-    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
-        
+
+    public func readPassport( accessKey : String, paceKeyReference: UInt8, tags : [DataGroupId] = [], skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
+
         self.passport = NFCPassportModel()
-        self.mrzKey = mrzKey
+        self.accessKey = accessKey
+        self.paceKeyReference = paceKeyReference
         self.skipCA = skipCA
         self.skipPACE = skipPACE
         
@@ -228,7 +230,7 @@ extension PassportReader {
                 Log.info( "Starting Password Authenticated Connection Establishment (PACE)" )
                  
                 let paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
-                try await paceHandler.doPACE(mrzKey: mrzKey )
+                try await paceHandler.doPACE(paceKeySeed: accessKey, paceKeyReference: paceKeyReference ?? PACEHandler.NO_PACE_KEY_REFERENCE)
                 passport.PACEStatus = .success
                 Log.debug( "PACE Succeeded" )
             } catch {
@@ -282,7 +284,10 @@ extension PassportReader {
         self.passport.BACStatus = .failed
 
         self.bacHandler = BACHandler( tagReader: tagReader )
-        try await bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey )
+        guard paceKeyReference == PACEHandler.MRZ_PACE_KEY_REFERENCE else {
+            throw NFCPassportReaderError.InvalidMRZKey
+        }
+        try await bacHandler?.performBACAndGetSessionKeys( mrzKey: accessKey )
         Log.info( "Basic Access Control (BAC) - SUCCESS!" )
 
         self.passport.BACStatus = .success
