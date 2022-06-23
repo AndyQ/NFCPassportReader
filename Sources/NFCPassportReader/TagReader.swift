@@ -160,8 +160,13 @@ public class TagReader {
     
 
     func selectFileAndRead( tag: [UInt8]) async throws -> [UInt8] {
-        var resp = try await selectFile(tag: tag )
-            
+        _ = try await selectFile(tag: tag )
+        return try await readSelectedFile()
+    }
+
+    public func readSelectedFile() async throws -> [UInt8] {
+        var resp: ResponseAPDU
+
         // Read first 4 bytes of header to see how big the data structure is
         guard let readHeaderCmd = NFCISO7816APDU(data:Data([0x00, 0xB0, 0x00, 0x00, 0x00, 0x00,0x04])) else {
             throw NFCPassportReaderError.UnexpectedError
@@ -231,7 +236,7 @@ public class TagReader {
         return data
     }
     
-    func selectPassportApplication() async throws -> ResponseAPDU {
+    public func selectPassportApplication() async throws -> ResponseAPDU {
         // Finally reselect the eMRTD application so the rest of the reading works as normal
         Log.debug( "Re-selecting eMRTD Application" )
         let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 0x00, instructionCode: 0xA4, p1Parameter: 0x04, p2Parameter: 0x0C, data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]), expectedResponseLength: 256)
@@ -248,10 +253,10 @@ public class TagReader {
         return try await send( cmd: cmd )
     }
 
-    func send( cmd: NFCISO7816APDU ) async throws -> ResponseAPDU {
+    public func send(cmd: NFCISO7816APDU, secureMessagingEnabled: Bool = true, skipResponseCheck: Bool = false) async throws -> ResponseAPDU {
         Log.verbose( "TagReader - sending \(cmd)" )
         var toSend = cmd
-        if let sm = secureMessaging {
+        if let sm = secureMessaging, secureMessagingEnabled == true {
             toSend = try sm.protect(apdu:cmd)
             Log.verbose("TagReader - [SM] \(toSend)" )
         }
@@ -260,14 +265,18 @@ public class TagReader {
         Log.verbose( "TagReader - Received response" )
         var rep = ResponseAPDU(data: [UInt8](data), sw1: sw1, sw2: sw2)
         
-        if let sm = self.secureMessaging {
+        if let sm = self.secureMessaging, secureMessagingEnabled == true {
             rep = try sm.unprotect(rapdu:rep)
             Log.verbose(String(format:"TagReader [SM - unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
         } else {
             Log.verbose(String(format:"TagReader [unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
             
         }
-        
+
+        guard skipResponseCheck == false else {
+            return rep
+        }
+
         if rep.sw1 != 0x90 && rep.sw2 != 0x00 {
             Log.error( "Error reading tag: sw1 - 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2))" )
             let tagError: NFCPassportReaderError
