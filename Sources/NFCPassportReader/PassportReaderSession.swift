@@ -14,7 +14,7 @@ import CoreNFC
 @available(iOS 13, *)
 public class PassportReaderSession : NSObject {
     
-    public typealias PassportCommunicationSession = (reader: TagReader, passport: NFCPassportModel, endSessionBlock: (() -> Void))
+    public typealias PassportCommunicationSession = (reader: TagReader, passport: NFCPassportModel, endSessionBlock: ((_ success: Bool) -> Void))
     private typealias NFCCheckedContinuation = CheckedContinuation<PassportCommunicationSession, Error>
     
     private var nfcContinuation: NFCCheckedContinuation?
@@ -251,14 +251,13 @@ extension PassportReaderSession {
         // Now to read the datagroups
         try await readDataGroups(tagReader: tagReader)
 
-        self.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.successfulRead)
-
         try await doActiveAuthenticationIfNeccessary(tagReader : tagReader)
         
         // If we have a masterlist url set then use that and verify the passport now
         self.passport.verifyPassport(masterListURL: self.masterListURL, useCMSVerification: self.passiveAuthenticationUsesOpenSSL)
 
-        return (reader: tagReader, passport: self.passport, endSessionBlock: { [weak self] in
+        return (reader: tagReader, passport: self.passport, endSessionBlock: { [weak self] success in
+            self?.updateReaderSessionMessage(alertMessage: success ? NFCViewDisplayMessage.successfulRead : NFCViewDisplayMessage.error(.UnexpectedError))
             self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
             self?.readerSession?.invalidate()
         })
