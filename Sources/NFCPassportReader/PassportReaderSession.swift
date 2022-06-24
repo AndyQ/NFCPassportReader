@@ -350,7 +350,7 @@ extension PassportReaderSession {
         }
     }
     
-    func readDataGroup( tagReader : TagReader, dgId : DataGroupId ) async throws -> DataGroup?  {
+    public func readDataGroup( tagReader : TagReader, dgId : DataGroupId ) async throws -> DataGroup?  {
 
         self.currentlyReadingDataGroup = dgId
         Log.info( "Reading tag - \(dgId)" )
