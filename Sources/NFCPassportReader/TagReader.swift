@@ -34,7 +34,7 @@ public class TagReader {
     }
 
 
-    func readDataGroup( dataGroup: DataGroupId ) async throws -> [UInt8]  {
+    public func readDataGroup( dataGroup: DataGroupId ) async throws -> [UInt8]  {
         guard let tag = dataGroup.getFileIDTag() else {
             throw NFCPassportReaderError.UnsupportedDataGroup
         }
