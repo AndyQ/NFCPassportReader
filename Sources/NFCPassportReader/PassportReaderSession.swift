@@ -260,8 +260,7 @@ extension PassportReaderSession {
             let message = success ? NFCViewDisplayMessage.successfulRead : NFCViewDisplayMessage.error(.UnexpectedError)
             self?.updateReaderSessionMessage(alertMessage: message)
             self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
-            self?.readerSession?.invalidate()
-            self?.readerSession?.invalidate(errorMessage: message.description)
+            success ? self?.readerSession?.invalidate() : self?.readerSession?.invalidate(errorMessage: message.description)
         })
     }
     
