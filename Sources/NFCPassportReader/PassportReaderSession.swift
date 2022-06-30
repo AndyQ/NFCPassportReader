@@ -257,9 +257,11 @@ extension PassportReaderSession {
         self.passport.verifyPassport(masterListURL: self.masterListURL, useCMSVerification: self.passiveAuthenticationUsesOpenSSL)
 
         return (reader: tagReader, passport: self.passport, endSessionBlock: { [weak self] success in
-            self?.updateReaderSessionMessage(alertMessage: success ? NFCViewDisplayMessage.successfulRead : NFCViewDisplayMessage.error(.UnexpectedError))
+            let message = success ? NFCViewDisplayMessage.successfulRead : NFCViewDisplayMessage.error(.UnexpectedError)
+            self?.updateReaderSessionMessage(alertMessage: message)
             self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
             self?.readerSession?.invalidate()
+            self?.readerSession?.invalidate(errorMessage: message.description)
         })
     }
     
