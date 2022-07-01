@@ -14,7 +14,7 @@ import CoreNFC
 @available(iOS 13, *)
 public class PassportReaderSession : NSObject {
     
-    public typealias PassportCommunicationSession = (reader: TagReader, passport: NFCPassportModel, endSessionBlock: ((_ success: Bool) -> Void))
+    public typealias PassportCommunicationSession = (reader: TagReader, passport: NFCPassportModel, endSessionBlock: ((_ errorMessage: String?) -> Void))
     private typealias NFCCheckedContinuation = CheckedContinuation<PassportCommunicationSession, Error>
     
     private var nfcContinuation: NFCCheckedContinuation?
@@ -212,7 +212,7 @@ extension PassportReaderSession : NFCTagReaderSessionDelegate {
         }
     }
     
-    public func updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage ) {
+    func updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage ) {
         self.readerSession?.alertMessage = self.nfcViewDisplayMessageHandler?(alertMessage) ?? alertMessage.description
     }
 }
@@ -256,11 +256,13 @@ extension PassportReaderSession {
         // If we have a masterlist url set then use that and verify the passport now
         self.passport.verifyPassport(masterListURL: self.masterListURL, useCMSVerification: self.passiveAuthenticationUsesOpenSSL)
 
-        return (reader: tagReader, passport: self.passport, endSessionBlock: { [weak self] success in
-            let message = success ? NFCViewDisplayMessage.successfulRead : NFCViewDisplayMessage.error(.UnexpectedError)
-            self?.updateReaderSessionMessage(alertMessage: message)
+        return (reader: tagReader, passport: self.passport, endSessionBlock: { [weak self] errorMessage in
             self?.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
-            success ? self?.readerSession?.invalidate() : self?.readerSession?.invalidate(errorMessage: message.description)
+            if let errorMessage = errorMessage {
+                self?.readerSession?.invalidate(errorMessage: errorMessage)
+            } else {
+                self?.readerSession?.invalidate()
+            }
         })
     }
     

@@ -13,7 +13,6 @@ public enum NFCViewDisplayMessage {
     case authenticatingWithPassport(Int)
     case readingDataGroupProgress(DataGroupId, Int)
     case error(NFCPassportReaderError)
-    case custom(String, Int)
     case successfulRead
 }
 
@@ -44,8 +43,6 @@ extension NFCViewDisplayMessage {
                     default:
                         return "Sorry, there was a problem reading the passport. Please try again"
                 }
-            case .custom(let message, _):
-                return message
             case .successfulRead:
                 return "Passport read successfully"
         }
