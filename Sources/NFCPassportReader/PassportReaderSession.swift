@@ -261,6 +261,7 @@ extension PassportReaderSession {
             if let errorMessage = errorMessage {
                 self?.readerSession?.invalidate(errorMessage: errorMessage)
             } else {
+                self?.updateReaderSessionMessage(alertMessage: .successfulRead)
                 self?.readerSession?.invalidate()
             }
         })
