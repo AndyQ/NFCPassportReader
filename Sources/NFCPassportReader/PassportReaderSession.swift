@@ -304,7 +304,7 @@ extension PassportReaderSession {
 
         self.bacHandler = BACHandler( tagReader: tagReader )
         guard paceKeyReference == PACEHandler.MRZ_PACE_KEY_REFERENCE else {
-            throw NFCPassportReaderError.InvalidMRZKey
+            throw NFCPassportReaderError.UnexpectedError
         }
         try await bacHandler?.performBACAndGetSessionKeys( mrzKey: accessKey )
         Log.info( "Basic Access Control (BAC) - SUCCESS!" )
