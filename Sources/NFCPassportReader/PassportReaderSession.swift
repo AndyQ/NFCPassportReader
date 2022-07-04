@@ -107,6 +107,20 @@ public class PassportReaderSession : NSObject {
             self.nfcContinuation = continuation
         })
     }
+    
+    /// This function is used to force end the communication session without calling the `endSessionBlock` that would be used normally.
+    /// This is useful in cases where the session was not fully established - like in cases where PACE authentication failed.
+    /// - Parameter errorMessage: The error message that will be shown to the user. Success will be shown if this is nil
+    public func forceEndCommunication(errorMessage: String?) {
+        shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
+        if let errorMessage = errorMessage {
+            readerSession?.invalidate(errorMessage: errorMessage)
+        } else {
+            updateReaderSessionMessage(alertMessage: .successfulRead)
+            readerSession?.invalidate()
+        }
+    }
+    
 }
 
 @available(iOS 13, *)
