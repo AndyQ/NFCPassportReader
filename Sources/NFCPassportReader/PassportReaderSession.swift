@@ -250,16 +250,16 @@ extension PassportReaderSession {
                 Log.debug( "PACE Succeeded" )
             } catch {
                 passport.PACEStatus = .failed
-                Log.error( "PACE Failed - falling back to BAC" )
+                Log.error( "PACE Failed" )
+                throw error
             }
 
-            // Called selectICAOApp in Android version
             _ = try await tagReader.selectPassportApplication()
         }
 
-        // If either PACE isn't supported, we failed whilst doing PACE or we didn't even attempt it, then fall back to BAC
+        // If either PACE isn't supported, we failed whilst doing PACE or we didn't even attempt it
         if passport.PACEStatus != .success {
-            try await doBACAuthentication(tagReader : tagReader)
+            throw NFCPassportReaderError.UnexpectedError
         }
 
         // Now to read the datagroups
