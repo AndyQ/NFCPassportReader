@@ -235,7 +235,8 @@ extension PassportReader {
                 Log.debug( "PACE Succeeded" )
             } catch {
                 passport.PACEStatus = .failed
-                Log.error( "PACE Failed - falling back to BAC" )
+                Log.error( "PACE Failed" )
+                throw error
             }
             
             _ = try await tagReader.selectPassportApplication()
@@ -243,7 +244,7 @@ extension PassportReader {
         
         // If either PACE isn't supported, we failed whilst doing PACE or we didn't even attempt it, then fall back to BAC
         if passport.PACEStatus != .success {
-            try await doBACAuthentication(tagReader : tagReader)
+            throw NFCPassportReaderError.UnexpectedError
         }
         
         // Now to read the datagroups
