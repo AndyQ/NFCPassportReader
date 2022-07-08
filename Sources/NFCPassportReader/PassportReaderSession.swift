@@ -186,7 +186,7 @@ extension PassportReaderSession : NFCTagReaderSessionDelegate {
             return
         }
         
-        Task { [passportTag] in
+        Task { [passportTag, tag] in
             do {
                 try await session.connect(to: tag)
                 
