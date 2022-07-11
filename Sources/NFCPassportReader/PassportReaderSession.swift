@@ -185,10 +185,18 @@ extension PassportReaderSession : NFCTagReaderSessionDelegate {
             self.invalidateSession(errorMessage:errorMessage, error: NFCPassportReaderError.TagNotValid)
             return
         }
-        
-        Task { [passportTag, tag] in
+
+        Task { [passportTag] in
             do {
-                try await session.connect(to: tag)
+                try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) -> Void in
+                    session.connect(to: tag) { error in
+                        if let error = error {
+                            cont.resume(throwing: error)
+                        } else {
+                            cont.resume()
+                        }
+                    }
+                }
                 
                 Log.debug( "tagReaderSession:connected to tag - starting authentication" )
                 self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.authenticatingWithPassport(0) )
