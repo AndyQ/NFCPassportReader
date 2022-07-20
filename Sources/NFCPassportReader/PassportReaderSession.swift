@@ -120,6 +120,13 @@ public class PassportReaderSession : NSObject {
             readerSession?.invalidate()
         }
     }
+
+    public func restarCardConnectionSession() async throws -> PassportCommunicationSession {
+        return try await withCheckedThrowingContinuation({ (continuation: NFCCheckedContinuation) in
+            readerSession?.restartPolling()
+            self.nfcContinuation = continuation
+        })
+    }
     
 }
 
