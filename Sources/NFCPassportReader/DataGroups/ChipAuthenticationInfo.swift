@@ -69,6 +69,7 @@ public class ChipAuthenticationInfo : SecurityInfo {
     /// - Returns: the cipher algorithm type
     /// - Throws: InvalidDataPassed error if invalid oid specified
     public static func toCipherAlgorithm( oid : String ) throws -> String {
+        return "AES"
         if ID_CA_DH_3DES_CBC_CBC_OID == oid
             || ID_CA_ECDH_3DES_CBC_CBC_OID == oid {
             return "DESede";
