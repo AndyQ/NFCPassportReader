@@ -97,8 +97,7 @@ public class PACEInfo : SecurityInfo {
     }
     
     public func getCipherAlgorithm() throws -> String {
-        //return try PACEInfo.toCipherAlgorithm(oid: oid); // Either DESede or AES.
-        return "AES"
+        return try PACEInfo.toCipherAlgorithm(oid: oid); // Either DESede or AES.
     }
     
     public func getDigestAlgorithm() throws -> String {
