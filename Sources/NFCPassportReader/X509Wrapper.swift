@@ -99,8 +99,9 @@ public class X509Wrapper {
     }
     
     public func getSerialNumber() -> String? {
-        let serialNr = String( ASN1_INTEGER_get(X509_get_serialNumber(cert)), radix:16, uppercase: true )
-        return serialNr
+        let bn = ASN1_INTEGER_to_BN(X509_get_serialNumber(cert), nil)
+        guard let hex = BN_bn2hex(bn) else { return nil }
+        return String(cString: hex)
     }
     
     public func getSignatureAlgorithm() -> String? {
