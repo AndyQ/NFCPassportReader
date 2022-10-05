@@ -150,7 +150,7 @@ public class PACEHandler {
 */
     }
     
-    /// Performs PACE Step 1- receives an encrypted nonce from the passport and decypts it with the  PACE key - derived from MRZ, CAN (not yet supported)
+    /// Performs PACE Step 1- receives an encrypted nonce from the passport and decypts it with the  PACE key - derived from MRZ or CAN
     func doStep1() async throws -> [UInt8] {
         Log.debug("Doing PACE Step1...")
         let response = try await tagReader.sendGeneralAuthenticate(data: [], isLast: false)

@@ -267,18 +267,15 @@ public class TagReader {
             Log.verbose(String(format:"TagReader [unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2) )
             
         }
-        
-        if rep.sw1 != 0x90 && rep.sw2 != 0x00 {
+
+        if rep.sw1 == 0x63 && rep.sw2 == 0x00 {
+            Log.error( "TagReader - Authentication failed" )
+            throw NFCPassportReaderError.AuthenticationFailed
+        } else if rep.sw1 != 0x90 && rep.sw2 != 0x00 {
             Log.error( "Error reading tag: sw1 - 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2))" )
-            let tagError: NFCPassportReaderError
-            if (rep.sw1 == 0x63 && rep.sw2 == 0x00) {
-                tagError = NFCPassportReaderError.InvalidMRZKey
-            } else {
-                let errorMsg = self.decodeError(sw1: rep.sw1, sw2: rep.sw2)
-                Log.error( "reason: \(errorMsg)" )
-                tagError = NFCPassportReaderError.ResponseError( errorMsg, sw1, sw2 )
-            }
-            throw tagError
+            let errorMsg = self.decodeError(sw1: rep.sw1, sw2: rep.sw2)
+            Log.error( "reason: \(errorMsg)" )
+            throw NFCPassportReaderError.ResponseError( errorMsg, sw1, sw2 )
         }
 
         return rep
