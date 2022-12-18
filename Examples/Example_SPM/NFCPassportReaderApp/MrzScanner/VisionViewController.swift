@@ -91,7 +91,11 @@ public class VisionViewController: ViewController {
 		if let sureNumber = mrzTracker.getStableString() {
 			showString(string: sureNumber)
 			mrzTracker.reset(string: sureNumber)
-            completionHandler?(sureNumber)
+            
+            DispatchQueue.main.async {
+                self.completionHandler?(sureNumber)
+            }
+
 		}
 	}
 	

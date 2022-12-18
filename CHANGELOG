@@ -1,3 +1,9 @@
+v2.0.1
+   Updated to latest version of OpenSSL - 1.1.1900
+   Fixed warnings of publishing updates on background thread when scanning MRZ (example SPM)
+   DataGroup12 class is now public (PR152) - thanks @recp
+   Improved compatibility with some documents by omitting LE (PR153) - set LE to -1 for commands not expected to return data - thanks @TimoTegtmeier
+
 v2.0.0
    Switched app over to user async/await - makes the code paths much simpler
    Added fix for DG11 names - thanks @TerjeLon 
