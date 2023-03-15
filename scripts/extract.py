@@ -34,12 +34,14 @@ def main( filename ):
         masterLists = readInMasterListFile( filename )
 
     print( f"Read in {len(masterLists)} masterlist files" )
-    print( f"Read in {cns} CNS" )
+    if filename.lower().endswith( ".ldif" ):
+        print( f"Read in {cns} CNS" )
 
     for index, ml in enumerate(masterLists):
         certNr = 1
         print( "-----------------------------------" )
-        print(f"Verifying and extracting MasterList {index} - {cns[index]}")
+        if filename.lower().endswith( ".ldif" ):
+            print(f"Verifying and extracting MasterList {index} - {cns[index]}")
         try:
             extractCertsFromMasterlist( ml )
         except Exception as e:
@@ -60,7 +62,7 @@ def readAndExtractLDIFFile( file ):
         for line in inf:
             if line.startswith( "cn: "):
                 cn = line[4:]
-            elif line.startswith( "CscaMasterListData:: "):
+            elif line.startswith( "CscaMasterListData:: ") or line.startswith( "pkdMasterListContent:: "):
                 cert = line[21:]
                 adding = True
             elif not line.startswith(" ") and adding == True:
