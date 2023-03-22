@@ -203,7 +203,7 @@ extension PassportReader : NFCTagReaderSessionDelegate {
                 nfcContinuation = nil
                 Log.debug( "tagReaderSession:failed to connect to tag - \(error.localizedDescription)" )
                 let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.ConnectionError)
-                self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.ConnectionError)
+                self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.Unknown(error))
             }
         }
     }
