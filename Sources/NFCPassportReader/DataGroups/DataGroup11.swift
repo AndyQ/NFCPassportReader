@@ -30,9 +30,7 @@ public class DataGroup11 : DataGroup {
 
     override func parse(_ data: [UInt8]) throws {
         var tag = try getNextTag()
-        if tag != 0x5C {
-            throw NFCPassportReaderError.InvalidResponse
-        }
+        try verifyTag(tag, equals: 0x5C)
         _ = try getNextValue()
         
         repeat {

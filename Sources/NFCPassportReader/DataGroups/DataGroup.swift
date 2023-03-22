@@ -80,5 +80,24 @@ public class DataGroup {
         
         return ret
     }
-    
+
+    public func verifyTag(_ tag: Int, equals expectedTag: Int) throws {
+        if tag != expectedTag  {
+            throw NFCPassportReaderError.InvalidResponse(
+                dataGroupId: datagroupType,
+                expectedTag: expectedTag,
+                actualTag: tag
+            )
+        }
+    }
+
+    public func verifyTag(_ tag: Int, oneOf expectedTags: [Int]) throws {
+        if !expectedTags.contains(tag) {
+            throw NFCPassportReaderError.InvalidResponse(
+                dataGroupId: datagroupType,
+                expectedTag: expectedTags.first!,
+                actualTag: tag
+            )
+        }
+    }
 }
