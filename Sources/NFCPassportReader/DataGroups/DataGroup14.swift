@@ -15,10 +15,11 @@ import Foundation
 public class DataGroup14 : DataGroup {
     private var asn1 : ASN1Item!
     public private(set) var securityInfos : [SecurityInfo] = [SecurityInfo]()
+
+    public override var datagroupType: DataGroupId { .DG14 }
     
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
-        datagroupType = .DG14
     }
     
     override func parse(_ data: [UInt8]) throws {

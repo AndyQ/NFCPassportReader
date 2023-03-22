@@ -8,7 +8,7 @@ import Foundation
 
 @available(iOS 13, macOS 10.15, *)
 public class DataGroup {
-    public var datagroupType : DataGroupId = .Unknown
+    public var datagroupType : DataGroupId { .Unknown }
     
     /// Body contains the actual data
     public private(set) var body : [UInt8] = []

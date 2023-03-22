@@ -34,8 +34,9 @@ public class DataGroup2 : DataGroup {
     public private(set) var deviceType : Int = 0
     public private(set) var quality : Int = 0
     public private(set) var imageData : [UInt8] = []
-    
-    
+
+    public override var datagroupType: DataGroupId { .DG2 }
+
 #if !os(macOS)
 func getImage() -> UIImage? {
         if imageData.count == 0 {
@@ -49,9 +50,8 @@ func getImage() -> UIImage? {
 
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
-        datagroupType = .DG2
     }
-    
+
     override func parse(_ data: [UInt8]) throws {
         var tag = try getNextTag()
         if tag != 0x7F61 {

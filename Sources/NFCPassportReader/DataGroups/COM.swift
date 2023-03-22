@@ -11,10 +11,11 @@ public class COM : DataGroup {
     public private(set) var version : String = "Unknown"
     public private(set) var unicodeVersion : String = "Unknown"
     public private(set) var dataGroupsPresent : [String] = []
-    
+
+    public override var datagroupType: DataGroupId { .COM }
+
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
-        datagroupType = .COM
     }
     
     override func parse(_ data: [UInt8]) throws {
