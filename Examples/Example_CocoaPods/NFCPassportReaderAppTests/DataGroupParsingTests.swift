@@ -143,12 +143,47 @@ final class DataGroupParsingTests: XCTestCase {
 
         }
     }
-    
+
+    func testItShouldThrowAnErrorWhenActualTagDoesNotMatchExpectedTag() throws {
+        let sut = try DataGroup([1, 2])
+        let expected = 1
+        let actual = 2
+
+        XCTAssertThrowsError(try sut.verifyTag(actual, equals: expected)) { error in
+            XCTAssertEqual("InvalidResponse in Unknown. Expected: 01 Actual: 02", error.localizedDescription)
+        }
+    }
+
+    func testItShouldNotThrowAnErrorWhenActualTagMatchesExpectedTag() throws {
+        let sut = try DataGroup([1, 2])
+        let expected = 1
+        let actual = 1
+
+        XCTAssertNoThrow(try sut.verifyTag(actual, equals: expected))
+    }
+
+    func testItShouldThrowAnErrorWhenActualTagIsNotAnExpectedTag() throws {
+        let sut = try DataGroup([1, 2])
+        let expected = [1, 3]
+        let actual = 2
+
+        XCTAssertThrowsError(try sut.verifyTag(actual, oneOf: expected)) { error in
+            XCTAssertEqual("InvalidResponse in Unknown. Expected: 01 Actual: 02", error.localizedDescription)
+        }
+    }
+
+    func testItShouldNotThrowAnErrorWhenActualTagIsAnExpectedTag() throws {
+        let sut = try DataGroup([1, 2])
+        let expected = [1, 3]
+        let actual = 3
+
+        XCTAssertNoThrow(try sut.verifyTag(actual, oneOf: expected))
+    }
+
     static var allTests = [
         ("testDatagroup1Parsing", testDatagroup1Parsing),
         ("testDatagroup2Parsing", testDatagroup2ParsingJPEG2000),
         ("testDatagroup2ParsingJPEG", testDatagroup2ParsingJPEG),
-        ("testCOMDatagroupParsing", testCOMDatagroupParsing),
+        ("testCOMDatagroupParsing", testCOMDatagroupParsing)
     ]
-    
 }
