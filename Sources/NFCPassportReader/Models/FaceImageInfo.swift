@@ -15,7 +15,7 @@ import Foundation
 
  Integration based on [JMRTD](https://sourceforge.net/p/jmrtd/code/HEAD/tree/trunk/jmrtd/src/main/java/org/jmrtd/lds/iso19794/FaceImageInfo.java#l59)
  */
-public struct FaceImageInfo {
+public struct FaceImageInfo: Equatable {
     let expression: Expression?
     let eyeColor: EyeColor?
     let faceImageType: FaceImageType?
