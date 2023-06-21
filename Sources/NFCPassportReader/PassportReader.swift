@@ -31,7 +31,7 @@ public class PassportReader : NSObject {
     private var bacHandler : BACHandler?
     private var caHandler : ChipAuthenticationHandler?
     private var paceHandler : PACEHandler?
-    private var mrzKey : String = ""
+    private var accessKey: PACEAccessKey?
     private var dataAmountToReadOverride : Int? = nil
     
     private var scanCompletedHandler: ((NFCPassportModel?, NFCPassportReaderError?)->())!
@@ -61,11 +61,23 @@ public class PassportReader : NSObject {
     public func overrideNFCDataAmountToRead( amount: Int ) {
         dataAmountToReadOverride = amount
     }
-    
+
+    @available(*, deprecated, message: "Use readPassport( accessKey: ...) instead")
     public func readPassport( mrzKey : String, tags : [DataGroupId] = [], skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
+        try await readPassport(
+            accessKey: .mrz(mrzKey),
+            tags: tags,
+            skipSecureElements: skipSecureElements,
+            skipCA: skipCA,
+            skipPACE: skipPACE,
+            customDisplayMessage: customDisplayMessage
+        )
+    }
+
+    public func readPassport( accessKey : PACEAccessKey, tags : [DataGroupId] = [], skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
         
         self.passport = NFCPassportModel()
-        self.mrzKey = mrzKey
+        self.accessKey = accessKey
         self.skipCA = skipCA
         self.skipPACE = skipPACE
         
@@ -217,6 +229,9 @@ extension PassportReader : NFCTagReaderSessionDelegate {
 extension PassportReader {
     
     func startReading(tagReader : TagReader) async throws -> NFCPassportModel {
+        guard let accessKey else {
+            preconditionFailure("accessKey not set")
+        }
 
         if !skipPACE {
             do {
@@ -228,12 +243,18 @@ extension PassportReader {
                 Log.info( "Starting Password Authenticated Connection Establishment (PACE)" )
                  
                 let paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
-                try await paceHandler.doPACE(mrzKey: mrzKey )
+                try await paceHandler.doPACE( accessKey: accessKey )
                 passport.PACEStatus = .success
                 Log.debug( "PACE Succeeded" )
             } catch {
                 passport.PACEStatus = .failed
-                Log.error( "PACE Failed - falling back to BAC" )
+                switch accessKey {
+                case .can:
+                    Log.error( "PACE Failed - BAC fallback skipped because accessKey == .can" )
+                    throw error
+                case .mrz:
+                    Log.error( "PACE Failed - falling back to BAC" )
+                }
             }
             
             _ = try await tagReader.selectPassportApplication()
@@ -281,11 +302,19 @@ extension PassportReader {
         
         self.passport.BACStatus = .failed
 
-        self.bacHandler = BACHandler( tagReader: tagReader )
-        try await bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey )
-        Log.info( "Basic Access Control (BAC) - SUCCESS!" )
+        switch accessKey {
+        case .none:
+            Log.error("Basic Access Control (BAC) - FAILED! No accessKey set.")
+        case .mrz( let mrzKey ):
+            self.bacHandler = BACHandler( tagReader: tagReader )
+            try await bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey )
+            Log.info( "Basic Access Control (BAC) - SUCCESS!" )
 
-        self.passport.BACStatus = .success
+            self.passport.BACStatus = .success
+        case .can:
+            Log.error("Basic Access Control (BAC) - FAILED! accessKey == .can. BAC is only supported with .mrz")
+        }
+
     }
 
     func readDataGroups( tagReader: TagReader ) async throws {
