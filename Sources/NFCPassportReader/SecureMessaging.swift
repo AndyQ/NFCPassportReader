@@ -150,6 +150,13 @@ public class SecureMessaging {
         
         //DO'99'
         // Mandatory, only absent if SM error occurs
+        guard rapduBin.count >= offset + 5 else {
+            print("size error")
+            let returnSw1 = (rapduBin.count >= offset+3) ? rapduBin[offset+2] : 0;
+            let returnSw2 = (rapduBin.count >= offset+4) ? rapduBin[offset+3] : 0;
+            return ResponseAPDU(data: [], sw1: returnSw1, sw2: returnSw2);
+        }
+
         do99 = [UInt8](rapduBin[offset..<offset+4])
         let sw1 = rapduBin[offset+2]
         let sw2 = rapduBin[offset+3]

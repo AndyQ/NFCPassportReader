@@ -1,3 +1,12 @@
+v2.0.3
+   Fix - for issue 170 - DO99 Fatal error provided by @jjynus
+       Guard check for size of rapduBin array
+	
+v2.0.2
+   Fix - change expected response length to -1 in TagReader:selectPassportApplication.
+      Should have been part of @TimoTegtmeier's PR (#153) but missed!
+      Thanks to @Thormeard for spotting this
+
 v2.0.1
    Updated to latest version of OpenSSL - 1.1.1900
    Fixed warnings of publishing updates on background thread when scanning MRZ (example SPM)
