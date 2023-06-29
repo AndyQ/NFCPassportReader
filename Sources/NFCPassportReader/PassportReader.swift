@@ -469,7 +469,7 @@ extension PassportReader {
                 // E.g. we failed to read the last Datagroup because its protected and we can't
                 let errMsg = err?.value ?? "Unknown  error"
                 Log.error( "ERROR - \(errMsg)" )
-                if errMsg == "Session invalidated" || errMsg == "Class not supported" || errMsg == "Tag connection lost"  {
+                if errMsg == "Session invalidated" || errMsg == "Class not supported" || errMsg == "Tag connection lost" || errMsg == "Tag response error / no response" {
                     // Check if we have done Chip Authentication, if so, set it to nil and try to redo BAC
                     if self.caHandler != nil {
                         self.caHandler = nil
