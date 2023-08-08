@@ -57,11 +57,12 @@ def readAndExtractLDIFFile( file ):
     cns = []
     cn = ""
     with open(file, "r") as inf:
+        cert = ""
         for line in inf:
             if line.startswith( "cn: "):
                 cn = line[4:]
-            elif line.startswith( "CscaMasterListData:: "):
-                cert = line[21:]
+            elif line.startswith( "pkdMasterListContent:: "):
+                cert = line[23:]
                 adding = True
             elif not line.startswith(" ") and adding == True:
                 adding = False
