@@ -1,3 +1,24 @@
+v2.0.4
+   Merged PR 189 - Handle change in MasterList extraction script
+       Changed from CscaMasterListData to pkdMasterListContent - thanks @jakudolejs and @Thormeard
+
+   Merged PR 186 - handle iOS 16 error message when user removed tag during scanning
+       Added additional error check - thanks @TLOn1
+       Added public invalidate method to end tag reader session - thanks @sergeyshalnov
+
+   Merged PR 181 - Expose mapped values for Face Image Information - thanks @TerjeLon
+
+   Merged PR 178 - Improve error reporting of invalid response
+       Updated NFCPassportReaderError.InvalidResponse to provide more information regarding the datagroup and the read tag
+       Added a new error case Unknown(Error) to handle errors not directly handled by the SDK
+       Added tests to cover the improved output
+       dataGroupType is now a computed property. This change makes it readonly and also available when an error needs to be 
+          thrown in parse method
+       Fixed an issue in PassportReader by removing nfcContinuation calls here as this is called in invalidateSession
+       Thanks - @markus-mohemian
+
+   Merged PR 172 - Introduced new display message for activate authentication state
+
 v2.0.3
    Fix - for issue 170 - DO99 Fatal error provided by @jjynus
        Guard check for size of rapduBin array
