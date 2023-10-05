@@ -8,7 +8,7 @@ Pod::Spec.new do |spec|
   spec.license      = "MIT"
   spec.author       = { "Andy Qua" => "andy.qua@gmail.com" }
   spec.platform = :ios
-  spec.ios.deployment_target = "12.0"
+  spec.ios.deployment_target = "14.0"
 
   spec.source       = { :git => "https://github.com/AndyQ/NFCPassportReader.git", :tag => "#{spec.version}" }
 
