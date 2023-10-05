@@ -21,6 +21,11 @@ private extension UInt8 {
     }
 }
 
+extension Int {
+    var hexString: String {
+        String(format:"%02X", self)
+    }
+}
 
 extension FileManager {
     static var documentDir : URL {

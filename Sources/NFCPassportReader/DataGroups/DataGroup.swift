@@ -8,7 +8,7 @@ import Foundation
 
 @available(iOS 13, macOS 10.15, *)
 public class DataGroup {
-    public var datagroupType : DataGroupId = .Unknown
+    public var datagroupType : DataGroupId { .Unknown }
     
     /// Body contains the actual data
     public private(set) var body : [UInt8] = []
@@ -80,5 +80,24 @@ public class DataGroup {
         
         return ret
     }
-    
+
+    public func verifyTag(_ tag: Int, equals expectedTag: Int) throws {
+        if tag != expectedTag  {
+            throw NFCPassportReaderError.InvalidResponse(
+                dataGroupId: datagroupType,
+                expectedTag: expectedTag,
+                actualTag: tag
+            )
+        }
+    }
+
+    public func verifyTag(_ tag: Int, oneOf expectedTags: [Int]) throws {
+        if !expectedTags.contains(tag) {
+            throw NFCPassportReaderError.InvalidResponse(
+                dataGroupId: datagroupType,
+                expectedTag: expectedTags.first!,
+                actualTag: tag
+            )
+        }
+    }
 }

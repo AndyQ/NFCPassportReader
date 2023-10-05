@@ -12,7 +12,7 @@ import Foundation
 @available(iOS 13, macOS 10.15, *)
 public enum NFCPassportReaderError: Error {
     case ResponseError(String, UInt8, UInt8)
-    case InvalidResponse
+    case InvalidResponse(dataGroupId: DataGroupId, expectedTag: Int, actualTag: Int)
     case UnexpectedError
     case NFCNotSupported
     case NoConnectedTag
@@ -40,11 +40,13 @@ public enum NFCPassportReaderError: Error {
     case ChipAuthenticationFailed
     case InvalidDataPassed(String)
     case NotYetSupported(String)
+    case Unknown(Error)
 
     var value: String {
         switch self {
             case .ResponseError(let errMsg, _, _): return errMsg
-            case .InvalidResponse: return "InvalidResponse"
+            case .InvalidResponse(let dataGroupId, let expected, let actual):
+                return "InvalidResponse in \(dataGroupId.getName()). Expected: \(expected.hexString) Actual: \(actual.hexString)"
             case .UnexpectedError: return "UnexpectedError"
             case .NFCNotSupported: return "NFCNotSupported"
             case .NoConnectedTag: return "NoConnectedTag"
@@ -72,6 +74,7 @@ public enum NFCPassportReaderError: Error {
             case .ChipAuthenticationFailed: return "ChipAuthenticationFailed"
             case .InvalidDataPassed(let reason) : return "Invalid data passed - \(reason)"
             case .NotYetSupported(let reason) : return "Not yet supported - \(reason)"
+            case .Unknown(let error): return "Unknown error: \(error.localizedDescription)"
         }
     }
 }

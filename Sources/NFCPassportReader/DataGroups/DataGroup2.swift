@@ -34,8 +34,9 @@ public class DataGroup2 : DataGroup {
     public private(set) var deviceType : Int = 0
     public private(set) var quality : Int = 0
     public private(set) var imageData : [UInt8] = []
-    
-    
+
+    public override var datagroupType: DataGroupId { .DG2 }
+
 #if !os(macOS)
 func getImage() -> UIImage? {
         if imageData.count == 0 {
@@ -49,42 +50,31 @@ func getImage() -> UIImage? {
 
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
-        datagroupType = .DG2
     }
-    
+
     override func parse(_ data: [UInt8]) throws {
         var tag = try getNextTag()
-        if tag != 0x7F61 {
-            throw NFCPassportReaderError.InvalidResponse
-        }
+        try verifyTag(tag, equals: 0x7F61)
         _ = try getNextLength()
         
         // Tag should be 0x02
         tag = try getNextTag()
-        if  tag != 0x02 {
-            throw NFCPassportReaderError.InvalidResponse
-        }
+        try verifyTag(tag, equals: 0x02)
         nrImages = try Int(getNextValue()[0])
         
         // Next tag is 0x7F60
         tag = try getNextTag()
-        if tag != 0x7F60 {
-            throw NFCPassportReaderError.InvalidResponse
-        }
+        try verifyTag(tag, equals: 0x7F60)
         _ = try getNextLength()
         
         // Next tag is 0xA1 (Biometric Header Template) - don't care about this
         tag = try getNextTag()
-        if tag != 0xA1 {
-            throw NFCPassportReaderError.InvalidResponse
-        }
+        try verifyTag(tag, equals: 0xA1)
         _ = try getNextValue()
         
         // Now we get to the good stuff - next tag is either 5F2E or 7F2E
         tag = try getNextTag()
-        if tag != 0x5F2E && tag != 0x7F2E {
-            throw NFCPassportReaderError.InvalidResponse
-        }
+        try verifyTag(tag, oneOf: [0x5F2E, 0x7F2E])
         let value = try getNextValue()
         
         try parseISO19794_5( data:value )
@@ -93,7 +83,11 @@ func getImage() -> UIImage? {
     func parseISO19794_5( data : [UInt8] ) throws {
         // Validate header - 'F', 'A' 'C' 0x00 - 0x46414300
         if data[0] != 0x46 && data[1] != 0x41 && data[2] != 0x43 && data[3] != 0x00 {
-            throw NFCPassportReaderError.InvalidResponse
+            throw NFCPassportReaderError.InvalidResponse(
+                dataGroupId: datagroupType,
+                expectedTag: 0x46,
+                actualTag: Int(data[0])
+            )
         }
         
         var offset = 4

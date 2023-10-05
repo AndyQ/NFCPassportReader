@@ -12,7 +12,9 @@ public class DataGroup15 : DataGroup {
     
     public private(set) var rsaPublicKey : OpaquePointer?
     public private(set) var ecdsaPublicKey : OpaquePointer?
-    
+
+    public override var datagroupType: DataGroupId { .DG15 }
+
     deinit {
         if ( ecdsaPublicKey != nil ) {
             EVP_PKEY_free(ecdsaPublicKey);
@@ -24,7 +26,6 @@ public class DataGroup15 : DataGroup {
     
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
-        datagroupType = .DG15
     }
     
     

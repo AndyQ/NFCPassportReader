@@ -21,17 +21,16 @@ public class DataGroup11 : DataGroup {
     public private(set) var proofOfCitizenship : String?
     public private(set) var tdNumbers : String?
     public private(set) var custodyInfo : String?
-    
+
+    public override var datagroupType: DataGroupId { .DG11 }
+
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
-        datagroupType = .DG11
     }
-    
+
     override func parse(_ data: [UInt8]) throws {
         var tag = try getNextTag()
-        if tag != 0x5C {
-            throw NFCPassportReaderError.InvalidResponse
-        }
+        try verifyTag(tag, equals: 0x5C)
         _ = try getNextValue()
         
         repeat {

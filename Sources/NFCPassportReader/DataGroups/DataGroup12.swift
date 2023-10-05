@@ -8,7 +8,6 @@ import Foundation
 
 @available(iOS 13, macOS 10.15, *)
 public class DataGroup12 : DataGroup {
-    
     public private(set) var issuingAuthority : String?
     public private(set) var dateOfIssue : String?
     public private(set) var otherPersonsDetails : String?
@@ -18,18 +17,17 @@ public class DataGroup12 : DataGroup {
     public private(set) var rearImage : [UInt8]?
     public private(set) var personalizationTime : String?
     public private(set) var personalizationDeviceSerialNr : String?
-    
+
+    public override var datagroupType: DataGroupId { .DG12 }
+
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
-        datagroupType = .DG12
     }
-    
+
     override func parse(_ data: [UInt8]) throws {
         var tag = try getNextTag()
-        if tag != 0x5C {
-            throw NFCPassportReaderError.InvalidResponse
-        }
-        
+        try verifyTag(tag, equals: 0x5C)
+
         // Skip the taglist - ideally we would check this but...
         let _ = try getNextValue()
         

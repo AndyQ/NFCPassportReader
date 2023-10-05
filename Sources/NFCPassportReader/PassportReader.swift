@@ -198,12 +198,9 @@ extension PassportReader : NFCTagReaderSessionDelegate {
                 let errorMessage = NFCViewDisplayMessage.error(error)
                 self.invalidateSession(errorMessage: errorMessage, error: error)
             } catch let error {
-
-                nfcContinuation?.resume(throwing: error)
-                nfcContinuation = nil
                 Log.debug( "tagReaderSession:failed to connect to tag - \(error.localizedDescription)" )
                 let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.ConnectionError)
-                self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.ConnectionError)
+                self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.Unknown(error))
             }
         }
     }
@@ -349,6 +346,7 @@ extension PassportReader {
         self.currentlyReadingDataGroup = dgId
         Log.info( "Reading tag - \(dgId)" )
         var readAttempts = 0
+        var nfcPassportReaderError: NFCPassportReaderError
         
         self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.readingDataGroupProgress(dgId, 0) )
 
@@ -359,6 +357,7 @@ extension PassportReader {
                 return dg
             } catch let error as NFCPassportReaderError {
                 Log.error( "TagError reading tag - \(error)" )
+                nfcPassportReaderError = error
 
                 // OK we had an error - depending on what happened, we may want to try to re-read this
                 // E.g. we failed to read the last Datagroup because its protected and we can't
@@ -396,8 +395,9 @@ extension PassportReader {
             }
             readAttempts += 1
         } while ( readAttempts < 2 )
-        
-        return nil
+
+        // The error will be thrown after n attempts
+        throw nfcPassportReaderError
     }
 
     func invalidateSession(errorMessage: NFCViewDisplayMessage, error: NFCPassportReaderError) {

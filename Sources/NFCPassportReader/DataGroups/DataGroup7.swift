@@ -14,10 +14,11 @@ import UIKit
 public class DataGroup7 : DataGroup {
     
     public private(set) var imageData : [UInt8] = []
-    
+
+    public override var datagroupType: DataGroupId { .DG7 }
+
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
-        datagroupType = .DG7
     }
     
 #if !os(macOS)
@@ -34,15 +35,11 @@ public class DataGroup7 : DataGroup {
     
     override func parse(_ data: [UInt8]) throws {
         var tag = try getNextTag()
-        if tag != 0x02 {
-            throw NFCPassportReaderError.InvalidResponse
-        }
+        try verifyTag(tag, equals: 0x02)
         _ = try getNextValue()
         
         tag = try getNextTag()
-        if tag != 0x5F43 {
-            throw NFCPassportReaderError.InvalidResponse
-        }
+        try verifyTag(tag, equals: 0x5F43)
         
         imageData = try getNextValue()
     }

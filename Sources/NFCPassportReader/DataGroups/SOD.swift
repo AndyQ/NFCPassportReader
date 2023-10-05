@@ -65,11 +65,12 @@ class SOD : DataGroup {
     public private(set) var pkcs7CertificateData : [UInt8] = []
     private var asn1 : ASN1Item!
     private var pubKey : OpaquePointer?
+
+    override var datagroupType: DataGroupId { .SOD }
     
     required init( _ data : [UInt8] ) throws {
         try super.init(data)
         self.pkcs7CertificateData = body
-        datagroupType = .SOD
     }
     
     deinit {
