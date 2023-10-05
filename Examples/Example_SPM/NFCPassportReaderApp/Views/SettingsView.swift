@@ -16,22 +16,6 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section(header: Text("Logging settings")) {
-                Toggle(isOn: $settings.shouldCaptureLogs) {
-                    Text("Should capture logs")
-                }
-                
-                Picker(
-                    selection: $settings.logLevel,
-                    label: Text("Logging level")
-                ) {
-                    ForEach(LogLevel.allCases, id: \.self) {
-                        Text(logLevels[$0.rawValue] ).tag($0)
-                    }
-                }
-
-            }
-            
             Section(header: Text("Passport reading settings")) {
                 Toggle(isOn: $settings.useNewVerificationMethod) {
                     Text("Use new Passive Authentication")

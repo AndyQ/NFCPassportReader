@@ -8,6 +8,9 @@
 
 import UIKit
 import NFCPassportReader
+import OSLog
+
+var lastPassportScanTime : Date = Date().addingTimeInterval(-3600)
 
 class PassportUtils {
     
@@ -53,25 +56,44 @@ class PassportUtils {
     
     static  func shareLogs() {
         do {
-            let arr = Log.logData
-            let data = try JSONSerialization.data(withJSONObject: arr, options: .prettyPrinted)
-            
-            let temporaryURL = URL(fileURLWithPath: NSTemporaryDirectory() + "passportreader.log")
-            try data.write(to: temporaryURL)
-            
-            let av = UIActivityViewController(activityItems: [temporaryURL], applicationActivities: nil)
-            let keyWindow = UIApplication.shared.connectedScenes
-                .filter({$0.activationState == .foregroundActive})
-                .map({$0 as? UIWindowScene})
-                .compactMap({$0})
-                .first?.windows
-                .filter({$0.isKeyWindow}).first
-            
-            keyWindow?.rootViewController?.present(av, animated: true, completion: nil)
+            var arr = (try? getLogEntries()) ?? []
+            arr.insert("LogLevel,Date,Subsystem,Category,Message", at: 0)
+
+            let csv = arr.joined(separator:"\n")
+            if let data = csv.data(using: .utf8) {
+                
+                let temporaryURL = URL(fileURLWithPath: NSTemporaryDirectory() + "passportreader_log.csv")
+                try data.write(to: temporaryURL)
+                
+                let av = UIActivityViewController(activityItems: [temporaryURL], applicationActivities: nil)
+                let keyWindow = UIApplication.shared.connectedScenes
+                    .filter({$0.activationState == .foregroundActive})
+                    .map({$0 as? UIWindowScene})
+                    .compactMap({$0})
+                    .first?.windows
+                    .filter({$0.isKeyWindow}).first
+                
+                keyWindow?.rootViewController?.present(av, animated: true, completion: nil)
+            }
         } catch {
             print( "ERROR - \(error)" )
         }
     }
 
+    static func getLogEntries() throws -> [String] {
+        let subsystem = Bundle.main.bundleIdentifier!
+        
+        print( "Getting logs since \(lastPassportScanTime)")
+        
+        let logStore = try OSLogStore(scope: .currentProcessIdentifier)
+        let lastScanTime = logStore.position(date: lastPassportScanTime)
+        let allEntries = try logStore.getEntries(at: lastScanTime)
+        
+        // FB8518539: Using NSPredicate to filter the subsystem doesn't seem to work.
+        return allEntries
+            .compactMap { $0 as? OSLogEntryLog }
+            .filter { $0.subsystem == subsystem && $0.date > lastPassportScanTime }
+            .map { "\($0.level.rawValue),\($0.date),\($0.subsystem),\($0.category),\"\($0.composedMessage)\"" }
+    }
 }
 

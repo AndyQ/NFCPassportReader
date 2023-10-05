@@ -94,9 +94,6 @@ extension StoredPassportView {
     }
     
     func importFile( url : URL ) {
-        Log.logLevel = settings.logLevel
-        Log.storeLogs = settings.shouldCaptureLogs
-        Log.clearStoredLogs()
         
         do {
             let data = try Data(contentsOf: url )

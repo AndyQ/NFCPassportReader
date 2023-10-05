@@ -7,10 +7,14 @@
 //
 
 import SwiftUI
+import OSLog
 import Combine
 import NFCPassportReader
 import UniformTypeIdentifiers
 import MRZParser
+
+let appLogging = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "app")
+
 
 struct MainView : View {
     @EnvironmentObject var settings: SettingsStore
@@ -24,6 +28,7 @@ struct MainView : View {
     @State private var showSettings : Bool = false
     @State private var showScanMRZ : Bool = false
     @State private var showSavedPassports : Bool = false
+    @State private var gettingLogs : Bool = false
 
     @State var page = 0
     
@@ -80,6 +85,25 @@ struct MainView : View {
                         .disabled( !isValid )
                     }
                 }
+                
+                if gettingLogs {
+                    VStack {
+                        VStack(alignment:.center) {
+                            Text( "Retrieving logs....." )
+                                .font(.title)
+                                .frame(maxWidth:.infinity, maxHeight:150)
+                        }
+                        .shadow(radius: 10)
+                        .background(.white)
+                        .cornerRadius(20) /// make the background rounded
+                        .overlay( /// apply a rounded border
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(.gray, lineWidth: 2)
+                        )
+                        .padding()
+                        Spacer()
+                    }
+                }
             }
             .navigationBarTitle("Passport details", displayMode: .automatic)
             .toolbar {
@@ -132,11 +156,17 @@ extension MainView {
 extension MainView {
 
     func shareLogs() {
-        hideKeyboard()
-        PassportUtils.shareLogs()
+        gettingLogs = true
+        Task {
+            hideKeyboard()
+            PassportUtils.shareLogs()
+            gettingLogs = false
+        }
     }
 
     func scanPassport( ) {
+        lastPassportScanTime = Date.now
+
         hideKeyboard()
         self.showDetails = false
         
@@ -162,11 +192,7 @@ extension MainView {
 //        let dataGroups : [DataGroupId] = [.COM, .SOD, .DG1, .DG2, .DG7, .DG11, .DG12, .DG14, .DG15]
 //        passportReader.readPassport(mrzKey: mrzKey, tags:dataGroups, completed: { (passport, error) in
         
-        Log.logLevel = settings.logLevel
-        Log.storeLogs = settings.shouldCaptureLogs
-        Log.clearStoredLogs()
-        
-        Log.error( "Using version \(UIApplication.version)" )
+        appLogging.error( "Using version \(UIApplication.version)" )
         
         Task {
             let customMessageHandler : (NFCViewDisplayMessage)->String? = { (displayMessage) in
@@ -181,6 +207,10 @@ extension MainView {
             
             do {
                 let passport = try await passportReader.readPassport( mrzKey: mrzKey, customDisplayMessage:customMessageHandler)
+                
+                if let fi = passport.faceImageInfo {
+                    print( "Got face Image details")
+                }
                 
                 if settings.savePassportOnScan {
                     // Save passport

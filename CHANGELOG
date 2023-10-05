@@ -1,4 +1,9 @@
-v2.0.4
+v2.1.0
+   Logging has changed to use OSLog framework.  This removes the different loglevel settings, and the export will only include the last passport read.
+   There is currently an issue reading some passports (I've noticed it with the iPhone 15 Pro) in that the
+       connection with the tag randoly drops.  This also happens with the ReadID app too so suspect its an
+       issue with CoreNFC
+
    Merged PR 189 - Handle change in MasterList extraction script
        Changed from CscaMasterListData to pkdMasterListContent - thanks @jakudolejs and @Thormeard
 
