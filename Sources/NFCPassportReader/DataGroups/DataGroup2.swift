@@ -153,6 +153,11 @@ func getImage() -> UIImage? {
         let jpeg2000BitmapHeader : [UInt8] = [0x00,0x00,0x00,0x0c,0x6a,0x50,0x20,0x20,0x0d,0x0a]
         let jpeg2000CodestreamBitmapHeader : [UInt8] = [0xff,0x4f,0xff,0x51]
         
+        if data.count < offset+jpeg2000CodestreamBitmapHeader.count {
+            throw NFCPassportReaderError.UnknownImageFormat
+        }
+
+        
         if [UInt8](data[offset..<offset+jpegHeader.count]) != jpegHeader &&
             [UInt8](data[offset..<offset+jpeg2000BitmapHeader.count]) != jpeg2000BitmapHeader &&
             [UInt8](data[offset..<offset+jpeg2000CodestreamBitmapHeader.count]) != jpeg2000CodestreamBitmapHeader {

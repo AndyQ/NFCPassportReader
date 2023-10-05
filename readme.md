@@ -2,8 +2,7 @@
 
 This package handles reading an NFC Enabled passport using iOS 13 CoreNFC APIS
 
-THIS IS AN IN-PROGRESS BRANCH AND NOT EVEN REMOTELY SUPPORTED! IT MAY CRASH OR JUST NOT WORK!
-
+**Version 2 (and the main branch) now uses Swift Async/Await for communication.  If you need an earlier version, please use 1.1.9 or below!**
 
 Supported features:
 * Basic Access Control (BAC)
@@ -14,18 +13,19 @@ Supported features:
 * Chip Authentication (ECDH DES and AES keys tested, DH DES AES keys implemented ad should work but currently not tested)
 * PACE - currently only Generic Mapping (GM) supported
 * Ability to dump passport stream and read it back in
+* Uses Async/Await
 
 This is still very early days - the code is by no means perfect and there are still some rough edges  - there ARE most definitely bugs and I'm sure I'm not doing things perfectly. 
 
 It reads and verifies my passport (and others I've been able to test) fine, however your mileage may vary.
 
 ## Installation
-### Swift Package Manager
+### Swift Package Manager (recommended)
 
 NFCPassportReader may be installed via Swift Package Manager, by pointing to this repo's URL.
 
 
-### CocoaPods
+### CocoaPods (deprecated and unsupported)
 
 Install using [CocoaPods](http://cocoapods.org) by adding this line to your Podfile:
 
@@ -40,7 +40,7 @@ Then, run the following command:
 $ pod install
 ```
 
-Note - Current Bitcode is disabled as OpenSSL is not correctly found.  Hopefully this will be fixed in a future release.
+Note - ** Don't use Bitcode ** - its not supported by this and has been deprecated by Apple
 
 ## Usage 
 To use, you first need to create the Passport MRZ Key which consists of the passport number, date of birth and expiry date (including the checksums).
