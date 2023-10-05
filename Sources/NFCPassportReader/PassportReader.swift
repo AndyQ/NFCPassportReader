@@ -243,10 +243,10 @@ extension PassportReader {
         
         // Now to read the datagroups
         try await readDataGroups(tagReader: tagReader)
-        
-        self.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.successfulRead)
 
         try await doActiveAuthenticationIfNeccessary(tagReader : tagReader)
+
+        self.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.successfulRead)
         self.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
         self.readerSession?.invalidate()
 
@@ -261,7 +261,9 @@ extension PassportReader {
         guard self.passport.activeAuthenticationSupported else {
             return
         }
-        
+
+        self.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.activeAuthentication)
+
         Log.info( "Performing Active Authentication" )
         
         let challenge = generateRandomUInt8Array(8)
