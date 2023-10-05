@@ -80,6 +80,13 @@ public class NFCPassportModel {
         
         return (passportDataElements?["53"] ?? "?").replacingOccurrences(of: "<", with: "" )
     }()
+    
+    /// face image info
+    public private(set) lazy var faceImageInfo : FaceImageInfo? = {
+        guard let dg2 = dataGroupsRead[.DG2] as? DataGroup2 else { return nil }
+        
+        return FaceImageInfo.from(dg2: dg2)
+    }()
 
     public private(set) lazy var documentSigningCertificate : X509Wrapper? = {
         return certificateSigningGroups[.documentSigningCertificate]
