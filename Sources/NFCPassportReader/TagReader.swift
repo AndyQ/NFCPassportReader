@@ -271,15 +271,15 @@ public class TagReader {
         
         if rep.sw1 != 0x90 && rep.sw2 != 0x00 {
             Logger.tagReader.error( "Error reading tag: sw1 - 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2))" )
-            let tagError: NFCPassportReaderError
             if (rep.sw1 == 0x63 && rep.sw2 == 0x00) {
-                tagError = NFCPassportReaderError.InvalidMRZKey
+                throw NFCPassportReaderError.InvalidMRZKey
+            } else if rep.sw1 == 0x61 || rep.sw1 == 0x64 || rep.sw1 == 0x6c {
+                Logger.tagReader.debug("Treated as non error: \(self.decodeError(sw1: rep.sw1, sw2: rep.sw2))")
             } else {
                 let errorMsg = self.decodeError(sw1: rep.sw1, sw2: rep.sw2)
                 Logger.tagReader.error( "reason: \(errorMsg)" )
-                tagError = NFCPassportReaderError.ResponseError( errorMsg, sw1, sw2 )
+                throw NFCPassportReaderError.ResponseError( errorMsg, sw1, sw2 )
             }
-            throw tagError
         }
 
         return rep
