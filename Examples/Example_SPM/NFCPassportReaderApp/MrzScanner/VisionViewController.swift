@@ -37,12 +37,13 @@ public struct MRZScanner: UIViewControllerRepresentable {
 
 
 public class VisionViewController: ViewController {
-	var request: VNRecognizeTextRequest!
-	// Temporal string tracker
+    var request: VNRecognizeTextRequest!
+
+    // Temporal string tracker
 	let mrzTracker = StringTracker()
 	
     var completionHandler: ((String) -> (Void))?
-
+    
 	public override func viewDidLoad() {
 		// Set up vision request before letting ViewController set up the camera
 		// so that it exists when the first buffer is received.
@@ -64,10 +65,13 @@ public class VisionViewController: ViewController {
 		}
 		
 		let maximumCandidates = 1
+//        let currentMSZMatch = CurrentMRZMatch()
 		for visionResult in results {
             guard let candidate = visionResult.topCandidates(maximumCandidates).first else { continue }
 			
 			var numberIsSubstring = true
+
+            print( candidate.string )
 
 			if let result = candidate.string.checkMrz() {
                 if(result != "nil"){
@@ -82,7 +86,8 @@ public class VisionViewController: ViewController {
 				redBoxes.append(visionResult.boundingBox)
 			}
 		}
-		
+        print( "---------------------" )
+
 		// Log any found numbers.
         mrzTracker.logFrame(strings: codes)
 		show(boxGroups: [(color: UIColor.red.cgColor, boxes: redBoxes), (color: UIColor.green.cgColor, boxes: greenBoxes)])
@@ -101,20 +106,22 @@ public class VisionViewController: ViewController {
 	
     public override func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
 		if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
-			// Configure for running in real-time.
-			request.recognitionLevel = .fast
-			// Language correction won't help recognizing phone numbers. It also
-			// makes recognition slower.
-			request.usesLanguageCorrection = false
-			// Only run on the region of interest for maximum speed.
-			request.regionOfInterest = regionOfInterest
-			
-			let requestHandler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: textOrientation, options: [:])
-			do {
-				try requestHandler.perform([request])
-			} catch {
-				print(error)
-			}
+            // Configure for running in real-time.
+            
+            
+            request.recognitionLevel = .fast
+            // Language correction won't help recognizing phone numbers. It also
+            // makes recognition slower.nonisolated
+            request.usesLanguageCorrection = false
+            // Only run on the region of interest for maximum speed.
+            request.regionOfInterest = regionOfInterest
+            
+            let requestHandler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: textOrientation, options: [:])
+            do {
+                try requestHandler.perform([request])
+            } catch {
+                print(error)
+            }
 		}
 	}
 	

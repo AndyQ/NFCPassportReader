@@ -95,12 +95,14 @@ public class ViewController: UIViewController {
         // Starting the capture session is a blocking call. Perform setup using
         // a dedicated serial dispatch queue to prevent blocking the main thread.
         captureSessionQueue.async {
-            self.setupCamera()
-            
-            // Calculate region of interest now that the camera is setup.
-            DispatchQueue.main.async {
-                // Figure out initial ROI.
-                self.calculateRegionOfInterest()
+            Task {
+                await self.setupCamera()
+                
+                // Calculate region of interest now that the camera is setup.
+                DispatchQueue.main.async {
+                    // Figure out initial ROI.
+                    self.calculateRegionOfInterest()
+                }
             }
         }
 	}
@@ -286,12 +288,13 @@ public class ViewController: UIViewController {
 	
 	@IBAction func handleTap(_ sender: UITapGestureRecognizer) {
         captureSessionQueue.async {
-            if !self.captureSession.isRunning {
-                self.captureSession.startRunning()
-            }
             DispatchQueue.main.async {
+                if !self.captureSession.isRunning {
+                    self.captureSession.startRunning()
+                }
                 self.numberView.isHidden = true
             }
+            
         }
 	}
 }
@@ -300,7 +303,7 @@ public class ViewController: UIViewController {
 
 extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
 	
-	public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+    public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
 		// This is implemented in VisionViewController.
 	}
 }

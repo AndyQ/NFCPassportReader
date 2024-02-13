@@ -10,10 +10,12 @@ import UIKit
 import NFCPassportReader
 import OSLog
 
-var lastPassportScanTime : Date = Date().addingTimeInterval(-3600)
 
+@MainActor
 class PassportUtils {
     
+    static var lastPassportScanTime : Date = Date().addingTimeInterval(-3600)
+
     func getMRZKey(passportNumber: String, dateOfBirth: String, dateOfExpiry: String ) -> String {
         
         // Pad fields if necessary
@@ -83,16 +85,16 @@ class PassportUtils {
     static func getLogEntries() throws -> [String] {
         let subsystem = Bundle.main.bundleIdentifier!
         
-        print( "Getting logs since \(lastPassportScanTime)")
+        print( "Getting logs since \(PassportUtils.lastPassportScanTime)")
         
         let logStore = try OSLogStore(scope: .currentProcessIdentifier)
-        let lastScanTime = logStore.position(date: lastPassportScanTime)
+        let lastScanTime = logStore.position(date: PassportUtils.lastPassportScanTime)
         let allEntries = try logStore.getEntries(at: lastScanTime)
         
         // FB8518539: Using NSPredicate to filter the subsystem doesn't seem to work.
         return allEntries
             .compactMap { $0 as? OSLogEntryLog }
-            .filter { $0.subsystem == subsystem && $0.date > lastPassportScanTime }
+            .filter { $0.subsystem == subsystem && $0.date > PassportUtils.lastPassportScanTime }
             .map { "\($0.level.rawValue),\($0.date),\($0.subsystem),\($0.category),\"\($0.composedMessage)\"" }
     }
 }

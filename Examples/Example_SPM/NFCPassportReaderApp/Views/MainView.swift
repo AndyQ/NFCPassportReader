@@ -13,7 +13,7 @@ import NFCPassportReader
 import UniformTypeIdentifiers
 import MRZParser
 
-let appLogging = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "app")
+@MainActor let appLogging = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "app")
 
 
 struct MainView : View {
@@ -165,7 +165,7 @@ extension MainView {
     }
 
     func scanPassport( ) {
-        lastPassportScanTime = Date.now
+        PassportUtils.lastPassportScanTime = Date.now
 
         hideKeyboard()
         self.showDetails = false
@@ -207,10 +207,6 @@ extension MainView {
             
             do {
                 let passport = try await passportReader.readPassport( mrzKey: mrzKey, customDisplayMessage:customMessageHandler)
-                
-                if let fi = passport.faceImageInfo {
-                    print( "Got face Image details")
-                }
                 
                 if settings.savePassportOnScan {
                     // Save passport

@@ -9,7 +9,7 @@
 import Foundation
 
 @available(iOS 13, macOS 10.15, *)
-public enum DataGroupId : Int, CaseIterable {
+public enum DataGroupId : Int, CaseIterable, Sendable {
     case COM = 0x60
     case DG1 = 0x61
     case DG2 = 0x75
