@@ -1,3 +1,5 @@
+v2.1.1 Implemented a fix for when Active Authentication fails as there are more bytes available - thanks to @petteri-huusko-op 
+
 v2.1.0
    Bumped minimum version to iOS 14
    Logging has changed to use OSLog framework.  This removes the different loglevel settings, and the export will only include the last passport read.
