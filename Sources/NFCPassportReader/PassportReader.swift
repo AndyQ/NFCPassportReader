@@ -292,12 +292,10 @@ extension PassportReader {
         var DGsToRead = [DataGroupId]()
 
         self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.readingDataGroupProgress(.COM, 0) )
+        
         if let com = try await readDataGroup(tagReader:tagReader, dgId:.COM) as? COM {
             self.passport.addDataGroup( .COM, dataGroup:com )
-        
-            // SOD and COM shouldn't be present in the DG list but just in case (worst case here we read the sod twice)
-            DGsToRead = [.SOD] + com.dataGroupsPresent.map { DataGroupId.getIDFromName(name:$0) }
-            DGsToRead.removeAll { $0 == .COM }
+            self.addDatagroupsToRead(com: com, to: &DGsToRead)
         }
         
         if DGsToRead.contains( .DG14 ) {
@@ -408,6 +406,28 @@ extension PassportReader {
         self.readerSession?.invalidate(errorMessage: self.nfcViewDisplayMessageHandler?(errorMessage) ?? errorMessage.description)
         nfcContinuation?.resume(throwing: error)
         nfcContinuation = nil
+    }
+    
+    private func addDatagroupsToRead(com: COM, to DGsToRead: inout [DataGroupId]) {
+        DGsToRead += com.dataGroupsPresent.compactMap {
+            let dg = DataGroupId.getIDFromName(name:$0)
+            
+            // Some document deviates from the ICAO-standard, where they have additional datagroups listed in COM
+            // These datagroups should not be read as there are no documentation for how to read them.
+            // Remove these additional groups from the session and warn about their existence
+            guard dg != .Unknown else {
+                Logger.passportReader.debug( "Unknown tag found in COM - \($0) " )
+                self.passport.exceptions.append(NFCPassportReaderError.AdditionalDataGroup($0))
+                return nil
+            }
+            
+            return dg
+        }
+        
+        DGsToRead.removeAll { $0 == .COM }
+        
+        // SOD should not be present in COM, but just in case we check before adding it so its not read twice
+        if !DGsToRead.contains(.SOD) { DGsToRead.insert(.SOD, at: 0) }
     }
 }
 #endif
