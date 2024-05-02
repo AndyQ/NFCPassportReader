@@ -135,6 +135,9 @@ extension PassportReader : NFCTagReaderSessionDelegate {
                 case NFCReaderError.readerSessionInvalidationErrorUserCanceled:
                     Logger.passportReader.error( "     - User cancelled session" )
                     userError = NFCPassportReaderError.UserCanceled
+                case NFCReaderError.readerSessionInvalidationErrorSessionTimeout:
+                    Logger.passportReader.error("     - Session timeout")
+                    userError = NFCPassportReaderError.TimeOutError
                 default:
                     Logger.passportReader.error( "     - some other error - \(readerError.localizedDescription)" )
                     userError = NFCPassportReaderError.UnexpectedError
@@ -199,10 +202,20 @@ extension PassportReader : NFCTagReaderSessionDelegate {
             } catch let error as NFCPassportReaderError {
                 let errorMessage = NFCViewDisplayMessage.error(error)
                 self.invalidateSession(errorMessage: errorMessage, error: error)
-            } catch let error {
+            } catch {
                 Logger.passportReader.debug( "tagReaderSession:failed to connect to tag - \(error.localizedDescription)" )
-                let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.ConnectionError)
-                self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.Unknown(error))
+
+                if let nfcError = error as? NFCReaderError {
+                    // .readerTransceiveErrorTagResponseError is thrown when a "connection lost" scenario is forced by moving the phone away from the NFC chip
+                    // .readerTransceiveErrorTagConnectionLost is never thrown for this scenario, but added for the sake of completeness
+                    if nfcError.errorCode == NFCReaderError.readerTransceiveErrorTagResponseError.rawValue || nfc.errorCode == NFCReaderError.readerTransceiveErrorTagConnectionLost.rawValue {
+                        let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.ConnectionError)
+                        self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.ConnectionError)
+                    }
+                } else {
+                    let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.Unknown(error))
+                    self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.Unknown(error))
+                }
             }
         }
     }
