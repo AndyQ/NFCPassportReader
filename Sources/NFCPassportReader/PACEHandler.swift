@@ -561,7 +561,7 @@ extension PACEHandler {
             throw NFCPassportReaderError.InvalidDataPassed("Unable to get public key data")
         }
 
-        let keyType = EVP_PKEY_base_id( key )
+        let keyType = EVP_PKEY_get_base_id( key )
         let tag : TKTLVTag
         if keyType == EVP_PKEY_DH || keyType == EVP_PKEY_DHX {
             tag = 0x84
