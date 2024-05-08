@@ -77,6 +77,7 @@ Currently the datagroups supported are: COM, DG1, DG2, DG7, DG11, DG12, DG14 (pa
 This will then handle the reading of the passport, and image and will call the completion block either with an TagError error if there was an error of some kind, or nil if successful.
 
 If successful, the passportReader object will then contain valid data for the passportMRZ and passportImage fields.
+Note - JPEG2000 images are currently unsupported - access to the raw data is available if you need to implement support for those.
 
 In addition, you can customise the messages displayed in the NFC Session Reader by providing a customDisplayMessage callback
 e.g. to override just the initial request to present passport message:
