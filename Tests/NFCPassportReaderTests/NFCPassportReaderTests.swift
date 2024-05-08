@@ -1,6 +1,7 @@
 import XCTest
 import CoreNFC
 import OpenSSL
+import OSLog
 
 @testable import NFCPassportReader
 
@@ -17,7 +18,8 @@ public func XCTAssertNoThrow<T>(_ expression: @autoclosure () throws -> T, _ mes
 
 
 final class NFCPassportReaderTests: XCTestCase {
-
+    let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "tests")
+    
     func testBinToHexRep() {
         let val : [UInt8] = [0x12, 0x24, 0x55, 0x77]
         XCTAssertEqual( binToHexRep(val), "12245577" )
@@ -136,9 +138,9 @@ final class NFCPassportReaderTests: XCTestCase {
         let iv : [UInt8] = [0, 0, 0, 0, 0, 0, 0, 0]
         let key : [UInt8] = [191, 73, 56, 112, 158, 148, 146, 127, 157, 76, 117, 8, 239, 128, 87, 42]
         let enc = tripleDESEncrypt(key: key, message: msg, iv: iv)
-        Log.debug("KEY: \(binToHexRep(key))")
-        Log.debug("MSG: \(binToHexRep(msg))")
-        Log.debug("ENC: \(binToHexRep(enc))")
+        logger.debug("KEY: \(binToHexRep(key))")
+        logger.debug("MSG: \(binToHexRep(msg))")
+        logger.debug("ENC: \(binToHexRep(enc))")
         
         XCTAssertEqual( binToHexRep(enc), "4DAF068AB358BC9E8F5E916D3DEDE750D92315370E44D9B3" )
     }
@@ -148,9 +150,9 @@ final class NFCPassportReaderTests: XCTestCase {
         let iv : [UInt8] = [0, 0, 0, 0, 0, 0, 0, 0]
         let key : [UInt8] = [191, 73, 56, 112, 158, 148, 146, 127, 157, 76, 117, 8, 239, 128, 87, 42]
         let dec = tripleDESDecrypt(key: key, message: enc, iv: iv)
-        Log.debug("KEY: \(binToHexRep(key))")
-        Log.debug("ENC: \(binToHexRep(enc))")
-        Log.debug("DEC: \(binToHexRep(dec))")
+        logger.debug("KEY: \(binToHexRep(key))")
+        logger.debug("ENC: \(binToHexRep(enc))")
+        logger.debug("DEC: \(binToHexRep(dec))")
         
         let val = String(data:Data(dec), encoding:.utf8)
         XCTAssertEqual( val, "maryhadalittlelambaaaaaa" )
@@ -218,32 +220,31 @@ final class NFCPassportReaderTests: XCTestCase {
     }
     
     
-        func testConvertECDSAPlainTODer() {
-            let sigText = "67e147aac644325792dfa0b1615956dc4ed54e8cd859341571db98003431936e0651e9a3cdbcea3c8accd75a6f6bf07eb6bcf9ad1728e21aa854049e634e6fbf"
-            let sig = hexRepToBin(sigText)
-            
-            let ecsig = ECDSA_SIG_new()
-            defer { ECDSA_SIG_free(ecsig) }
-            sig.withUnsafeBufferPointer { (unsafeBufPtr) in
-                let unsafePointer = unsafeBufPtr.baseAddress!
-                let r = BN_bin2bn(unsafePointer, 32, nil)
-                let s = BN_bin2bn(unsafePointer + 32, 32, nil)
-                ECDSA_SIG_set0(ecsig, r, s)
-            }
-            
-            //print( "Sig - \(ecsig)" )
-            
-            var derEncodedSignature: UnsafeMutablePointer<UInt8>? = nil
-            let derLength = i2d_ECDSA_SIG(ecsig, &derEncodedSignature)
-
-            var derBytes = [UInt8](repeating: 0, count: Int(derLength))
-            for b in 0..<Int(derLength) {
-                derBytes[b] = derEncodedSignature![b]
-            }
-
-            XCTAssertNoThrow(try OpenSSLUtils.ASN1Parse(data: Data(derBytes)), "Successfully parsed" )
-
+    func testConvertECDSAPlainTODer() {
+        let sigText = "67e147aac644325792dfa0b1615956dc4ed54e8cd859341571db98003431936e0651e9a3cdbcea3c8accd75a6f6bf07eb6bcf9ad1728e21aa854049e634e6fbf"
+        let sig = hexRepToBin(sigText)
+        
+        let ecsig = ECDSA_SIG_new()
+        defer { ECDSA_SIG_free(ecsig) }
+        sig.withUnsafeBufferPointer { (unsafeBufPtr) in
+            let unsafePointer = unsafeBufPtr.baseAddress!
+            let r = BN_bin2bn(unsafePointer, 32, nil)
+            let s = BN_bin2bn(unsafePointer + 32, 32, nil)
+            ECDSA_SIG_set0(ecsig, r, s)
         }
+        
+        //print( "Sig - \(ecsig)" )
+        
+        var derEncodedSignature: UnsafeMutablePointer<UInt8>? = nil
+        let derLength = i2d_ECDSA_SIG(ecsig, &derEncodedSignature)
+
+        var derBytes = [UInt8](repeating: 0, count: Int(derLength))
+        for b in 0..<Int(derLength) {
+            derBytes[b] = derEncodedSignature![b]
+        }
+
+        XCTAssertNoThrow(try OpenSSLUtils.ASN1Parse(data: Data(derBytes)), "Successfully parsed" )
+    }
 
     
     static var allTests = [
