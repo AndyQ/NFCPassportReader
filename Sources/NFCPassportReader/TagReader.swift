@@ -52,13 +52,13 @@ public class TagReader {
     func doInternalAuthentication( challenge: [UInt8] ) async throws -> ResponseAPDU {
         let randNonce = Data(challenge)
         
-        let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 256) //65536)
+        let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 65536)
 
-        var respAPDU = try await send( cmd: cmd )
+        var respAPDU = try await send( cmd: cmd, useExtended: true )
         if respAPDU.sw1 != 0x90 && respAPDU.sw2 != 0x00 {
             // Lets retry with extended mode
-            let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 65536)
-            respAPDU = try await send( cmd: cmd, useExtended: true )
+            let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 256)
+            respAPDU = try await send( cmd: cmd )
         }
         return respAPDU
     }
