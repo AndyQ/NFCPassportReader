@@ -206,7 +206,16 @@ extension MainView {
             }
             
             do {
-                let passport = try await passportReader.readPassport( mrzKey: mrzKey, customDisplayMessage:customMessageHandler)
+                let options = PassportReaderOptions(
+                    skipSecureElements: settings.skipSecureElements,
+                    skipCA: settings.skipCA,
+                    skipPACE: settings.skipPACE,
+                    useExtendedReads: settings.useExtendedReads,
+                    usePACEPolling: settings.usePACEPolling)
+                
+                let passport = try await passportReader.readPassport( mrzKey: mrzKey,
+                                                                      readingOptions: options,
+                                                                      customDisplayMessage:customMessageHandler)
                 
                 if let _ = passport.faceImageInfo {
                     print( "Got face Image details")

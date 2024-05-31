@@ -52,9 +52,15 @@ public class TagReader {
     func doInternalAuthentication( challenge: [UInt8] ) async throws -> ResponseAPDU {
         let randNonce = Data(challenge)
         
-        let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 65536)
+        let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 256) //65536)
 
-        return try await send( cmd: cmd )
+        var respAPDU = try await send( cmd: cmd )
+        if respAPDU.sw1 != 0x90 && respAPDU.sw2 != 0x00 {
+            // Lets retry with extended mode
+            let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 65536)
+            respAPDU = try await send( cmd: cmd, useExtended: true )
+        }
+        return respAPDU
     }
 
     func doMutualAuthentication( cmdData : Data ) async throws -> ResponseAPDU{
@@ -249,11 +255,11 @@ public class TagReader {
         return try await send( cmd: cmd )
     }
 
-    func send( cmd: NFCISO7816APDU ) async throws -> ResponseAPDU {
+    func send( cmd: NFCISO7816APDU, useExtended: Bool = false ) async throws -> ResponseAPDU {
         Logger.tagReader.debug( "TagReader - sending \(cmd)" )
         var toSend = cmd
         if let sm = secureMessaging {
-            toSend = try sm.protect(apdu:cmd)
+            toSend = try sm.protect(apdu:cmd, useExtended: useExtended)
             Logger.tagReader.debug("TagReader - [SM] \(toSend)" )
         }
         

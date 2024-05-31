@@ -18,7 +18,27 @@ struct SettingsView: View {
         Form {
             Section(header: Text("Passport reading settings")) {
                 Toggle(isOn: $settings.useNewVerificationMethod) {
-                    Text("Use new Passive Authentication")
+                    Text("Use new Passive Authentication (RFS5652 instead of OpenSSL CMS")
+                }
+                .padding(.bottom)
+                Toggle(isOn: $settings.skipSecureElements) {
+                    Text("Skip Secure Elements")
+                }
+                .padding(.bottom)
+                Toggle(isOn: $settings.skipCA) {
+                    Text("Skip CA Authentication")
+                }
+                .padding(.bottom)
+                Toggle(isOn: $settings.skipPACE) {
+                    Text("Skip PACE Authentication")
+                }
+                .padding(.bottom)
+                Toggle(isOn: $settings.useExtendedReads) {
+                    Text("Use Extended reads for Active Authentication")
+                }
+                .padding(.bottom)
+                Toggle(isOn: $settings.usePACEPolling) {
+                    Text("Use PACE Polling rather than ISO14443")
                 }
                 .padding(.bottom)
                 VStack {

@@ -13,6 +13,22 @@ import OSLog
 import UIKit
 import CoreNFC
 
+public struct PassportReaderOptions {
+    var skipSecureElements = true  // Skips the elements that require additional authentication
+    var skipCA = false // Skips CA Authentication
+    var skipPACE = false // Skips PACE Authentication
+    var useExtendedReads = false // Use extended reading
+    var usePACEPolling = false // Uses PACE Polling when looking for passports
+    
+    public init(skipSecureElements: Bool = true, skipCA: Bool = false, skipPACE: Bool = false, useExtendedReads: Bool = false, usePACEPolling: Bool = true) {
+        self.skipSecureElements = skipSecureElements
+        self.skipCA = skipCA
+        self.skipPACE = skipPACE
+        self.useExtendedReads = useExtendedReads
+        self.usePACEPolling = usePACEPolling
+    }
+}
+
 @available(iOS 15, *)
 public class PassportReader : NSObject {
     private typealias NFCCheckedContinuation = CheckedContinuation<NFCPassportModel, Error>
@@ -24,10 +40,8 @@ public class PassportReader : NSObject {
     private var currentlyReadingDataGroup : DataGroupId?
     
     private var dataGroupsToRead : [DataGroupId] = []
+    private var readingOptions : PassportReaderOptions = PassportReaderOptions()
     private var readAllDatagroups = false
-    private var skipSecureElements = true
-    private var skipCA = false
-    private var skipPACE = false
 
     private var bacHandler : BACHandler?
     private var caHandler : ChipAuthenticationHandler?
@@ -45,7 +59,7 @@ public class PassportReader : NSObject {
     public var passiveAuthenticationUsesOpenSSL : Bool = false
 
     public init( masterListURL: URL? = nil ) {
-        super.init()
+        super.init( )
         
         self.masterListURL = masterListURL
     }
@@ -62,17 +76,14 @@ public class PassportReader : NSObject {
         dataAmountToReadOverride = amount
     }
     
-    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
+    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], readingOptions : PassportReaderOptions = PassportReaderOptions(), customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
         
         self.passport = NFCPassportModel()
         self.mrzKey = mrzKey
-        self.skipCA = skipCA
-        self.skipPACE = skipPACE
         
         self.dataGroupsToRead.removeAll()
         self.dataGroupsToRead.append( contentsOf:tags)
         self.nfcViewDisplayMessageHandler = customDisplayMessage
-        self.skipSecureElements = skipSecureElements
         self.currentlyReadingDataGroup = nil
         self.bacHandler = nil
         self.caHandler = nil
@@ -93,7 +104,14 @@ public class PassportReader : NSObject {
         }
         
         if NFCTagReaderSession.readingAvailable {
-            readerSession = NFCTagReaderSession(pollingOption: [.iso14443], delegate: self, queue: nil)
+            let pollingOption : NFCTagReaderSession.PollingOption
+            if #available(iOS 16.0, *) {
+                pollingOption = readingOptions.usePACEPolling ? .pace : .iso14443
+            } else {
+                pollingOption = NFCTagReaderSession.PollingOption.iso14443
+                // Fallback on earlier versions
+            }
+            readerSession = NFCTagReaderSession(pollingOption: [pollingOption], delegate: self, queue: nil)
             
             self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.requestPresentPassport )
             readerSession?.begin()
@@ -215,7 +233,7 @@ extension PassportReader {
     
     func startReading(tagReader : TagReader) async throws -> NFCPassportModel {
 
-        if !skipPACE {
+        if !readingOptions.skipPACE {
             do {
                 let data = try await tagReader.readCardAccess()
                 Logger.passportReader.debug( "Read CardAccess - data \(binToHexRep(data))" )
@@ -303,7 +321,7 @@ extension PassportReader {
         if DGsToRead.contains( .DG14 ) {
             DGsToRead.removeAll { $0 == .DG14 }
             
-            if !skipCA {
+            if !self.readingOptions.skipCA {
                 // Do Chip Authentication
                 if let dg14 = try await readDataGroup(tagReader:tagReader, dgId:.DG14) as? DataGroup14 {
                     self.passport.addDataGroup( .DG14, dataGroup:dg14 )
@@ -327,7 +345,7 @@ extension PassportReader {
         }
 
         // If we are skipping secure elements then remove .DG3 and .DG4
-        if self.skipSecureElements {
+        if self.readingOptions.skipSecureElements {
             DGsToRead = DGsToRead.filter { $0 != .DG3 && $0 != .DG4 }
         }
 

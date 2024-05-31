@@ -136,9 +136,9 @@ final class NFCPassportReaderTests: XCTestCase {
         let iv : [UInt8] = [0, 0, 0, 0, 0, 0, 0, 0]
         let key : [UInt8] = [191, 73, 56, 112, 158, 148, 146, 127, 157, 76, 117, 8, 239, 128, 87, 42]
         let enc = tripleDESEncrypt(key: key, message: msg, iv: iv)
-        Log.debug("KEY: \(binToHexRep(key))")
-        Log.debug("MSG: \(binToHexRep(msg))")
-        Log.debug("ENC: \(binToHexRep(enc))")
+        print("KEY: \(binToHexRep(key))")
+        print("MSG: \(binToHexRep(msg))")
+        print("ENC: \(binToHexRep(enc))")
         
         XCTAssertEqual( binToHexRep(enc), "4DAF068AB358BC9E8F5E916D3DEDE750D92315370E44D9B3" )
     }
@@ -148,9 +148,9 @@ final class NFCPassportReaderTests: XCTestCase {
         let iv : [UInt8] = [0, 0, 0, 0, 0, 0, 0, 0]
         let key : [UInt8] = [191, 73, 56, 112, 158, 148, 146, 127, 157, 76, 117, 8, 239, 128, 87, 42]
         let dec = tripleDESDecrypt(key: key, message: enc, iv: iv)
-        Log.debug("KEY: \(binToHexRep(key))")
-        Log.debug("ENC: \(binToHexRep(enc))")
-        Log.debug("DEC: \(binToHexRep(dec))")
+        print("KEY: \(binToHexRep(key))")
+        print("ENC: \(binToHexRep(enc))")
+        print("DEC: \(binToHexRep(dec))")
         
         let val = String(data:Data(dec), encoding:.utf8)
         XCTAssertEqual( val, "maryhadalittlelambaaaaaa" )
