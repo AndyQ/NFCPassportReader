@@ -54,9 +54,11 @@ public class TagReader {
         
         let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 65536)
 
-        var respAPDU = try await send( cmd: cmd, useExtended: true )
-        if respAPDU.sw1 != 0x90 && respAPDU.sw2 != 0x00 {
-            // Lets retry with extended mode
+        var respAPDU : ResponseAPDU
+        do {
+            respAPDU = try await send( cmd: cmd, useExtended: true )
+        } catch NFCPassportReaderError.ResponseError {
+            // Naive - for the moment, don't care what the error is - just try with extended mode
             let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x88, p1Parameter: 0, p2Parameter: 0, data: randNonce, expectedResponseLength: 256)
             respAPDU = try await send( cmd: cmd )
         }
