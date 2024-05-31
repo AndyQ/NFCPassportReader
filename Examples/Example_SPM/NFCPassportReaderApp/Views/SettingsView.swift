@@ -33,10 +33,6 @@ struct SettingsView: View {
                     Text("Skip PACE Authentication")
                 }
                 .padding(.bottom)
-                Toggle(isOn: $settings.useExtendedReads) {
-                    Text("Use Extended reads for Active Authentication")
-                }
-                .padding(.bottom)
                 Toggle(isOn: $settings.usePACEPolling) {
                     Text("Use PACE Polling rather than ISO14443")
                 }

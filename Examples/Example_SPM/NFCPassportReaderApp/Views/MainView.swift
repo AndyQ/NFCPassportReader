@@ -210,7 +210,6 @@ extension MainView {
                     skipSecureElements: settings.skipSecureElements,
                     skipCA: settings.skipCA,
                     skipPACE: settings.skipPACE,
-                    useExtendedReads: settings.useExtendedReads,
                     usePACEPolling: settings.usePACEPolling)
                 
                 let passport = try await passportReader.readPassport( mrzKey: mrzKey,

@@ -17,14 +17,12 @@ public struct PassportReaderOptions {
     var skipSecureElements = true  // Skips the elements that require additional authentication
     var skipCA = false // Skips CA Authentication
     var skipPACE = false // Skips PACE Authentication
-    var useExtendedReads = false // Use extended reading
     var usePACEPolling = false // Uses PACE Polling when looking for passports
     
-    public init(skipSecureElements: Bool = true, skipCA: Bool = false, skipPACE: Bool = false, useExtendedReads: Bool = false, usePACEPolling: Bool = true) {
+    public init(skipSecureElements: Bool = true, skipCA: Bool = false, skipPACE: Bool = false, usePACEPolling: Bool = true) {
         self.skipSecureElements = skipSecureElements
         self.skipCA = skipCA
         self.skipPACE = skipPACE
-        self.useExtendedReads = useExtendedReads
         self.usePACEPolling = usePACEPolling
     }
 }

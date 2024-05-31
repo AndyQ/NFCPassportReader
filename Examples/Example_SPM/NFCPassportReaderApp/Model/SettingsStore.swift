@@ -23,7 +23,6 @@ final class SettingsStore: ObservableObject {
         static let skipSecureElements = "skipSecureElements"
         static let skipCA = "skipCA"
         static let skipPACE = "skipPACE"
-        static let useExtendedReads = "useExtendedReads"
         static let usePACEPolling = "usePACEPolling"
         
     }
@@ -44,11 +43,6 @@ final class SettingsStore: ObservableObject {
             Keys.captureLog: true,
             Keys.logLevel: 1,
             Keys.useNewVerification: true,
-            Keys.skipSecureElements: false  ,
-            Keys.skipCA: false,
-            Keys.skipPACE: false,
-            Keys.useExtendedReads: false,
-            Keys.usePACEPolling: false,
             Keys.savePassportOnScan: false,
             Keys.passportNumber: "",
             Keys.dateOfBirth: Date().timeIntervalSince1970,
@@ -75,7 +69,6 @@ final class SettingsStore: ObservableObject {
     @AppStorage(Keys.skipSecureElements) var skipSecureElements: Bool = true
     @AppStorage(Keys.skipCA) var skipCA: Bool = false
     @AppStorage(Keys.skipPACE) var skipPACE: Bool = false
-    @AppStorage(Keys.useExtendedReads) var useExtendedReads: Bool = false
     @AppStorage(Keys.usePACEPolling) var usePACEPolling: Bool = false
 
 /*
