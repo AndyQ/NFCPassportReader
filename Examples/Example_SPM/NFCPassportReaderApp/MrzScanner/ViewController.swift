@@ -21,7 +21,7 @@ public class ViewController: UIViewController {
 	var currentOrientation = UIDeviceOrientation.portrait
 	
 	// MARK: - Capture related objects
-	private let captureSession = AVCaptureSession()
+    private let captureSession = AVCaptureSession()
     let captureSessionQueue = DispatchQueue(label: "com.example.apple-samplecode.CaptureSessionQueue")
     
 	var captureDevice: AVCaptureDevice?
@@ -268,9 +268,13 @@ public class ViewController: UIViewController {
 			return
 		}
 		
-		captureSession.startRunning()
+        // This needs to go on the background queue BUT until Apple fix captureSession as Sendable we can't!
+        // So currently we get a warning that this should be on the background thread
+//        captureSessionQueue.async {
+            self.captureSession.startRunning()
+//        }
 	}
-	
+    
 	// MARK: - UI drawing and interaction
 	
 	func showString(string: String) {

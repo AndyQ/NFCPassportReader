@@ -16,7 +16,7 @@ import Foundation
 extension String {
 
     @MainActor func checkMrz() -> (String)? {
-
+        
         let tdOneFirstRegex = "(I|C|A).[A-Z0<]{3}[A-Z0-9]{1,9}<?[0-9O]{1}[A-Z0-9<]{14,22}"
         let tdOneSecondRegex = "[0-9O]{7}(M|F|<)[0-9O]{7}[A-Z0<]{3}[A-Z0-9<]{11}[0-9O]"
         let tdOneThirdRegex = "([A-Z0]+<)+<([A-Z0]+<)+<+"

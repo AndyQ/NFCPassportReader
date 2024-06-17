@@ -72,8 +72,11 @@ public class VisionViewController: ViewController {
 			var numberIsSubstring = true
 
             print( candidate.string )
+            
+            // Remove spaces from candidate.string
+            let mrz = candidate.string.replacingOccurrences(of: " ", with: "")
 
-			if let result = candidate.string.checkMrz() {
+			if let result = mrz.checkMrz() {
                 if(result != "nil"){
                     codes.append(result)
                     numberIsSubstring = false
