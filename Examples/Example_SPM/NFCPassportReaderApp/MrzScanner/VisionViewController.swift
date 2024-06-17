@@ -104,25 +104,35 @@ public class VisionViewController: ViewController {
 		}
 	}
 	
+    
+    nonisolated func createCGImage(from pixelBuffer: CVPixelBuffer) -> CGImage? {
+        let ciContext = CIContext()
+        let ciImage = CIImage(cvImageBuffer: pixelBuffer)
+        return ciContext.createCGImage(ciImage, from: ciImage.extent)
+    }
+
     public override func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-		if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
-            // Configure for running in real-time.
-            
-            
-            request.recognitionLevel = .fast
-            // Language correction won't help recognizing phone numbers. It also
-            // makes recognition slower.nonisolated
-            request.usesLanguageCorrection = false
-            // Only run on the region of interest for maximum speed.
-            request.regionOfInterest = regionOfInterest
-            
-            let requestHandler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: textOrientation, options: [:])
-            do {
-                try requestHandler.perform([request])
-            } catch {
-                print(error)
+        if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+            guard let cgImage = createCGImage(from: pixelBuffer) else { return }
+            Task { @MainActor in
+                // Configure for running in real-time.
+                
+                request.recognitionLevel = .fast
+                // Language correction won't help recognizing phone numbers. It also
+                // makes recognition slower.nonisolated
+                request.usesLanguageCorrection = false
+                // Only run on the region of interest for maximum speed.
+                request.regionOfInterest = regionOfInterest
+                
+//                let requestHandler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: textOrientation, options: [:])
+                let requestHandler = VNImageRequestHandler(cgImage: cgImage, orientation: textOrientation, options: [:])
+                do {
+                    try requestHandler.perform([request])
+                } catch {
+                    print(error)
+                }
             }
-		}
+        }
 	}
 	
 	// MARK: - Bounding box drawing
