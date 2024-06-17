@@ -13,7 +13,7 @@ import NFCPassportReader
 import UniformTypeIdentifiers
 import MRZParser
 
-let appLogging = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "app")
+@MainActor let appLogging = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "app")
 
 
 struct MainView : View {
@@ -165,7 +165,7 @@ extension MainView {
     }
 
     func scanPassport( ) {
-        lastPassportScanTime = Date.now
+        PassportUtils.lastPassportScanTime = Date.now
 
         hideKeyboard()
         self.showDetails = false

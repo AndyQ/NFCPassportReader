@@ -8,7 +8,8 @@
 import Foundation
 
 @available(iOS 13, macOS 10.15, *)
-public enum NFCViewDisplayMessage {
+@MainActor
+public enum NFCViewDisplayMessage  {
     case requestPresentPassport
     case authenticatingWithPassport(Int)
     case readingDataGroupProgress(DataGroupId, Int)

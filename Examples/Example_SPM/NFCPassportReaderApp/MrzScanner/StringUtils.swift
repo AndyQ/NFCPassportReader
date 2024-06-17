@@ -7,15 +7,15 @@ Utilities for dealing with recognized strings
 
 import Foundation
 
-var captureFirst = ""
-var captureSecond = ""
-var captureThird = ""
-var mrz = ""
-var temp_mrz = ""
+@MainActor var captureFirst = ""
+@MainActor var captureSecond = ""
+@MainActor var captureThird = ""
+@MainActor var mrz = ""
+@MainActor var temp_mrz = ""
 
 extension String {
 
-	func checkMrz() -> (String)? {
+    @MainActor func checkMrz() -> (String)? {
 
         let tdOneFirstRegex = "(I|C|A).[A-Z0<]{3}[A-Z0-9]{1,9}<?[0-9O]{1}[A-Z0-9<]{14,22}"
         let tdOneSecondRegex = "[0-9O]{7}(M|F|<)[0-9O]{7}[A-Z0<]{3}[A-Z0-9<]{11}[0-9O]"
@@ -147,7 +147,7 @@ class StringTracker {
 		}
 	}
 	
-	func reset(string: String) {
+    @MainActor func reset(string: String) {
 		seenStrings.removeValue(forKey: string)
 		bestCount = 0
 		bestString = ""

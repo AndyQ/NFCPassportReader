@@ -21,7 +21,7 @@ public enum PassportAuthenticationStatus {
 }
 
 @available(iOS 13, macOS 10.15, *)
-public class NFCPassportModel {
+public final class NFCPassportModel : @unchecked Sendable {
     
     public private(set) lazy var documentType : String = { return String( passportDataElements?["5F03"]?.first ?? "?" ) }()
     public private(set) lazy var documentSubType : String = { return String( passportDataElements?["5F03"]?.last ?? "?" ) }()
