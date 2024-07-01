@@ -16,6 +16,25 @@ import CoreNFC
 @available(iOS 15, *)
 public protocol PassportReaderTrackingDelegate: AnyObject {
     func nfcTagDetected()
+    func readCardAccess(cardAccess: CardAccess)
+    func paceStarted()
+    func paceSucceeded()
+    func paceFailed()
+    func bacStarted()
+    func bacSucceeded()
+    func bacFailed()
+}
+
+@available(iOS 15, *)
+extension PassportReaderTrackingDelegate {
+    func nfcTagDetected() { /* default implementation */ }
+    func readCardAccess(cardAccess: CardAccess) { /* default implementation */ }
+    func paceStarted() { /* default implementation */ }
+    func paceSucceeded() { /* default implementation */ }
+    func paceFailed() { /* default implementation */ }
+    func bacStarted() { /* default implementation */ }
+    func bacSucceeded() { /* default implementation */ }
+    func bacFailed() { /* default implementation */ }
 }
 
 @available(iOS 15, *)
@@ -235,21 +254,30 @@ extension PassportReader : NFCTagReaderSessionDelegate {
 extension PassportReader {
     
     func startReading(tagReader : TagReader) async throws -> NFCPassportModel {
+        trackingDelegate?.nfcTagDetected()
 
         if !skipPACE {
             do {
+                trackingDelegate?.paceStarted()
+
                 let data = try await tagReader.readCardAccess()
                 Logger.passportReader.debug( "Read CardAccess - data \(binToHexRep(data))" )
                 let cardAccess = try CardAccess(data)
                 passport.cardAccess = cardAccess
-     
+
+                trackingDelegate?.readCardAccess(cardAccess: cardAccess)
+
                 Logger.passportReader.info( "Starting Password Authenticated Connection Establishment (PACE)" )
                  
                 let paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
                 try await paceHandler.doPACE(mrzKey: mrzKey )
                 passport.PACEStatus = .success
                 Logger.passportReader.debug( "PACE Succeeded" )
+
+                trackingDelegate?.paceSucceeded()
             } catch {
+                trackingDelegate?.paceFailed()
+
                 passport.PACEStatus = .failed
                 Logger.passportReader.error( "PACE Failed - falling back to BAC" )
             }
@@ -259,7 +287,17 @@ extension PassportReader {
         
         // If either PACE isn't supported, we failed whilst doing PACE or we didn't even attempt it, then fall back to BAC
         if passport.PACEStatus != .success {
-            try await doBACAuthentication(tagReader : tagReader)
+            do {
+                trackingDelegate?.bacStarted()
+
+                try await doBACAuthentication(tagReader : tagReader)
+
+                trackingDelegate?.bacSucceeded()
+            } catch {
+                trackingDelegate?.bacFailed()
+
+                throw error
+            }
         }
         
         // Now to read the datagroups
@@ -295,8 +333,7 @@ extension PassportReader {
 
     func doBACAuthentication(tagReader : TagReader) async throws {
         self.currentlyReadingDataGroup = nil
-        
-        trackingDelegate?.nfcTagDetected()
+
         Logger.passportReader.info( "Starting Basic Access Control (BAC)" )
         
         self.passport.BACStatus = .failed
