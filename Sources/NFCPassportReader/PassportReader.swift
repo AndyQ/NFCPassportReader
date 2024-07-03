@@ -28,6 +28,7 @@ public class PassportReader : NSObject {
     private var skipSecureElements = true
     private var skipCA = false
     private var skipPACE = false
+    private var useExtendedMode = false
 
     private var bacHandler : BACHandler?
     private var caHandler : ChipAuthenticationHandler?
@@ -62,12 +63,13 @@ public class PassportReader : NSObject {
         dataAmountToReadOverride = amount
     }
     
-    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
+    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, useExtendedMode : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
         
         self.passport = NFCPassportModel()
         self.mrzKey = mrzKey
         self.skipCA = skipCA
         self.skipPACE = skipPACE
+        self.useExtendedMode = useExtendedMode
         
         self.dataGroupsToRead.removeAll()
         self.dataGroupsToRead.append( contentsOf:tags)
@@ -267,7 +269,7 @@ extension PassportReader {
 
         let challenge = generateRandomUInt8Array(8)
         Logger.passportReader.debug( "Generated Active Authentication challange - \(binToHexRep(challenge))")
-        let response = try await tagReader.doInternalAuthentication(challenge: challenge)
+        let response = try await tagReader.doInternalAuthentication(challenge: challenge, useExtendedMode: useExtendedMode)
         self.passport.verifyActiveAuthentication( challenge:challenge, signature:response.data )
     }
     
