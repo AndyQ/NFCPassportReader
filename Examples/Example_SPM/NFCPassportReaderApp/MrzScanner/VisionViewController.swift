@@ -36,7 +36,7 @@ public struct MRZScanner: UIViewControllerRepresentable {
 }
 
 
-public class VisionViewController: ViewController {
+public class VisionViewController: CameraViewController {
     var request: VNRecognizeTextRequest!
 
     // Temporal string tracker
@@ -73,7 +73,7 @@ public class VisionViewController: ViewController {
 
             print( candidate.string )
             
-            // Remove spaces from candidate.string
+            // Remove spaces from candidate.string - improved recognition
             let mrz = candidate.string.replacingOccurrences(of: " ", with: "")
 
 			if let result = mrz.checkMrz() {

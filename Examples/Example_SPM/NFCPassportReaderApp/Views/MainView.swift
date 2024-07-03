@@ -44,13 +44,14 @@ struct MainView : View {
                 NavigationLink( destination: StoredPassportView(), isActive: $showSavedPassports) { Text("") }
                 NavigationLink( destination: MRZScanner(completionHandler: { mrz in
                     
-                    if let (docNr, dob, doe) = parse( mrz:mrz ) {
-                        settings.passportNumber = docNr
-                        settings.dateOfBirth = dob
-                        settings.dateOfExpiry = doe
-                    }
-                    showScanMRZ = false
-                }).navigationTitle("Scan MRZ"), isActive: $showScanMRZ){ Text("") }
+                        if let (docNr, dob, doe) = parse( mrz:mrz ) {
+                            settings.passportNumber = docNr
+                            settings.dateOfBirth = dob
+                            settings.dateOfExpiry = doe
+                        }
+                        showScanMRZ = false
+                    })
+                    .navigationTitle("Scan MRZ"), isActive: $showScanMRZ){ Text("") }
 
                 VStack {
                     HStack {

@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A117B7EB2695AD2400E13C18 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A117B7E62695AD2400E13C18 /* ViewController.swift */; };
+		A117B7EB2695AD2400E13C18 /* CameraViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A117B7E62695AD2400E13C18 /* CameraViewController.swift */; };
 		A117B7EC2695AD2400E13C18 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A117B7E72695AD2400E13C18 /* PreviewView.swift */; };
 		A117B7ED2695AD2400E13C18 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = A117B7E82695AD2400E13C18 /* LICENSE */; };
 		A117B7EE2695AD2400E13C18 /* VisionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A117B7E92695AD2400E13C18 /* VisionViewController.swift */; };
@@ -52,7 +52,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		A117B7E62695AD2400E13C18 /* ViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		A117B7E62695AD2400E13C18 /* CameraViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CameraViewController.swift; sourceTree = "<group>"; };
 		A117B7E72695AD2400E13C18 /* PreviewView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
 		A117B7E82695AD2400E13C18 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		A117B7E92695AD2400E13C18 /* VisionViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VisionViewController.swift; sourceTree = "<group>"; };
@@ -115,7 +115,7 @@
 		A117B7E52695AD2400E13C18 /* MrzScanner */ = {
 			isa = PBXGroup;
 			children = (
-				A117B7E62695AD2400E13C18 /* ViewController.swift */,
+				A117B7E62695AD2400E13C18 /* CameraViewController.swift */,
 				A117B7E72695AD2400E13C18 /* PreviewView.swift */,
 				A117B7E82695AD2400E13C18 /* LICENSE */,
 				A117B7E92695AD2400E13C18 /* VisionViewController.swift */,
@@ -340,7 +340,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1CE83AC22C91D1300E3EACF /* StringExt.swift in Sources */,
-				A117B7EB2695AD2400E13C18 /* ViewController.swift in Sources */,
+				A117B7EB2695AD2400E13C18 /* CameraViewController.swift in Sources */,
 				A1FDC53625D43AB400D22FF4 /* MRZEntryView.swift in Sources */,
 				A17134BE22C8EF7200C457C3 /* MainView.swift in Sources */,
 				A117B7EE2695AD2400E13C18 /* VisionViewController.swift in Sources */,

@@ -9,7 +9,7 @@ import UIKit
 import AVFoundation
 import Vision
 
-public class ViewController: UIViewController {
+public class CameraViewController: UIViewController {
 	// MARK: - UI objects
 	var previewView: PreviewView!
 	var cutoutView: UIView!
@@ -119,14 +119,30 @@ public class ViewController: UIViewController {
 		
 		// Handle device orientation in the preview layer.
 		if let videoPreviewLayerConnection = previewView.videoPreviewLayer.connection {
-			if let newVideoOrientation = AVCaptureVideoOrientation(deviceOrientation: deviceOrientation) {
-				videoPreviewLayerConnection.videoOrientation = newVideoOrientation
-			}
+            if #available(iOS 17, *) {
+                let angle = getAngle(deviceOrientation)
+                videoPreviewLayerConnection.videoRotationAngle = angle
+            }
+            else {
+                if let newVideoOrientation = AVCaptureVideoOrientation(deviceOrientation: deviceOrientation) {
+                    videoPreviewLayerConnection.videoOrientation = newVideoOrientation
+                }
+            }
 		}
 		
 		// Orientation changed: figure out new region of interest (ROI).
 		calculateRegionOfInterest()
 	}
+    
+    private func getAngle(_ orientation: UIDeviceOrientation) -> CGFloat {
+        switch orientation {
+            case .landscapeRight: return 45
+            case .portrait: return 90
+            case .portraitUpsideDown: return 180
+            default: return 0.0
+        }
+    }
+
 	
 	public override func viewDidLayoutSubviews() {
 		super.viewDidLayoutSubviews()
@@ -269,7 +285,6 @@ public class ViewController: UIViewController {
 		}
 		
         // This needs to go on the background queue BUT until Apple fix captureSession as Sendable we can't!
-        // So currently we get a warning that this should be on the background thread
 //        captureSessionQueue.async {
             self.captureSession.startRunning()
 //        }
@@ -305,7 +320,7 @@ public class ViewController: UIViewController {
 
 // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
 
-extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
+extension CameraViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
 	
     nonisolated public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
 		// This is implemented in VisionViewController.
