@@ -13,6 +13,7 @@ import OSLog
 import CoreNFC
 
 @available(iOS 15, *)
+@MainActor
 public class TagReader {
     var tag : NFCISO7816Tag
     var secureMessaging : SecureMessaging?
@@ -248,15 +249,27 @@ public class TagReader {
         
         return try await send( cmd: cmd )
     }
-
-    func send( cmd: NFCISO7816APDU ) async throws -> ResponseAPDU {
-        Logger.tagReader.debug( "TagReader - sending \(cmd)" )
+    
+    @MainActor
+    func createSecureCommand(from cmd: NFCISO7816APDU ) throws -> NFCISO7816APDU {
         var toSend = cmd
         if let sm = secureMessaging {
             toSend = try sm.protect(apdu:cmd)
             Logger.tagReader.debug("TagReader - [SM] \(toSend)" )
         }
         
+        return toSend
+    }
+
+    func send( cmd: NFCISO7816APDU ) async throws -> ResponseAPDU {
+        Logger.tagReader.debug( "TagReader - sending \(cmd)" )
+        let toSend = try createSecureCommand(from: cmd)
+//        if let sm = secureMessaging {
+//            toSend = try sm.protect(apdu:cmd)
+//            Logger.tagReader.debug("TagReader - [SM] \(toSend)" )
+//        }
+//        
+//        let toSendCmd = toSend
         var (data, sw1, sw2) = try await tag.sendCommand(apdu: toSend)
         Logger.tagReader.debug( "TagReader - Received response, size \(data.count)b" )
 

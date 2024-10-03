@@ -36,6 +36,7 @@ extension PACEHandlerError: LocalizedError {
 }
 
 @available(iOS 15, *)
+@MainActor
 public class PACEHandler {
     
     

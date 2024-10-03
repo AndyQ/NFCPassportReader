@@ -12,7 +12,9 @@ import CryptoTokenKit
 
 @available(iOS 13, macOS 10.15, *)
 public class OpenSSLUtils {
-    private static var loaded = false
+    private static var loaded : Bool {
+        return false
+    }
     
     /// Returns any OpenSSL Error as a String
     public static func getOpenSSLError() -> String {
