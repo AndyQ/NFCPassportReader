@@ -230,13 +230,13 @@ extension PassportReader : NFCTagReaderSessionDelegate {
             } catch {
                 Logger.passportReader.debug( "tagReaderSession:failed to connect to tag - \(error.localizedDescription)" )
 
-                if let nfcError = error as? NFCReaderError {
-                    // .readerTransceiveErrorTagResponseError is thrown when a "connection lost" scenario is forced by moving the phone away from the NFC chip
-                    // .readerTransceiveErrorTagConnectionLost is never thrown for this scenario, but added for the sake of completeness
-                    if nfcError.errorCode == NFCReaderError.readerTransceiveErrorTagResponseError.rawValue || nfcError.errorCode == NFCReaderError.readerTransceiveErrorTagConnectionLost.rawValue {
-                        let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.ConnectionError)
-                        self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.ConnectionError)
-                    }
+                // .readerTransceiveErrorTagResponseError is thrown when a "connection lost" scenario is forced by moving the phone away from the NFC chip
+                // .readerTransceiveErrorTagConnectionLost is never thrown for this scenario, but added for the sake of completeness
+                if let nfcError = error as? NFCReaderError,
+                   nfcError.errorCode == NFCReaderError.readerTransceiveErrorTagResponseError.rawValue ||
+                    nfcError.errorCode == NFCReaderError.readerTransceiveErrorTagConnectionLost.rawValue {
+                    let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.ConnectionError)
+                    self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.ConnectionError)
                 } else {
                     let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.Unknown(error))
                     self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.Unknown(error))
