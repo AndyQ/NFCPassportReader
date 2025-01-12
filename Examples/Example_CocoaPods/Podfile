@@ -1,5 +1,5 @@
 # Uncomment the next line to define a global platform for your project
-platform :ios, '15.0'
+platform :ios, '14.0'
 
 # Disable use of input/output files here so that when we build it includes any changes to the development pod
 # rather than having to manually clean and rebuuild each time
