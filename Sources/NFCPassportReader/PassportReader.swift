@@ -289,13 +289,10 @@ extension PassportReader {
         if passport.PACEStatus != .success {
             do {
                 trackingDelegate?.bacStarted()
-
                 try await doBACAuthentication(tagReader : tagReader)
-
                 trackingDelegate?.bacSucceeded()
             } catch {
                 trackingDelegate?.bacFailed()
-
                 throw error
             }
         }
