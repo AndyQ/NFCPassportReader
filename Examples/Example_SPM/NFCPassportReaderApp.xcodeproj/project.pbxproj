@@ -33,8 +33,6 @@
 		A1C234C225DD19DE003FFD79 /* PassportSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C234C125DD19DE003FFD79 /* PassportSummaryView.swift */; };
 		A1CE83AC22C91D1300E3EACF /* StringExt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CE83AB22C91D1300E3EACF /* StringExt.swift */; };
 		A1DD3F3F22C535F10067255C /* masterList.pem in Resources */ = {isa = PBXBuildFile; fileRef = A1DD3F3E22C535F00067255C /* masterList.pem */; };
-		A1EBC5242370BAB2004DD19E /* DataGroupParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1EBC5212370BAB2004DD19E /* DataGroupParsingTests.swift */; };
-		A1EBC5252370BAB2004DD19E /* NFCPassportReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1EBC5222370BAB2004DD19E /* NFCPassportReaderTests.swift */; };
 		A1FDC52E25D3F15D00D22FF4 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FDC52D25D3F15D00D22FF4 /* SettingsView.swift */; };
 		A1FDC53225D3F19E00D22FF4 /* ViewModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FDC53125D3F19E00D22FF4 /* ViewModifiers.swift */; };
 		A1FDC53425D3F1DE00D22FF4 /* CheckBoxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1FDC53325D3F1DE00D22FF4 /* CheckBoxView.swift */; };
@@ -83,8 +81,6 @@
 		A1DD3F3E22C535F00067255C /* masterList.pem */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = masterList.pem; sourceTree = "<group>"; };
 		A1EBC50D2370B88D004DD19E /* NFCPassportReaderAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NFCPassportReaderAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1EBC5112370B88D004DD19E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A1EBC5212370BAB2004DD19E /* DataGroupParsingTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataGroupParsingTests.swift; sourceTree = "<group>"; };
-		A1EBC5222370BAB2004DD19E /* NFCPassportReaderTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NFCPassportReaderTests.swift; sourceTree = "<group>"; };
 		A1FDC52D25D3F15D00D22FF4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A1FDC53125D3F19E00D22FF4 /* ViewModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModifiers.swift; sourceTree = "<group>"; };
 		A1FDC53325D3F1DE00D22FF4 /* CheckBoxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckBoxView.swift; sourceTree = "<group>"; };
@@ -219,8 +215,6 @@
 		A1EBC50E2370B88D004DD19E /* NFCPassportReaderAppTests */ = {
 			isa = PBXGroup;
 			children = (
-				A1EBC5212370BAB2004DD19E /* DataGroupParsingTests.swift */,
-				A1EBC5222370BAB2004DD19E /* NFCPassportReaderTests.swift */,
 				A17375F425F78B0C005995DA /* PACETests.swift */,
 				A1EBC5112370B88D004DD19E /* Info.plist */,
 			);
@@ -367,9 +361,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1EBC5252370BAB2004DD19E /* NFCPassportReaderTests.swift in Sources */,
 				A17375F525F78B0D005995DA /* PACETests.swift in Sources */,
-				A1EBC5242370BAB2004DD19E /* DataGroupParsingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -348,12 +348,10 @@ extension PassportReader {
         var DGsToRead = [DataGroupId]()
 
         self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.readingDataGroupProgress(.COM, 0) )
+        
         if let com = try await readDataGroup(tagReader:tagReader, dgId:.COM) as? COM {
             self.passport.addDataGroup( .COM, dataGroup:com )
-        
-            // SOD and COM shouldn't be present in the DG list but just in case (worst case here we read the sod twice)
-            DGsToRead = [.SOD] + com.dataGroupsPresent.map { DataGroupId.getIDFromName(name:$0) }
-            DGsToRead.removeAll { $0 == .COM }
+            self.addDatagroupsToRead(com: com, to: &DGsToRead)
         }
         
         if DGsToRead.contains( .DG14 ) {
@@ -441,6 +439,10 @@ extension PassportReader {
                     // OK passport can't handle max length so drop it down
                     tagReader.reduceDataReadingAmount()
                     redoBAC = true
+                } else if errMsg == "UnsupportedDataGroup" {
+                    // OK, this DataGroup is not supported, lets skip it
+                    Logger.passportReader.debug("Unsupported DataGroup - \(dgId.rawValue)")
+                    return nil
                 }
                 
                 if redoBAC {
@@ -464,6 +466,14 @@ extension PassportReader {
         self.readerSession?.invalidate(errorMessage: self.nfcViewDisplayMessageHandler?(errorMessage) ?? errorMessage.description)
         nfcContinuation?.resume(throwing: error)
         nfcContinuation = nil
+    }
+    
+    internal func addDatagroupsToRead(com: COM, to DGsToRead: inout [DataGroupId]) {
+        DGsToRead += com.dataGroupsPresent.compactMap { DataGroupId.getIDFromName(name:$0) }
+        DGsToRead.removeAll { $0 == .COM }
+        
+        // SOD should not be present in COM, but just in case we check before adding it so its not read twice
+        if !DGsToRead.contains(.SOD) { DGsToRead.insert(.SOD, at: 0) }
     }
 }
 #endif
