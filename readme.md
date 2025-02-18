@@ -57,7 +57,7 @@ Passport number - 12345678
 Passport number checksum - 8
 Date Of birth - 980127
 Date of birth checksum - 7
-Expiry date - 250831
+Expiry date - 250830
 Expiry date checksum - 5
 
 mrzKey = "12345678898012772508315"
