@@ -30,6 +30,7 @@ public enum NFCPassportReaderError: Error {
     case NotImplemented
     case TagNotValid
     case ConnectionError
+    case TimeOutError
     case UserCanceled
     case InvalidMRZKey
     case MoreThanOneTagFound
@@ -64,6 +65,7 @@ public enum NFCPassportReaderError: Error {
             case .NotImplemented: return "NotImplemented"
             case .TagNotValid: return "TagNotValid"
             case .ConnectionError: return "ConnectionError"
+            case .TimeOutError: return "TimeOutError"
             case .UserCanceled: return "UserCanceled"
             case .InvalidMRZKey: return "InvalidMRZKey"
             case .MoreThanOneTagFound: return "MoreThanOneTagFound"

@@ -14,10 +14,35 @@ import UIKit
 import CoreNFC
 
 @available(iOS 15, *)
+public protocol PassportReaderTrackingDelegate: AnyObject {
+    func nfcTagDetected()
+    func readCardAccess(cardAccess: CardAccess)
+    func paceStarted()
+    func paceSucceeded()
+    func paceFailed()
+    func bacStarted()
+    func bacSucceeded()
+    func bacFailed()
+}
+
+@available(iOS 15, *)
+extension PassportReaderTrackingDelegate {
+    func nfcTagDetected() { /* default implementation */ }
+    func readCardAccess(cardAccess: CardAccess) { /* default implementation */ }
+    func paceStarted() { /* default implementation */ }
+    func paceSucceeded() { /* default implementation */ }
+    func paceFailed() { /* default implementation */ }
+    func bacStarted() { /* default implementation */ }
+    func bacSucceeded() { /* default implementation */ }
+    func bacFailed() { /* default implementation */ }
+}
+
+@available(iOS 15, *)
 public class PassportReader : NSObject {
     private typealias NFCCheckedContinuation = CheckedContinuation<NFCPassportModel, Error>
     private var nfcContinuation: NFCCheckedContinuation?
 
+    public weak var trackingDelegate: PassportReaderTrackingDelegate?
     private var passport : NFCPassportModel = NFCPassportModel()
     
     private var readerSession: NFCTagReaderSession?
@@ -135,6 +160,9 @@ extension PassportReader : NFCTagReaderSessionDelegate {
                 case NFCReaderError.readerSessionInvalidationErrorUserCanceled:
                     Logger.passportReader.error( "     - User cancelled session" )
                     userError = NFCPassportReaderError.UserCanceled
+                case NFCReaderError.readerSessionInvalidationErrorSessionTimeout:
+                    Logger.passportReader.error("     - Session timeout")
+                    userError = NFCPassportReaderError.TimeOutError
                 default:
                     Logger.passportReader.error( "     - some other error - \(readerError.localizedDescription)" )
                     userError = NFCPassportReaderError.UnexpectedError
@@ -199,10 +227,20 @@ extension PassportReader : NFCTagReaderSessionDelegate {
             } catch let error as NFCPassportReaderError {
                 let errorMessage = NFCViewDisplayMessage.error(error)
                 self.invalidateSession(errorMessage: errorMessage, error: error)
-            } catch let error {
+            } catch {
                 Logger.passportReader.debug( "tagReaderSession:failed to connect to tag - \(error.localizedDescription)" )
-                let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.ConnectionError)
-                self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.Unknown(error))
+
+                // .readerTransceiveErrorTagResponseError is thrown when a "connection lost" scenario is forced by moving the phone away from the NFC chip
+                // .readerTransceiveErrorTagConnectionLost is never thrown for this scenario, but added for the sake of completeness
+                if let nfcError = error as? NFCReaderError,
+                   nfcError.errorCode == NFCReaderError.readerTransceiveErrorTagResponseError.rawValue ||
+                    nfcError.errorCode == NFCReaderError.readerTransceiveErrorTagConnectionLost.rawValue {
+                    let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.ConnectionError)
+                    self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.ConnectionError)
+                } else {
+                    let errorMessage = NFCViewDisplayMessage.error(NFCPassportReaderError.Unknown(error))
+                    self.invalidateSession(errorMessage: errorMessage, error: NFCPassportReaderError.Unknown(error))
+                }
             }
         }
     }
@@ -216,21 +254,30 @@ extension PassportReader : NFCTagReaderSessionDelegate {
 extension PassportReader {
     
     func startReading(tagReader : TagReader) async throws -> NFCPassportModel {
+        trackingDelegate?.nfcTagDetected()
 
         if !skipPACE {
             do {
+                trackingDelegate?.paceStarted()
+
                 let data = try await tagReader.readCardAccess()
                 Logger.passportReader.debug( "Read CardAccess - data \(binToHexRep(data))" )
                 let cardAccess = try CardAccess(data)
                 passport.cardAccess = cardAccess
-     
+
+                trackingDelegate?.readCardAccess(cardAccess: cardAccess)
+
                 Logger.passportReader.info( "Starting Password Authenticated Connection Establishment (PACE)" )
                  
                 let paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
                 try await paceHandler.doPACE(mrzKey: mrzKey )
                 passport.PACEStatus = .success
                 Logger.passportReader.debug( "PACE Succeeded" )
+
+                trackingDelegate?.paceSucceeded()
             } catch {
+                trackingDelegate?.paceFailed()
+
                 passport.PACEStatus = .failed
                 Logger.passportReader.error( "PACE Failed - falling back to BAC" )
             }
@@ -240,7 +287,14 @@ extension PassportReader {
         
         // If either PACE isn't supported, we failed whilst doing PACE or we didn't even attempt it, then fall back to BAC
         if passport.PACEStatus != .success {
-            try await doBACAuthentication(tagReader : tagReader)
+            do {
+                trackingDelegate?.bacStarted()
+                try await doBACAuthentication(tagReader : tagReader)
+                trackingDelegate?.bacSucceeded()
+            } catch {
+                trackingDelegate?.bacFailed()
+                throw error
+            }
         }
         
         // Now to read the datagroups
@@ -276,7 +330,7 @@ extension PassportReader {
 
     func doBACAuthentication(tagReader : TagReader) async throws {
         self.currentlyReadingDataGroup = nil
-        
+
         Logger.passportReader.info( "Starting Basic Access Control (BAC)" )
         
         self.passport.BACStatus = .failed
