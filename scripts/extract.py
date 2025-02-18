@@ -32,6 +32,7 @@ def main( filename ):
         (cns,masterLists) = readAndExtractLDIFFile( filename )
     elif filename.lower().endswith( ".ml" ):
         masterLists = readInMasterListFile( filename )
+        cns = ["MasterList ml file"]
 
     print( f"Read in {len(masterLists)} masterlist files" )
     print( f"Read in {cns} CNS" )

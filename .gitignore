@@ -10,6 +10,7 @@ Example/Pods
 *.pem
 *.pem_
 .swiftpm
+**masterlist.pem
 
 # Xcode
 #

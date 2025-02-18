@@ -68,6 +68,9 @@ public class VisionViewController: ViewController {
             guard let candidate = visionResult.topCandidates(maximumCandidates).first else { continue }
 			
 			var numberIsSubstring = true
+            
+            // Remove spaces from candidate.string - improves recognition vastly
+            let mrz = candidate.string.replacingOccurrences(of: " ", with: "")
 
 			if let result = candidate.string.checkMrz() {
                 if(result != "nil"){
