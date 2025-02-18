@@ -1,4 +1,8 @@
-v2.1.1 Implemented a fix for when Active Authentication fails as there are more bytes available - thanks to @petteri-huusko-op 
+v2.1.2
+   Added tracking delegate and improved error handling - thanks to @mikahautz-mohemian, @josiporezic-mohemian and @lauraheiger-mohemian
+   Fix to readme example - thanks @Daymox
+
+v2.1.1 Implemented a fix for when Active Authentication fails as there are more bytes available - thanks to @petteri-huusko-op
 
 v2.1.0
    Bumped minimum version to iOS 14
