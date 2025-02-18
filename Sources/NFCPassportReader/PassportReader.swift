@@ -53,6 +53,8 @@ public class PassportReader : NSObject {
     private var skipSecureElements = true
     private var skipCA = false
     private var skipPACE = false
+    
+    // Extended mode is used for reading eMRTD's that support extended length APDUs
     private var useExtendedMode = false
 
     private var bacHandler : BACHandler?

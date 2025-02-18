@@ -17,6 +17,7 @@ final class SettingsStore: ObservableObject {
         static let logLevel = "logLevel"
         static let useNewVerification = "useNewVerification"
         static let savePassportOnScan = "savePassportOnScan"
+        static let useExtendedMode = "useExtendedMode"
         static let passportNumber = "passportNumber"
         static let dateOfBirth = "dateOfBirth"
         static let dateOfExpiry = "dateOfExpiry"
@@ -37,6 +38,7 @@ final class SettingsStore: ObservableObject {
             Keys.captureLog: true,
             Keys.logLevel: 1,
             Keys.useNewVerification: true,
+            Keys.useExtendedMode: false,
             Keys.savePassportOnScan: false,
             Keys.passportNumber: "",
             Keys.dateOfBirth: Date().timeIntervalSince1970,
@@ -65,6 +67,11 @@ final class SettingsStore: ObservableObject {
         get { defaults.bool(forKey: Keys.useNewVerification) }
     }
     
+    var useExtendedMode: Bool {
+        set { defaults.set(newValue, forKey: Keys.useExtendedMode) }
+        get { defaults.bool(forKey: Keys.useExtendedMode) }
+    }
+        
     var savePassportOnScan: Bool {
         set { defaults.set(newValue, forKey: Keys.savePassportOnScan) }
         get { defaults.bool(forKey: Keys.savePassportOnScan) }

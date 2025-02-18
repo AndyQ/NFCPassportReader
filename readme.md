@@ -4,6 +4,8 @@ This package handles reading an NFC Enabled passport using iOS 13 CoreNFC APIS
 
 **Version 2 (and the main branch) now uses Swift Async/Await for communication.  If you need an earlier version, please use 1.1.9 or below!**
 
+**NOTE: the CocoaPods is considered deprecated and unsupported - please use Swift Package Manager**
+
 Supported features:
 * Basic Access Control (BAC)
 * Secure Messaging
@@ -25,7 +27,7 @@ It reads and verifies my passport (and others I've been able to test) fine, howe
 NFCPassportReader may be installed via Swift Package Manager, by pointing to this repo's URL.
 
 
-### CocoaPods (deprecated and unsupported)
+### CocoaPods **(deprecated and unsupported)**
 
 Install using [CocoaPods](http://cocoapods.org) by adding this line to your Podfile:
 
@@ -94,6 +96,9 @@ passportReader.readPassport(mrzKey: mrzKey, tags: [.COM, .DG1, .DG2],
         ...
 }
 ```
+
+Extended mode reads (not supported by all passports) can be enabled by passing in the useExtendedMode flag to the readPassport function.
+This will increase the number of bytes that can be read in a call and may be required for some passports that use long AA keys (some Australian passports for example).
 
 
 ## Logging

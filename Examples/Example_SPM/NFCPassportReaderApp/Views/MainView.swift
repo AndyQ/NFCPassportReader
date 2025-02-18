@@ -177,6 +177,7 @@ extension MainView {
         let pptNr = settings.passportNumber
         let dob = df.string(from:settings.dateOfBirth)
         let doe = df.string(from:settings.dateOfExpiry)
+        let useExtendedMode = settings.useExtendedMode
 
         let passportUtils = PassportUtils()
         let mrzKey = passportUtils.getMRZKey( passportNumber: pptNr, dateOfBirth: dob, dateOfExpiry: doe)
@@ -187,7 +188,7 @@ extension MainView {
         
         // Set whether to use the new Passive Authentication verification method (default true) or the old OpenSSL CMS verifiction
         passportReader.passiveAuthenticationUsesOpenSSL = !settings.useNewVerificationMethod
-
+        
         // If we want to read only specific data groups we can using:
 //        let dataGroups : [DataGroupId] = [.COM, .SOD, .DG1, .DG2, .DG7, .DG11, .DG12, .DG14, .DG15]
 //        passportReader.readPassport(mrzKey: mrzKey, tags:dataGroups, completed: { (passport, error) in
@@ -206,7 +207,7 @@ extension MainView {
             }
             
             do {
-                let passport = try await passportReader.readPassport( mrzKey: mrzKey, useExtendedMode: false,  customDisplayMessage:customMessageHandler)
+                let passport = try await passportReader.readPassport( mrzKey: mrzKey, useExtendedMode: useExtendedMode,  customDisplayMessage:customMessageHandler)
                 
                 if let _ = passport.faceImageInfo {
                     print( "Got face Image details")
