@@ -10,8 +10,6 @@ import OSLog
 import OpenSSL
 import CryptoTokenKit
 
-
-
 @available(iOS 13, macOS 10.15, *)
 public class OpenSSLUtils {
     private static var loaded = false
