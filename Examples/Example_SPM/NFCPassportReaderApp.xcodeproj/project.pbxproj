@@ -3,10 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3B48FF682DA7E5FD000E652D /* NFCPassportReader in Frameworks */ = {isa = PBXBuildFile; productRef = 3B48FF672DA7E5FD000E652D /* NFCPassportReader */; };
 		A117B7EB2695AD2400E13C18 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A117B7E62695AD2400E13C18 /* ViewController.swift */; };
 		A117B7EC2695AD2400E13C18 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A117B7E72695AD2400E13C18 /* PreviewView.swift */; };
 		A117B7ED2695AD2400E13C18 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = A117B7E82695AD2400E13C18 /* LICENSE */; };
@@ -95,6 +96,7 @@
 				A1A4C0F725B5E4D70070908B /* Foundation.framework in Frameworks */,
 				A117B7F22695AE2300E13C18 /* MRZParser in Frameworks */,
 				A13F2A22268EF8BA0097C2D1 /* NFCPassportReader in Frameworks */,
+				3B48FF682DA7E5FD000E652D /* NFCPassportReader in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -240,6 +242,7 @@
 			packageProductDependencies = (
 				A13F2A21268EF8BA0097C2D1 /* NFCPassportReader */,
 				A117B7F12695AE2300E13C18 /* MRZParser */,
+				3B48FF672DA7E5FD000E652D /* NFCPassportReader */,
 			);
 			productName = NFCTest;
 			productReference = A16EB22D22A9E9E10008F53F /* NFCPassportReaderApp.app */;
@@ -293,8 +296,8 @@
 			);
 			mainGroup = A16EB22422A9E9E10008F53F;
 			packageReferences = (
-				A183989A26848C7600DC98C1 /* XCRemoteSwiftPackageReference "NFCPassportReader" */,
 				A117B7F02695AE2300E13C18 /* XCRemoteSwiftPackageReference "MRZParser" */,
+				3B48FF662DA7E5FD000E652D /* XCLocalSwiftPackageReference "../../../NFCPassportReader" */,
 			);
 			productRefGroup = A16EB22E22A9E9E10008F53F /* Products */;
 			projectDirPath = "";
@@ -624,6 +627,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		3B48FF662DA7E5FD000E652D /* XCLocalSwiftPackageReference "../../../NFCPassportReader" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../../NFCPassportReader;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		A117B7F02695AE2300E13C18 /* XCRemoteSwiftPackageReference "MRZParser" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -633,17 +643,13 @@
 				minimumVersion = 1.0.0;
 			};
 		};
-		A183989A26848C7600DC98C1 /* XCRemoteSwiftPackageReference "NFCPassportReader" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/AndyQ/NFCPassportReader";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		3B48FF672DA7E5FD000E652D /* NFCPassportReader */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NFCPassportReader;
+		};
 		A117B7F12695AE2300E13C18 /* MRZParser */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A117B7F02695AE2300E13C18 /* XCRemoteSwiftPackageReference "MRZParser" */;
