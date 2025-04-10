@@ -40,7 +40,7 @@ We welcome contributions to improve NFCPassportReader! If you find and fix bugs,
 5. Submit your contribution:
    - Create a new branch for your changes
    - Make your fixes
-   - Open a Pull Request to the [main repository](https://github.com/y-labs-ltd/ysuperapp-ios/pulls)
+   - Open a Pull Request to the [main repository](https://github.com/y-labs-ltd/NFCPassportReader/pulls)
    - Fill out the contribution form with:
      - Description of the bug
      - Steps to reproduce
