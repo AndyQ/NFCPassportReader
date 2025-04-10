@@ -11,6 +11,7 @@ This package handles reading an NFC Enabled passport using iOS 13 CoreNFC APIS
 We welcome contributions to improve NFCPassportReader! If you find and fix bugs, you may be eligible for a bounty. Here's how to contribute:
 
 ### Requirements:
+- XCode
 - Have an active Apple Developer account
 - A physical iOS device with NFC capabilities (iPhone 7 or newer)
 
