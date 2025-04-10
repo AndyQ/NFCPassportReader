@@ -293,7 +293,6 @@
 			);
 			mainGroup = A16EB22422A9E9E10008F53F;
 			packageReferences = (
-				A183989A26848C7600DC98C1 /* XCRemoteSwiftPackageReference "NFCPassportReader" */,
 				A117B7F02695AE2300E13C18 /* XCRemoteSwiftPackageReference "MRZParser" */,
 			);
 			productRefGroup = A16EB22E22A9E9E10008F53F /* Products */;
@@ -628,14 +627,6 @@
 		A117B7F02695AE2300E13C18 /* XCRemoteSwiftPackageReference "MRZParser" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/appintheair/MRZParser";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
-		A183989A26848C7600DC98C1 /* XCRemoteSwiftPackageReference "NFCPassportReader" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/AndyQ/NFCPassportReader";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.0.0;
