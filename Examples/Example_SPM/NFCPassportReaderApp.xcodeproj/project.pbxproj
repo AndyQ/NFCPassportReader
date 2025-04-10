@@ -297,7 +297,7 @@
 			mainGroup = A16EB22422A9E9E10008F53F;
 			packageReferences = (
 				A117B7F02695AE2300E13C18 /* XCRemoteSwiftPackageReference "MRZParser" */,
-				3B48FF662DA7E5FD000E652D /* XCLocalSwiftPackageReference "../../../NFCPassportReader" */,
+				3B48FF662DA7E5FD000E652D /* XCLocalSwiftPackageReference "../.." */,
 			);
 			productRefGroup = A16EB22E22A9E9E10008F53F /* Products */;
 			projectDirPath = "";
@@ -628,9 +628,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		3B48FF662DA7E5FD000E652D /* XCLocalSwiftPackageReference "../../../NFCPassportReader" */ = {
+		3B48FF662DA7E5FD000E652D /* XCLocalSwiftPackageReference "../.." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../NFCPassportReader;
+			relativePath = ../..;
 		};
 /* End XCLocalSwiftPackageReference section */
 
