@@ -6,6 +6,53 @@ This package handles reading an NFC Enabled passport using iOS 13 CoreNFC APIS
 
 **NOTE: 2.1.2 is the last version that will be deployed through Cocoapods as CocoaPods is considered deprecated and unsupported - please use Swift Package Manager**
 
+## Bug Bounty Program
+
+We welcome contributions to improve NFCPassportReader! If you find and fix bugs, you may be eligible for a bounty. Here's how to contribute:
+
+### Requirements:
+- Have an active Apple Developer account
+- A physical iOS device with NFC capabilities (iPhone 7 or newer)
+
+### Steps to Contribute:
+1. Clone the project:
+   ```bash
+   git clone git@github.com:y-labs-ltd/NFCPassportReader
+   ```
+
+2. Open the example project:
+   - Navigate to `Examples/Example_SPM`
+   - Open `Example_SPM.xcodeproj` in Xcode
+
+3. Configure the project:
+   - Select the project in the navigator
+   - Select the "Example_SPM" target
+   - Under "Signing & Capabilities":
+     - Change the Team to your Apple Developer account
+     - Update the Bundle Identifier to something unique (e.g., `com.yourdomain.nfcpassportreader.example`)
+
+4. Test and Debug:
+   - Connect your iOS device
+   - Build and run the project, scan your passport
+   - Test the NFC passport reading functionality
+   - Debug any issues you find
+
+5. Submit your contribution:
+   - Create a new branch for your changes
+   - Make your fixes
+   - Open a Pull Request to the main repository
+   - Fill out the contribution form with:
+     - Description of the bug
+     - Steps to reproduce
+     - Your solution
+     - Test results
+
+6. Bounty Process:
+   - If your PR successfully fixes the reported problem
+   - The solution is verified by the maintainers
+   - You will receive the bounty as specified in the issue
+
+## Features
 Supported features:
 * Basic Access Control (BAC)
 * Secure Messaging
