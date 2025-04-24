@@ -248,25 +248,38 @@ extension MainView {
         appLogging.error( "Using version \(UIApplication.version)" )
         
         Task {
-            let customMessageHandler : (NFCViewDisplayMessage)->String? = { (displayMessage) in
-                switch displayMessage {
-                    case .requestPresentPassport:
-                        return selectedPasswordType == .mrz ?
-                            "Hold your iPhone near an NFC enabled passport." :
-                            "Hold your iPhone near the document and enter the CAN."
-                    default:
-                        // Return nil for all other messages so we use the provided default
-                        return nil
+                let customMessageHandler: (NFCViewDisplayMessage)->String? = { (displayMessage) in
+                    switch displayMessage {
+                        case .requestPresentPassport:
+                            return selectedPasswordType == .mrz ?
+                                "Hold your iPhone near an NFC enabled passport." :
+                                "Hold your iPhone near the document and enter the CAN."
+                        default:
+                            // Return nil for all other messages so we use the provided default
+                            return nil
+                    }
                 }
-            }
-            
-            do {
-                let passport = try await passportReader.readPassport(
-                    mrzKey: mrzKeyParam,
-                    can: canParam,
-                    useExtendedMode: settings.useExtendedMode,
-                    customDisplayMessage: customMessageHandler
-                )
+                
+                do {
+                    let passport: NFCPassportModel
+                    
+                    if selectedPasswordType == .mrz {
+                        // Use the original API for MRZ to demonstrate backward compatibility
+                        passport = try await passportReader.readPassport(
+                            mrzKey: mrzKeyParam,
+                            useExtendedMode: settings.useExtendedMode,
+                            customDisplayMessage: customMessageHandler
+                        )
+                    } else {
+                        // Use the new API for CAN
+                        passport = try await passportReader.readPassport(
+                            mrzKey: nil,
+                            can: canParam,
+                            useExtendedMode: settings.useExtendedMode,
+                            customDisplayMessage: customMessageHandler
+                        )
+                    }
+                    
                 
                 if let _ = passport.faceImageInfo {
                     print( "Got face Image details")
