@@ -29,6 +29,8 @@ struct MainView : View {
     @State private var showScanMRZ : Bool = false
     @State private var showSavedPassports : Bool = false
     @State private var gettingLogs : Bool = false
+    @State private var selectedPasswordType: PACEPasswordType = .mrz
+    @State private var canNumber = ""
 
     @State var page = 0
     
@@ -53,13 +55,49 @@ struct MainView : View {
                 }).navigationTitle("Scan MRZ"), isActive: $showScanMRZ){ Text("") }
 
                 VStack {
-                    HStack {
-                        Spacer()
-                        Button(action: {self.showScanMRZ.toggle()}) {
-                            Label("Scan MRZ", systemImage:"camera")
-                        }.padding([.top, .trailing])
+                    // Authentication Method Picker
+                    Picker("Authentication Method", selection: $selectedPasswordType) {
+                        Text("MRZ").tag(PACEPasswordType.mrz)
+                        Text("CAN").tag(PACEPasswordType.can)
                     }
-                    MRZEntryView()
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal)
+                    .padding(.top)
+                    
+                    // Show appropriate UI based on selection
+                    if selectedPasswordType == .mrz {
+                        HStack {
+                            Spacer()
+                            Button(action: {self.showScanMRZ.toggle()}) {
+                                Label("Scan MRZ", systemImage:"camera")
+                            }.padding([.top, .trailing])
+                        }
+                        MRZEntryView()
+                    } else {
+                        VStack(alignment: .leading) {
+                            Text("Card Access Number (CAN)")
+                                .font(.headline)
+                                .padding(.horizontal)
+                                .padding(.top)
+                            
+                            TextField("Enter 6-digit CAN", text: $canNumber)
+                                .keyboardType(.numberPad)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .padding(.horizontal)
+                                .onChange(of: canNumber) { newValue in
+                                    // Limit to 6 digits and ensure only digits
+                                    if newValue.count > 6 {
+                                        canNumber = String(newValue.prefix(6))
+                                    }
+                                    canNumber = newValue.filter { $0.isNumber }
+                                }
+                            
+                            Text("The CAN is a 6-digit number printed on your document")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal)
+                        }
+                    }
                     
                     Button(action: {
                         self.scanPassport()
@@ -134,7 +172,12 @@ struct MainView : View {
 extension MainView {
     
     var isValid : Bool {
-        return settings.passportNumber.count >= 8
+        // Updated to handle both MRZ and CAN validation
+        if selectedPasswordType == .mrz {
+            return settings.passportNumber.count >= 8
+        } else {
+            return canNumber.count == 6 && canNumber.allSatisfy { $0.isNumber }
+        }
     }
 
     func parse( mrz:String ) -> (String, Date, Date)? {
@@ -170,17 +213,26 @@ extension MainView {
         hideKeyboard()
         self.showDetails = false
         
-        let df = DateFormatter()
-        df.timeZone = TimeZone(secondsFromGMT: 0)
-        df.dateFormat = "YYMMdd"
+        // Key difference: Prepare parameters based on selected authentication type
+        let mrzKeyParam: String?
+        let canParam: String?
         
-        let pptNr = settings.passportNumber
-        let dob = df.string(from:settings.dateOfBirth)
-        let doe = df.string(from:settings.dateOfExpiry)
-        let useExtendedMode = settings.useExtendedMode
-
-        let passportUtils = PassportUtils()
-        let mrzKey = passportUtils.getMRZKey( passportNumber: pptNr, dateOfBirth: dob, dateOfExpiry: doe)
+        if selectedPasswordType == .mrz {
+            let df = DateFormatter()
+            df.timeZone = TimeZone(secondsFromGMT: 0)
+            df.dateFormat = "YYMMdd"
+            
+            let pptNr = settings.passportNumber
+            let dob = df.string(from:settings.dateOfBirth)
+            let doe = df.string(from:settings.dateOfExpiry)
+            
+            let passportUtils = PassportUtils()
+            mrzKeyParam = passportUtils.getMRZKey(passportNumber: pptNr, dateOfBirth: dob, dateOfExpiry: doe)
+            canParam = nil
+        } else {
+            mrzKeyParam = nil
+            canParam = canNumber
+        }
 
         // Set the masterListURL on the Passport Reader to allow auto passport verification
         let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem")!
@@ -199,7 +251,9 @@ extension MainView {
             let customMessageHandler : (NFCViewDisplayMessage)->String? = { (displayMessage) in
                 switch displayMessage {
                     case .requestPresentPassport:
-                        return "Hold your iPhone near an NFC enabled passport."
+                        return selectedPasswordType == .mrz ?
+                            "Hold your iPhone near an NFC enabled passport." :
+                            "Hold your iPhone near the document and enter the CAN."
                     default:
                         // Return nil for all other messages so we use the provided default
                         return nil
@@ -207,7 +261,12 @@ extension MainView {
             }
             
             do {
-                let passport = try await passportReader.readPassport( mrzKey: mrzKey, useExtendedMode: useExtendedMode,  customDisplayMessage:customMessageHandler)
+                let passport = try await passportReader.readPassport(
+                    mrzKey: mrzKeyParam,
+                    can: canParam,
+                    useExtendedMode: settings.useExtendedMode,
+                    customDisplayMessage: customMessageHandler
+                )
                 
                 if let _ = passport.faceImageInfo {
                     print( "Got face Image details")
@@ -230,7 +289,7 @@ extension MainView {
                 }
             } catch {
                 self.alertTitle = "Oops"
-                self.alertTitle = error.localizedDescription
+                self.alertMessage = error.localizedDescription
                 self.showingAlert = true
 
             }
