@@ -62,6 +62,7 @@ public class PassportReader : NSObject {
     private var paceHandler : PACEHandler?
     private var mrzKey : String = ""
     private var dataAmountToReadOverride : Int? = nil
+    private var passwordType: PACEPasswordType = .mrz
     
     private var scanCompletedHandler: ((NFCPassportModel?, NFCPassportReaderError?)->())!
     private var nfcViewDisplayMessageHandler: ((NFCViewDisplayMessage) -> String?)?
@@ -90,10 +91,37 @@ public class PassportReader : NSObject {
         dataAmountToReadOverride = amount
     }
     
-    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, useExtendedMode : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
-        
+    public func readPassport(
+        mrzKey: String? = nil,
+        can: String? = nil,
+        tags: [DataGroupId] = [],
+        skipSecureElements: Bool = true,
+        skipCA: Bool = false,
+        skipPACE: Bool = false,
+        useExtendedMode: Bool = false,
+        customDisplayMessage: ((NFCViewDisplayMessage) -> String?)? = nil
+    ) async throws -> NFCPassportModel {
+
+        // Determine password and type
+        let password: String
+        let passwordType: PACEPasswordType
+
+        if let can = can {
+            password = can
+            passwordType = .can
+        } else if let mrz = mrzKey {
+            password = mrz
+            passwordType = .mrz
+        } else {
+            throw NFCPassportReaderError.InvalidDataPassed("Either `mrzKey` or `can` must be provided.")
+        }
+
+        // Validate the password for the selected type
+        try PACEPasswordValidator.validate(password: password, type: passwordType)
+
         self.passport = NFCPassportModel()
-        self.mrzKey = mrzKey
+        self.mrzKey = password
+        self.passwordType = passwordType
         self.skipCA = skipCA
         self.skipPACE = skipPACE
         self.useExtendedMode = useExtendedMode
@@ -255,7 +283,7 @@ extension PassportReader : NFCTagReaderSessionDelegate {
 @available(iOS 15, *)
 extension PassportReader {
     
-    func startReading(tagReader : TagReader) async throws -> NFCPassportModel {
+    func startReading(tagReader: TagReader) async throws -> NFCPassportModel {
         trackingDelegate?.nfcTagDetected()
 
         if !skipPACE {
@@ -263,25 +291,25 @@ extension PassportReader {
                 trackingDelegate?.paceStarted()
 
                 let data = try await tagReader.readCardAccess()
-                Logger.passportReader.debug( "Read CardAccess - data \(binToHexRep(data))" )
+                Logger.passportReader.debug("Read CardAccess - data \(binToHexRep(data))")
                 let cardAccess = try CardAccess(data)
                 passport.cardAccess = cardAccess
 
                 trackingDelegate?.readCardAccess(cardAccess: cardAccess)
 
-                Logger.passportReader.info( "Starting Password Authenticated Connection Establishment (PACE)" )
+                Logger.passportReader.info("Starting Password Authenticated Connection Establishment (PACE)")
                  
-                let paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
-                try await paceHandler.doPACE(mrzKey: mrzKey )
+                let paceHandler = try PACEHandler(cardAccess: cardAccess, tagReader: tagReader)
+                
+                try await paceHandler.doPACE(password: mrzKey, passwordType: passwordType)
                 passport.PACEStatus = .success
-                Logger.passportReader.debug( "PACE Succeeded" )
+                Logger.passportReader.debug("PACE Succeeded")
 
                 trackingDelegate?.paceSucceeded()
             } catch {
                 trackingDelegate?.paceFailed()
-
                 passport.PACEStatus = .failed
-                Logger.passportReader.error( "PACE Failed - falling back to BAC" )
+                Logger.passportReader.error("PACE Failed - falling back to BAC")
             }
             
             _ = try await tagReader.selectPassportApplication()
@@ -289,13 +317,18 @@ extension PassportReader {
         
         // If either PACE isn't supported, we failed whilst doing PACE or we didn't even attempt it, then fall back to BAC
         if passport.PACEStatus != .success {
-            do {
-                trackingDelegate?.bacStarted()
-                try await doBACAuthentication(tagReader : tagReader)
-                trackingDelegate?.bacSucceeded()
-            } catch {
-                trackingDelegate?.bacFailed()
-                throw error
+            if passwordType == .mrz {
+                do {
+                    trackingDelegate?.bacStarted()
+                    try await doBACAuthentication(tagReader : tagReader)
+                    trackingDelegate?.bacSucceeded()
+                } catch {
+                    trackingDelegate?.bacFailed()
+                    throw error
+                }
+            } else {
+                Logger.passportReader.warning("BAC fallback not attempted: unsupported for passwordType \(String(describing: self.passwordType))")
+                throw NFCPassportReaderError.NotYetSupported("BAC fallback only supported for MRZ-based credentials")
             }
         }
         

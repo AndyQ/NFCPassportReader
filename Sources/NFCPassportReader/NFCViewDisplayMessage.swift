@@ -15,6 +15,7 @@ public enum NFCViewDisplayMessage {
     case error(NFCPassportReaderError)
     case activeAuthentication
     case successfulRead
+    case requestPresentPassportForCAN
 }
 
 @available(iOS 13, macOS 10.15, *)
@@ -48,6 +49,8 @@ extension NFCViewDisplayMessage {
                 return "Authenticating....."
             case .successfulRead:
                 return "Passport read successfully"
+            case .requestPresentPassportForCAN:
+                return "Hold your iPhone near an NFC enabled passport and enter your CAN."
         }
     }
     
