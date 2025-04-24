@@ -309,7 +309,25 @@ extension PassportReader {
             } catch {
                 trackingDelegate?.paceFailed()
                 passport.PACEStatus = .failed
-                Logger.passportReader.error("PACE Failed - falling back to BAC")
+                Logger.passportReader.error("PACE Failed - determining next steps")
+                
+                // Check if this is a CAN-specific error
+                if let passportError = error as? NFCPassportReaderError {
+                    if case .InvalidCAN = passportError {
+                        throw passportError  // Propagate InvalidCAN directly
+                    } else if case .InvalidDataPassed(let reason) = passportError, reason.contains("CAN") {
+                        throw NFCPassportReaderError.InvalidCAN  // Convert to InvalidCAN for consistent error handling
+                    }
+                }
+                
+                // For other errors with CAN, don't attempt BAC fallback
+                if passwordType == .can {
+                    Logger.passportReader.error("CAN authentication failed and BAC fallback not supported for CAN")
+                    throw NFCPassportReaderError.InvalidCAN
+                }
+                
+                // Otherwise, log that we're falling back to BAC
+                Logger.passportReader.warning("PACE Failed - falling back to BAC")
             }
             
             _ = try await tagReader.selectPassportApplication()
@@ -328,7 +346,7 @@ extension PassportReader {
                 }
             } else {
                 Logger.passportReader.warning("BAC fallback not attempted: unsupported for passwordType \(String(describing: self.passwordType))")
-                throw NFCPassportReaderError.NotYetSupported("BAC fallback only supported for MRZ-based credentials")
+                throw NFCPassportReaderError.InvalidCAN
             }
         }
         

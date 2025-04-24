@@ -40,6 +40,13 @@ extension NFCViewDisplayMessage {
                         return "Connection error. Please try again."
                     case NFCPassportReaderError.InvalidMRZKey:
                         return "MRZ Key not valid for this document."
+                    case NFCPassportReaderError.InvalidCAN:
+                        return "CAN is not valid for this document."
+                    case NFCPassportReaderError.InvalidDataPassed(let reason):
+                        if reason.contains("CAN") {
+                            return "Invalid CAN: \(reason)"
+                        }
+                        return "Invalid data: \(reason)"
                     case NFCPassportReaderError.ResponseError(let description, let sw1, let sw2):
                         return "Sorry, there was a problem reading the passport. \(description) - (0x\(sw1), 0x\(sw2)"
                     default:
