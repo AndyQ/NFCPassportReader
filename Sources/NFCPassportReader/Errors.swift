@@ -78,7 +78,7 @@ public enum NFCPassportReaderError: Error {
             case .InvalidDataPassed(let reason) : return "Invalid data passed - \(reason)"
             case .NotYetSupported(let reason) : return "Not yet supported - \(reason)"
             case .Unknown(let error): return "Unknown error: \(error.localizedDescription)"
-            case .InvalidCAN: return "Invalid CAN format"
+            case .InvalidCAN: return "InvalidCAN"
         }
     }
 }
