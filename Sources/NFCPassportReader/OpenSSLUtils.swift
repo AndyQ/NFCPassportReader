@@ -41,6 +41,18 @@ public class OpenSSLUtils {
         return ret
     }
     
+
+    static func sk_X509_num(_ sk : OpaquePointer!) -> Int32 {
+        return OPENSSL_sk_num(ossl_check_const_X509_sk_type(sk))
+    }
+    
+    static func sk_X509_value(_ sk : OpaquePointer!, _ idx : Int32 ) -> OpaquePointer! {
+        let p = OPENSSL_sk_value(ossl_check_const_X509_sk_type(sk), (idx))
+        let op = OpaquePointer(p)
+        return op
+    }
+
+    
     static func X509ToPEM( x509: OpaquePointer ) -> String {
         
         let out = BIO_new(BIO_s_mem())!
@@ -572,7 +584,7 @@ public class OpenSSLUtils {
     public static func getPublicKeyData(from key:OpaquePointer) -> [UInt8]? {
         var data : [UInt8] = []
         // Get Key type
-        let v = EVP_PKEY_base_id( key )
+        let v = EVP_PKEY_get_base_id( key )
         if v == EVP_PKEY_DH || v == EVP_PKEY_DHX {
             guard let dh = EVP_PKEY_get0_DH(key) else {
                 return nil
@@ -608,7 +620,7 @@ public class OpenSSLUtils {
     public static func decodePublicKeyFromBytes(pubKeyData: [UInt8], params: OpaquePointer) -> OpaquePointer? {
         var pubKey : OpaquePointer?
         
-        let keyType = EVP_PKEY_base_id( params )
+        let keyType = EVP_PKEY_get_base_id( params )
         if keyType == EVP_PKEY_DH || keyType == EVP_PKEY_DHX {
             
             let dhKey = DH_new()
@@ -657,7 +669,7 @@ public class OpenSSLUtils {
         // OR I'm misunderstanding something (which is more possible)
         // Works fine though for ECDH keys
         var secret : [UInt8]
-        let keyType = EVP_PKEY_base_id( privateKeyPair )
+        let keyType = EVP_PKEY_get_base_id( privateKeyPair )
         if keyType == EVP_PKEY_DH || keyType == EVP_PKEY_DHX {
             // Get bn for public key
             let dh = EVP_PKEY_get1_DH(privateKeyPair);
@@ -669,7 +681,7 @@ public class OpenSSLUtils {
             secret = [UInt8](repeating: 0, count: Int(DH_size(dh)))
             let len = DH_compute_key(&secret, bn, dh);
             
-            Logger.openSSL.debug( "OpenSSLUtils.computeSharedSecret - DH secret len - \(len)" )
+            Logger.openSSL.debug( "OpenSSLUtils.computeSharedSecret - DH secret len - \(len) - \(secret)" )
         } else {
             let ctx = EVP_PKEY_CTX_new(privateKeyPair, nil)
             defer{ EVP_PKEY_CTX_free(ctx) }
@@ -698,6 +710,9 @@ public class OpenSSLUtils {
                 // Error
                 Logger.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
             }
+            
+            Logger.openSSL.debug( "OpenSSLUtils.computeSharedSecret - secret len - \(keyLen), secret - \(secret)" )
+
         }
         return secret
     }
