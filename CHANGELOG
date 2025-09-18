@@ -1,3 +1,5 @@
+V2.2.0
+   Upgrade to OpenSSL V3 - thanks to @agmike
 v2.1.2
    Added tracking delegate and improved error handling - thanks to @mikahautz-mohemian, @josiporezic-mohemian and @lauraheiger-mohemian
    Fix to readme example - thanks @Daymox
