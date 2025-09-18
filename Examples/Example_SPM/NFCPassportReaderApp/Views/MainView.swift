@@ -29,6 +29,7 @@ struct MainView : View {
     @State private var showScanMRZ : Bool = false
     @State private var showSavedPassports : Bool = false
     @State private var gettingLogs : Bool = false
+    @State private var paceOnly: Bool = false
 
     @State var page = 0
     
@@ -60,6 +61,20 @@ struct MainView : View {
                         }.padding([.top, .trailing])
                     }
                     MRZEntryView()
+                    
+                    // PACE-only polling toggle
+                    Toggle(isOn: $paceOnly) {
+                        VStack(alignment: .leading) {
+                            Text("PACE only")
+                            Text("Use Core NFC PACE polling\n(requires PACE support on document)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 4)
+                    
+                    Spacer()
                     
                     Button(action: {
                         self.scanPassport()
@@ -207,7 +222,7 @@ extension MainView {
             }
             
             do {
-                let passport = try await passportReader.readPassport( mrzKey: mrzKey, useExtendedMode: useExtendedMode,  customDisplayMessage:customMessageHandler)
+                let passport = try await passportReader.readPassport( mrzKey: mrzKey, useExtendedMode: useExtendedMode, paceOnly: paceOnly, customDisplayMessage:customMessageHandler)
                 
                 if let _ = passport.faceImageInfo {
                     print( "Got face Image details")

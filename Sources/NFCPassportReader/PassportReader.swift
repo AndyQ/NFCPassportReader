@@ -67,6 +67,9 @@ public class PassportReader : NSObject {
     private var nfcViewDisplayMessageHandler: ((NFCViewDisplayMessage) -> String?)?
     private var masterListURL : URL?
     private var shouldNotReportNextReaderSessionInvalidationErrorUserCanceled : Bool = false
+    
+    // Toggle for polling behavior: false = BAC/PACE (.iso14443), true = PACE-only (.pace)
+    private var paceOnlyPolling: Bool = false
 
     // By default, Passive Authentication uses the new RFS5652 method to verify the SOD, but can be switched to use
     // the previous OpenSSL CMS verification if necessary
@@ -90,13 +93,14 @@ public class PassportReader : NSObject {
         dataAmountToReadOverride = amount
     }
     
-    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, useExtendedMode : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
+    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, useExtendedMode : Bool = false, paceOnly: Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
         
         self.passport = NFCPassportModel()
         self.mrzKey = mrzKey
         self.skipCA = skipCA
         self.skipPACE = skipPACE
         self.useExtendedMode = useExtendedMode
+        self.paceOnlyPolling = paceOnly
         
         self.dataGroupsToRead.removeAll()
         self.dataGroupsToRead.append( contentsOf:tags)
@@ -122,7 +126,8 @@ public class PassportReader : NSObject {
         }
         
         if NFCTagReaderSession.readingAvailable {
-            readerSession = NFCTagReaderSession(pollingOption: [.iso14443], delegate: self, queue: nil)
+            let polling: NFCTagReaderSession.PollingOption = self.paceOnlyPolling ? .pace : .iso14443
+            readerSession = NFCTagReaderSession(pollingOption: polling, delegate: self, queue: nil)
             
             self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.requestPresentPassport )
             readerSession?.begin()
