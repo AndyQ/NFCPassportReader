@@ -35,6 +35,12 @@ extension PACEHandlerError: LocalizedError {
     }
 }
 
+public enum PACEPasswordType {
+    case mrz
+    case can
+    // Other types could be added: PIN, PUK, etc.
+}
+
 @available(iOS 15, *)
 public class PACEHandler {
     
@@ -72,7 +78,7 @@ public class PACEHandler {
         isPACESupported = true
     }
     
-    public func doPACE( mrzKey : String ) async throws {
+    public func doPACE(password: String, passwordType: PACEPasswordType = .mrz) async throws {
         guard isPACESupported else {
             throw NFCPassportReaderError.NotYetSupported( "PACE not supported" )
         }
@@ -88,8 +94,16 @@ public class PACEHandler {
         digestAlg = try paceInfo.getDigestAlgorithm()  // Either SHA-1 or SHA-256.
         keyLength = try paceInfo.getKeyLength()  // Get key length  the enc cipher. Either 128, 192, or 256.
 
-        paceKeyType = PACEHandler.MRZ_PACE_KEY_REFERENCE
-        paceKey = try createPaceKey( from: mrzKey )
+        // Set key reference based on password type
+         switch passwordType {
+         case .mrz:
+             paceKeyType = PACEHandler.MRZ_PACE_KEY_REFERENCE
+         case .can:
+             paceKeyType = PACEHandler.CAN_PACE_KEY_REFERENCE
+         }
+         
+         // Create PACE key with appropriate method based on type
+         paceKey = try createPaceKey(from: password, type: passwordType)
         
         // Temporary logging
         Logger.pace.debug("doPace - inpit parameters" )
@@ -100,7 +114,7 @@ public class PACEHandler {
         Logger.pace.debug("cipherAlg - \(self.cipherAlg)" )
         Logger.pace.debug("digestAlg - \(self.digestAlg)" )
         Logger.pace.debug("keyLength - \(self.keyLength)" )
-        Logger.pace.debug("keyLength - \(mrzKey)" )
+        Logger.pace.debug("keyLength - \(password)" )
         Logger.pace.debug("paceKey - \(binToHexRep(self.paceKey, asArray:true))" )
 
         // First start the initial auth call
@@ -597,15 +611,27 @@ extension PACEHandler {
     }
 
     /// Computes a key seed based on an MRZ key
-    /// - Parameter the mrz key
+    /// - Parameters:
+    ///     - password: The password to be used for PACE
+    ///     - PACEPasswordType: The type of the password for example MRZ, CAN, etc
     /// - Returns a encoded key based on the mrz key that can be used for PACE
-    func createPaceKey( from mrzKey: String ) throws -> [UInt8] {
-        let buf: [UInt8] = Array(mrzKey.utf8)
-        let hash = calcSHA1Hash(buf)
-        
-        let smskg = SecureMessagingSessionKeyGenerator()
-        let key = try smskg.deriveKey(keySeed: hash, cipherAlgName: cipherAlg, keyLength: keyLength, nonce: nil, mode: .PACE_MODE, paceKeyReference: paceKeyType)
-        return key
+    func createPaceKey(from password: String, type: PACEPasswordType) throws -> [UInt8] {
+        switch type {
+        case .mrz:
+            let buf: [UInt8] = Array(password.utf8)
+            let hash = calcSHA1Hash(buf)
+            
+            let smskg = SecureMessagingSessionKeyGenerator()
+            let key = try smskg.deriveKey(keySeed: hash, cipherAlgName: cipherAlg, keyLength: keyLength, nonce: nil, mode: .PACE_MODE, paceKeyReference: paceKeyType)
+            return key
+            
+        case .can:
+            let canBytes: [UInt8] = Array(password.utf8)
+            
+            let smskg = SecureMessagingSessionKeyGenerator()
+            let key = try smskg.deriveKey(keySeed: canBytes, cipherAlgName: cipherAlg, keyLength: keyLength, nonce: nil, mode: .PACE_MODE, paceKeyReference: paceKeyType)
+            return key
+        }
     }
     
     /// Performs the ECDH PACE GM key agreement protocol by multiplying a private key with a public key

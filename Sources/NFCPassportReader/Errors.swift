@@ -42,6 +42,7 @@ public enum NFCPassportReaderError: Error {
     case InvalidDataPassed(String)
     case NotYetSupported(String)
     case Unknown(Error)
+    case InvalidCAN
 
     var value: String {
         switch self {
@@ -77,6 +78,7 @@ public enum NFCPassportReaderError: Error {
             case .InvalidDataPassed(let reason) : return "Invalid data passed - \(reason)"
             case .NotYetSupported(let reason) : return "Not yet supported - \(reason)"
             case .Unknown(let error): return "Unknown error: \(error.localizedDescription)"
+            case .InvalidCAN: return "InvalidCAN"
         }
     }
 }
