@@ -1,0 +1,24 @@
+{
+  "originHash" : "823518ff58ccbf237e3e4be6439bc1ab09b407c6211ebccf9338f4a6266e2b7f",
+  "pins" : [
+    {
+      "identity" : "mrzparser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/appintheair/MRZParser",
+      "state" : {
+        "revision" : "64b73fae8092b31d0a378f0d000c244470c7ac44",
+        "version" : "1.1.3"
+      }
+    },
+    {
+      "identity" : "openssl",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/krzyzanowskim/OpenSSL.git",
+      "state" : {
+        "revision" : "8cb1d641ab5ebce2cd7cf31c93baef07bed672d4",
+        "version" : "1.1.2301"
+      }
+    }
+  ],
+  "version" : 3
+}
