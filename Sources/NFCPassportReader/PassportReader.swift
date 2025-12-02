@@ -52,6 +52,7 @@ public class PassportReader : NSObject {
     private var readAllDatagroups = false
     private var skipSecureElements = true
     private var skipCA = false
+    private var enforceCA = false
     private var skipPACE = false
     
     // Extended mode is used for reading eMRTD's that support extended length APDUs
@@ -91,12 +92,13 @@ public class PassportReader : NSObject {
         dataAmountToReadOverride = amount
     }
     
-    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], aaChallenge: [UInt8]? = nil, skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, useExtendedMode : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
+    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], aaChallenge: [UInt8]? = nil, skipSecureElements : Bool = true, skipCA : Bool = false, enforceCA : Bool = false, skipPACE : Bool = false, useExtendedMode : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
         
         self.passport = NFCPassportModel()
         self.mrzKey = mrzKey
         self.aaChallenge = aaChallenge
         self.skipCA = skipCA
+        self.enforceCA = enforceCA
         self.skipPACE = skipPACE
         self.useExtendedMode = useExtendedMode
         
@@ -283,7 +285,7 @@ extension PassportReader {
                 trackingDelegate?.paceFailed()
 
                 passport.PACEStatus = .failed
-                Logger.passportReader.error( "PACE Failed - falling back to BAC" )
+                Logger.passportReader.error( "PACE Failed - falling back to BAC \(error)" )
             }
             
             _ = try await tagReader.selectPassportApplication()
@@ -304,7 +306,7 @@ extension PassportReader {
         // Now to read the datagroups
         try await readDataGroups(tagReader: tagReader)
 
-        try await doActiveAuthenticationIfNeccessary(tagReader : tagReader)
+        try await tryActiveAuthentication(tagReader : tagReader)
 
         self.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.successfulRead)
         self.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
@@ -317,8 +319,9 @@ extension PassportReader {
     }
     
     
-    func doActiveAuthenticationIfNeccessary( tagReader : TagReader) async throws {
+    func tryActiveAuthentication( tagReader : TagReader) async throws {
         guard self.passport.activeAuthenticationSupported else {
+            Logger.passportReader.info( "Passport does not support active authentication" )
             return
         }
         self.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.activeAuthentication)
@@ -326,7 +329,7 @@ extension PassportReader {
         Logger.passportReader.info( "Performing Active Authentication" )
 
         let challenge = aaChallenge ?? generateRandomUInt8Array(8)
-        Logger.passportReader.debug( "Generated Active Authentication challange - \(binToHexRep(challenge))")
+        Logger.passportReader.debug( "Active Authentication Challenge - \(binToHexRep(challenge))")
         let response = try await tagReader.doInternalAuthentication(challenge: challenge, useExtendedMode: useExtendedMode)
         self.passport.verifyActiveAuthentication( challenge:challenge, signature:response.data )
     }
@@ -335,7 +338,7 @@ extension PassportReader {
     func doBACAuthentication(tagReader : TagReader) async throws {
         self.currentlyReadingDataGroup = nil
 
-        Logger.passportReader.info( "Starting Basic Access Control (BAC)" )
+        Logger.passportReader.info( "Performing Basic Access Control (BAC)" )
         
         self.passport.BACStatus = .failed
 
@@ -344,6 +347,45 @@ extension PassportReader {
         Logger.passportReader.info( "Basic Access Control (BAC) - SUCCESS!" )
 
         self.passport.BACStatus = .success
+    }
+
+    func tryChipAuthentication(tagReader : TagReader, DGsToRead : inout [DataGroupId]) async throws {
+        if !DGsToRead.contains( .DG14 ) {
+            self.passport.chipAuthenticationStatus = .failed
+            return
+        }
+        
+        DGsToRead.removeAll { $0 == .DG14 }
+        
+        if skipCA {
+            self.passport.chipAuthenticationStatus = .failed
+            return
+        }
+        
+        guard let dg14 = try await readDataGroup(tagReader:tagReader, dgId:.DG14) as? DataGroup14 else {
+            self.passport.chipAuthenticationStatus = .failed
+            throw NFCPassportReaderError.ChipAuthenticationFailed
+        }
+        
+        self.passport.addDataGroup( .DG14, dataGroup:dg14 )
+        let caHandler = ChipAuthenticationHandler(dg14: dg14, tagReader: tagReader)
+        
+        if caHandler.isChipAuthenticationSupported {
+            do {
+                // Do Chip authentication and then continue reading datagroups
+                try await caHandler.doChipAuthentication()
+                Logger.passportReader.info( "Chip Authentication succeeded" )
+                self.passport.chipAuthenticationStatus = .success
+            } catch {
+                Logger.passportReader.info( "Chip Authentication failed \(error) - re-establishing BAC")
+                self.passport.chipAuthenticationStatus = .failed
+                
+                // Failed Chip Auth, need to re-establish BAC
+                try await doBACAuthentication(tagReader: tagReader)
+            }
+        } else {
+            self.passport.chipAuthenticationStatus = .failed
+        }
     }
 
     func readDataGroups( tagReader: TagReader ) async throws {
@@ -358,30 +400,11 @@ extension PassportReader {
             self.addDatagroupsToRead(com: com, to: &DGsToRead)
         }
         
-        if DGsToRead.contains( .DG14 ) {
-            DGsToRead.removeAll { $0 == .DG14 }
-            
-            if !skipCA {
-                // Do Chip Authentication
-                if let dg14 = try await readDataGroup(tagReader:tagReader, dgId:.DG14) as? DataGroup14 {
-                    self.passport.addDataGroup( .DG14, dataGroup:dg14 )
-                    let caHandler = ChipAuthenticationHandler(dg14: dg14, tagReader: tagReader)
-                     
-                    if caHandler.isChipAuthenticationSupported {
-                        do {
-                            // Do Chip authentication and then continue reading datagroups
-                            try await caHandler.doChipAuthentication()
-                            self.passport.chipAuthenticationStatus = .success
-                        } catch {
-                            Logger.passportReader.info( "Chip Authentication failed - re-establishing BAC")
-                            self.passport.chipAuthenticationStatus = .failed
-                            
-                            // Failed Chip Auth, need to re-establish BAC
-                            try await doBACAuthentication(tagReader: tagReader)
-                        }
-                    }
-                }
-            }
+        try await tryChipAuthentication(tagReader: tagReader, DGsToRead: &DGsToRead)
+        
+        // If Chip Authentication is enforced but it failed, bail out
+        if self.enforceCA && self.passport.chipAuthenticationStatus == .failed {
+            throw NFCPassportReaderError.ChipAuthenticationFailed
         }
 
         // If we are skipping secure elements then remove .DG3 and .DG4

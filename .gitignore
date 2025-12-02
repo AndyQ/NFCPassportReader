@@ -11,6 +11,7 @@ Example/Pods
 *.pem_
 .swiftpm
 **masterlist.pem
+**/.DS_Store
 
 # Xcode
 #
