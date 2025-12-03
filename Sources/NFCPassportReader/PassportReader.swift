@@ -100,6 +100,7 @@ import OSLog
 
       self.passport = NFCPassportModel()
       self.mrzKey = mrzKey
+      self.aaChallenge = aaChallenge
       self.skipCA = skipCA
       self.skipPACE = skipPACE
       self.useExtendedMode = useExtendedMode
@@ -351,7 +352,7 @@ import OSLog
 
       Logger.passportReader.info("Performing Active Authentication")
 
-      let challenge = generateRandomUInt8Array(8)
+      let challenge = self.aaChallenge ?? generateRandomUInt8Array(8)
       Logger.passportReader.debug(
         "Generated Active Authentication challange - \(binToHexRep(challenge))")
       let response = try await tagReader.doInternalAuthentication(
