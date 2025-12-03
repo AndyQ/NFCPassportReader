@@ -1,7 +1,7 @@
 Pod::Spec.new do |spec|
 
   spec.name         = "OP_NFCPassportReader"
-  spec.version      = "2.2.1"
+  spec.version      = "2.2.2"
   spec.summary      = "This package handles reading an NFC Enabled passport using iOS 13 CoreNFC APIS"
 
   spec.homepage     = "https://github.com/ospfranco/NFCPassportReader"
