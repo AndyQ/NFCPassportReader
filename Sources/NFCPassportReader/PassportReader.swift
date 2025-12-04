@@ -309,7 +309,7 @@ import OSLog
           trackingDelegate?.paceFailed()
 
           passport.PACEStatus = .failed
-          Logger.passportReader.error("PACE Failed - falling back to BAC")
+          Logger.passportReader.error("PACE Failed - falling back to BAC \(error)")
         }
 
         _ = try await tagReader.selectPassportApplication()
@@ -330,7 +330,7 @@ import OSLog
       // Now to read the datagroups
       try await readDataGroups(tagReader: tagReader)
 
-      try await doActiveAuthenticationIfNeccessary(tagReader: tagReader)
+      try await doActiveAuthenticationIfNecessary(tagReader: tagReader)
 
       self.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.successfulRead)
       self.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
@@ -344,8 +344,9 @@ import OSLog
       return self.passport
     }
 
-    func doActiveAuthenticationIfNeccessary(tagReader: TagReader) async throws {
+    func doActiveAuthenticationIfNecessary(tagReader: TagReader) async throws {
       guard self.passport.activeAuthenticationSupported else {
+        Logger.passportReader.info("Passport does not support active authentication")
         return
       }
       self.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.activeAuthentication)
@@ -375,20 +376,18 @@ import OSLog
     }
 
     func readDataGroups(tagReader: TagReader) async throws {
-
-      // Read COM
-      var DGsToRead = [DataGroupId]()
+      var availableDataGroups = [DataGroupId]()
 
       self.updateReaderSessionMessage(
         alertMessage: NFCViewDisplayMessage.readingDataGroupProgress(.COM, 0))
 
       if let com = try await readDataGroup(tagReader: tagReader, dgId: .COM) as? COM {
         self.passport.addDataGroup(.COM, dataGroup: com)
-        self.addDatagroupsToRead(com: com, to: &DGsToRead)
+        self.addAvailableDataGroups(com: com, to: &availableDataGroups)
       }
 
-      if DGsToRead.contains(.DG14) {
-        DGsToRead.removeAll { $0 == .DG14 }
+      if availableDataGroups.contains(.DG14) {
+        availableDataGroups.removeAll { $0 == .DG14 }
 
         if !skipCA {
           // Do Chip Authentication
@@ -400,6 +399,7 @@ import OSLog
               do {
                 // Do Chip authentication and then continue reading datagroups
                 try await caHandler.doChipAuthentication()
+                Logger.passportReader.info("Chip Authentication succeeded")
                 self.passport.chipAuthenticationStatus = .success
               } catch {
                 Logger.passportReader.info("Chip Authentication failed - re-establishing BAC")
@@ -415,13 +415,15 @@ import OSLog
 
       // If we are skipping secure elements then remove .DG3 and .DG4
       if self.skipSecureElements {
-        DGsToRead = DGsToRead.filter { $0 != .DG3 && $0 != .DG4 }
+        availableDataGroups = availableDataGroups.filter { $0 != .DG3 && $0 != .DG4 }
       }
 
-      if self.readAllDatagroups != true {
-        DGsToRead = DGsToRead.filter { dataGroupsToRead.contains($0) }
+      // Here we filter between the available data groups and what is requested
+      if !self.readAllDatagroups {
+        availableDataGroups = availableDataGroups.filter { self.dataGroupsToRead.contains($0) }
       }
-      for dgId in DGsToRead {
+
+      for dgId in availableDataGroups {
         self.updateReaderSessionMessage(
           alertMessage: NFCViewDisplayMessage.readingDataGroupProgress(dgId, 0))
         if let dg = try await readDataGroup(tagReader: tagReader, dgId: dgId) {
@@ -506,12 +508,12 @@ import OSLog
       nfcContinuation = nil
     }
 
-    internal func addDatagroupsToRead(com: COM, to DGsToRead: inout [DataGroupId]) {
-      DGsToRead += com.dataGroupsPresent.compactMap { DataGroupId.getIDFromName(name: $0) }
-      DGsToRead.removeAll { $0 == .COM }
+    internal func addAvailableDataGroups(com: COM, to dataGroups: inout [DataGroupId]) {
+      dataGroups += com.dataGroupsPresent.compactMap { DataGroupId.getIDFromName(name: $0) }
+      dataGroups.removeAll { $0 == .COM }
 
       // SOD should not be present in COM, but just in case we check before adding it so its not read twice
-      if !DGsToRead.contains(.SOD) { DGsToRead.insert(.SOD, at: 0) }
+      if !dataGroups.contains(.SOD) { dataGroups.insert(.SOD, at: 0) }
     }
   }
 #endif
