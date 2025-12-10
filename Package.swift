@@ -15,17 +15,21 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/krzyzanowskim/OpenSSL.git", .upToNextMinor(from: "3.3.1000")),
+        .package(url: "https://github.com/krzyzanowskim/OpenSSL-Package.git", .upToNextMinor(from: "3.3.1000")),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages which this package depends on.
         .target(
             name: "NFCPassportReader",
-            dependencies: ["OpenSSL"]),
+            dependencies: [
+              .product(name: "OpenSSL", package: "OpenSSL-Package")
+            ]),
         .testTarget(
             name: "NFCPassportReaderTests",
-            dependencies: ["NFCPassportReader", "OpenSSL"]),
+            dependencies: [
+              .product(name: "OpenSSL", package: "OpenSSL-Package")
+            ]),
     ]
 )
 

@@ -1,3 +1,8 @@
+V2.3.0
+   Added fix for OpenSSL 3.3 breaking SOD X509 certificate verification - thanks @SteveDove for reporting and testing
+   Added ability to provide a custom AA Challenge key for supporting backend AA challenges and eliminating replay attacks - thanks @Premeide
+   Updated to use the binary OpenSSL-Package to improve repo loading times and updated Cocoapods to use OpenSSL 3.3.1001 binary too - thanks @ospfranco
+   Updated docs to say that Cocoapods will continue to be released to until end-2026 but will not be a supported deployment. - thanks @ospfranco
 V2.2.0
    Upgrade to OpenSSL V3 - thanks to @agmike
 v2.1.2

@@ -164,16 +164,25 @@ public class OpenSSLUtils {
         X509_STORE_set_verify_cb(cert_ctx) { (ok, ctx) -> Int32 in
             let cert_error = X509_STORE_CTX_get_error(ctx)
             
+            var ret : Int32 = ok
             if ok == 0 {
                 let errVal = X509_verify_cert_error_string(Int(cert_error))
                 let val = errVal!.withMemoryRebound(to: CChar.self, capacity: 1000) { (ptr) in
                     return String(cString: ptr)
                 }
                 
-                Logger.openSSL.error("error \(cert_error) at \(X509_STORE_CTX_get_error_depth(ctx)) depth lookup:\(val)" )
+                // OpenSSL V3 made a change to fail verification for certificates using explicit parameters
+                // However the ICAO spec requires no implicit parameters
+                // So if we have the explict params error - we ignore it and return 1 (no error) for this error
+                if cert_error == X509_V_ERR_EC_KEY_EXPLICIT_PARAMS {
+                    // Ignoring this
+                    ret = 1
+                } else {
+                    Logger.openSSL.error("error \(cert_error) at \(X509_STORE_CTX_get_error_depth(ctx)) depth lookup:\(val)" )
+                }
             }
             
-            return ok;
+            return ret;
         }
         
         guard let lookup = X509_STORE_add_lookup(cert_ctx, X509_LOOKUP_file()) else { return .failure(OpenSSLError.UnableToVerifyX509CertificateForSOD("Unable to add lookup to store")) }
