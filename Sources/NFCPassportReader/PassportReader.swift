@@ -359,9 +359,11 @@ extension PassportReader {
         }
         
         if DGsToRead.contains( .DG14 ) {
-            DGsToRead.removeAll { $0 == .DG14 }
             
             if !skipCA {
+                // If we have been explicitly asked to read DG14, remove it from the list as we are reading it now.
+                DGsToRead.removeAll { $0 == .DG14 }
+                
                 // Do Chip Authentication
                 if let dg14 = try await readDataGroup(tagReader:tagReader, dgId:.DG14) as? DataGroup14 {
                     self.passport.addDataGroup( .DG14, dataGroup:dg14 )

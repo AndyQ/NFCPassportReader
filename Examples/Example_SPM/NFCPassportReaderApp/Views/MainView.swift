@@ -178,6 +178,8 @@ extension MainView {
         let dob = df.string(from:settings.dateOfBirth)
         let doe = df.string(from:settings.dateOfExpiry)
         let useExtendedMode = settings.useExtendedMode
+        let skipPACE = settings.skipPACE
+        let skipCA = settings.skipCA
 
         let passportUtils = PassportUtils()
         let mrzKey = passportUtils.getMRZKey( passportNumber: pptNr, dateOfBirth: dob, dateOfExpiry: doe)
@@ -207,7 +209,7 @@ extension MainView {
             }
             
             do {
-                let passport = try await passportReader.readPassport( mrzKey: mrzKey, useExtendedMode: useExtendedMode,  customDisplayMessage:customMessageHandler)
+                let passport = try await passportReader.readPassport( mrzKey: mrzKey, skipCA: skipCA, skipPACE: skipPACE, useExtendedMode: useExtendedMode, customDisplayMessage:customMessageHandler)
                 
                 if let _ = passport.faceImageInfo {
                     print( "Got face Image details")
