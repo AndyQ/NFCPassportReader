@@ -3,8 +3,11 @@ V2.3.0
    Added ability to provide a custom AA Challenge key for supporting backend AA challenges and eliminating replay attacks - thanks @Premeide
    Updated to use the binary OpenSSL-Package to improve repo loading times and updated Cocoapods to use OpenSSL 3.3.1001 binary too - thanks @ospfranco
    Updated docs to say that Cocoapods will continue to be released to until end-2026 but will not be a supported deployment. - thanks @ospfranco
+   Added ability to skip PACE and CA authorisations in demo app
+
 V2.2.0
    Upgrade to OpenSSL V3 - thanks to @agmike
+
 v2.1.2
    Added tracking delegate and improved error handling - thanks to @mikahautz-mohemian, @josiporezic-mohemian and @lauraheiger-mohemian
    Fix to readme example - thanks @Daymox
