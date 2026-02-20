@@ -264,7 +264,8 @@ public class PACEHandler {
             let group = EC_KEY_get0_group(ecParams),
             EC_KEY_set_group(ephEcKey, group) == 1,
             EC_KEY_generate_key(ephEcKey) == 1 else {
-            throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to generate EC key" )
+                Logger.pace.error( "Failed to generate EC key")
+                throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to generate EC key" )
         }
 
         // Wrap the EC_KEY into an EVP_PKEY

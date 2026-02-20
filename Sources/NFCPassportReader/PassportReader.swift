@@ -284,6 +284,13 @@ extension PassportReader {
 
                 passport.PACEStatus = .failed
                 Logger.passportReader.error( "PACE Failed - falling back to BAC" )
+                
+                let data : [UInt8] = [0x83, 0x00, 0x00, 0x00]
+                do {
+                    let response = try await tagReader.sendGeneralAuthenticate(data:data, isLast:true)
+                } catch {
+                    // ignore
+                }
             }
             
             _ = try await tagReader.selectPassportApplication()
@@ -292,6 +299,7 @@ extension PassportReader {
         // If either PACE isn't supported, we failed whilst doing PACE or we didn't even attempt it, then fall back to BAC
         if passport.PACEStatus != .success {
             do {
+                
                 trackingDelegate?.bacStarted()
                 try await doBACAuthentication(tagReader : tagReader)
                 trackingDelegate?.bacSucceeded()
