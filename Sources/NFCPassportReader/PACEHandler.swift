@@ -259,9 +259,15 @@ public class PACEHandler {
         }
         defer { EC_KEY_free(ephEcKey) }
 
-        guard
-            let ecParams = EVP_PKEY_get0_EC_KEY(ephemeralParams),
-            let group = EC_KEY_get0_group(ecParams),
+        // Use EVP_PKEY_get1_EC_KEY (not get0) for OpenSSL 3.x compatibility:
+        // get1 returns an owned copy that works reliably with provider-backed keys.
+        guard let ecParams = EVP_PKEY_get1_EC_KEY(ephemeralParams) else {
+            Logger.pace.error( "Failed to get EC key from ephemeral params")
+            throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to get EC key from ephemeral params" )
+        }
+        defer { EC_KEY_free(ecParams) }
+
+        guard let group = EC_KEY_get0_group(ecParams),
             EC_KEY_set_group(ephEcKey, group) == 1,
             EC_KEY_generate_key(ephEcKey) == 1 else {
                 Logger.pace.error( "Failed to generate EC key")
@@ -472,8 +478,11 @@ extension PACEHandler {
     /// - Returns the EVP_PKEY containing the mapped ephemeral parameters
     func doECDHMappingAgreement( mappingKey : OpaquePointer, passportPublicKeyData: [UInt8], nonce: OpaquePointer ) throws -> OpaquePointer {
 
-        let ec_mapping_key = EVP_PKEY_get1_EC_KEY(mappingKey)
-        
+        guard let ec_mapping_key = EVP_PKEY_get1_EC_KEY(mappingKey) else {
+            throw PACEHandlerError.ECDHKeyAgreementError( "Unable to get EC key from mapping key" )
+        }
+        defer { EC_KEY_free(ec_mapping_key) }
+
         guard let group = EC_GROUP_dup(EC_KEY_get0_group(ec_mapping_key)) else {
             // Error
             throw PACEHandlerError.ECDHKeyAgreementError( "Unable to get EC group" )
@@ -526,14 +535,16 @@ extension PACEHandler {
 
         let ephemeral_key = EC_KEY_dup(ec_mapping_key)
         defer{ EC_KEY_free(ephemeral_key) }
-        
-        // configure the new EC_KEY
-        guard EVP_PKEY_set1_EC_KEY(ephemeralParams, ephemeral_key) == 1,
-              EC_GROUP_set_generator(group, newGenerater, order, cofactor) == 1,
-              EC_GROUP_check(group, nil) == 1,
-              EC_KEY_set_group(ephemeral_key, group) == 1 else {
-            // Error
 
+        // Configure the EC group with the new generator and set it on the EC_KEY
+        // BEFORE associating with the EVP_PKEY. In OpenSSL 3.x, EVP_PKEY_set1_EC_KEY
+        // exports the key to a provider-backed representation; modifications to the
+        // legacy EC_KEY afterwards are not reflected, causing EVP_PKEY_get0_EC_KEY
+        // to return nil when it detects an inconsistent state.
+        guard EC_GROUP_set_generator(group, newGenerater, order, cofactor) == 1,
+              EC_GROUP_check(group, nil) == 1,
+              EC_KEY_set_group(ephemeral_key, group) == 1,
+              EVP_PKEY_set1_EC_KEY(ephemeralParams, ephemeral_key) == 1 else {
             EVP_PKEY_free( ephemeralParams )
             throw PACEHandlerError.ECDHKeyAgreementError( "Unable to configure new ephemeral params" )
         }
