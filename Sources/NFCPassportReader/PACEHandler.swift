@@ -254,11 +254,20 @@ public class PACEHandler {
         Logger.pace.debug( "Doing PACE Step3 - Key Exchange")
 
         // Create a new EC_KEY with the same group
-        let ephEcKey = try generateEphemeralECKey(from: ephemeralParams)
-        
+        guard let ephEcKey = EC_KEY_new() else {
+            throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to create EC key" )
+        }
         defer { EC_KEY_free(ephEcKey) }
-        
-        
+
+        guard
+            let ecParams = EVP_PKEY_get0_EC_KEY(ephemeralParams),
+            let group = EC_KEY_get0_group(ecParams),
+            EC_KEY_set_group(ephEcKey, group) == 1,
+            EC_KEY_generate_key(ephEcKey) == 1 else {
+                Logger.pace.error( "Failed to generate EC key")
+                throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to generate EC key" )
+        }
+
         // Wrap the EC_KEY into an EVP_PKEY
         var ephKeyPair = EVP_PKEY_new()
         guard let ephemeralKeyPair = ephKeyPair else {
