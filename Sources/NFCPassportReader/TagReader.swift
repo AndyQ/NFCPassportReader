@@ -110,14 +110,17 @@ public class TagReader {
         
         return try await send( cmd: cmd )
     }
-    
-    func sendMSESetATMutualAuth( oid: String, keyType: UInt8 ) async throws -> ResponseAPDU {
-        
+
+    func sendMSESetATMutualAuth( oid: String, keyType: UInt8, parameterId: Int? = nil ) async throws -> ResponseAPDU {
+
         let oidBytes = oidToBytes(oid: oid, replaceTag: true)
         let keyTypeBytes = wrapDO( b: 0x83, arr:[keyType])
         
-        let data = oidBytes + keyTypeBytes
-            
+        var data = oidBytes + keyTypeBytes
+        if let parameterId {
+            data += wrapDO(b: 0x84, arr: [UInt8(parameterId)])
+        }
+
         let cmd = NFCISO7816APDU(instructionClass: 00, instructionCode: 0x22, p1Parameter: 0xC1, p2Parameter: 0xA4, data: Data(data), expectedResponseLength: -1)
         
         return try await send( cmd: cmd )
