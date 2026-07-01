@@ -1,3 +1,5 @@
+V2.3.2
+   Updated to OpenSSL 3.6 - hoping to fix issue with missing DSYMS
 V2.3.1
    Fixed issue reading some JPEG2000 images - they had additional padding after them causeing the image reader to think
       there was another container
