@@ -285,7 +285,7 @@ public class TagReader {
             
         }
         
-        if rep.sw1 != 0x90 && rep.sw2 != 0x00 {
+        if rep.sw1 != 0x90 || rep.sw2 != 0x00 {
             Logger.tagReader.error( "Error reading tag: sw1 - 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2))" )
             let tagError: NFCPassportReaderError
             if (rep.sw1 == 0x63 && rep.sw2 == 0x00) {
