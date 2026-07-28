@@ -17,10 +17,14 @@ public class CardAccess {
     private var asn1 : ASN1Item!
     public private(set) var securityInfos : [SecurityInfo] = [SecurityInfo]()
     
-    var paceInfo : PACEInfo? {
-        get {
-            return (securityInfos.filter { ($0 as? PACEInfo) != nil }).first as? PACEInfo
+    var paceInfo: PACEInfo? {
+        for securityInfo in securityInfos {
+            if let paceInfo = securityInfo as? PACEInfo,
+               (try? paceInfo.getMappingType()) == .GM {
+                return paceInfo
+            }
         }
+        return nil
     }
     
     required init( _ data : [UInt8] ) throws {

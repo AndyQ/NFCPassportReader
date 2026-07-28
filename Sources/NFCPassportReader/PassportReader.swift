@@ -52,14 +52,12 @@ public class PassportReader : NSObject {
     private var readAllDatagroups = false
     private var skipSecureElements = true
     private var skipCA = false
-    private var skipPACE = false
-    
+    private var authenticationMethod: AuthenticationMethod = .PACE
+
     // Extended mode is used for reading eMRTD's that support extended length APDUs
     private var useExtendedMode = false
 
-    private var bacHandler : BACHandler?
     private var caHandler : ChipAuthenticationHandler?
-    private var paceHandler : PACEHandler?
     private var mrzKey : String = ""
     private var aaChallenge: [UInt8]?
     private var dataAmountToReadOverride : Int? = nil
@@ -91,13 +89,13 @@ public class PassportReader : NSObject {
         dataAmountToReadOverride = amount
     }
     
-    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], aaChallenge: [UInt8]? = nil, skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, useExtendedMode : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
+    public func readPassport( mrzKey : String, tags : [DataGroupId] = [], aaChallenge: [UInt8]? = nil, skipSecureElements : Bool = true, skipCA : Bool = false, authenticationMethod: AuthenticationMethod = .PACE, useExtendedMode : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
         
         self.passport = NFCPassportModel()
         self.mrzKey = mrzKey
         self.aaChallenge = aaChallenge
         self.skipCA = skipCA
-        self.skipPACE = skipPACE
+        self.authenticationMethod = authenticationMethod
         self.useExtendedMode = useExtendedMode
         
         self.dataGroupsToRead.removeAll()
@@ -105,10 +103,8 @@ public class PassportReader : NSObject {
         self.nfcViewDisplayMessageHandler = customDisplayMessage
         self.skipSecureElements = skipSecureElements
         self.currentlyReadingDataGroup = nil
-        self.bacHandler = nil
         self.caHandler = nil
-        self.paceHandler = nil
-        
+
         // If no tags specified, read all
         if self.dataGroupsToRead.count == 0 {
             // Start off with .COM, will always read (and .SOD but we'll add that after), and then add the others from the COM
@@ -260,47 +256,15 @@ extension PassportReader {
     func startReading(tagReader : TagReader) async throws -> NFCPassportModel {
         trackingDelegate?.nfcTagDetected()
 
-        if !skipPACE {
-            do {
-                trackingDelegate?.paceStarted()
-
-                let data = try await tagReader.readCardAccess()
-                Logger.passportReader.debug( "Read CardAccess - data \(binToHexRep(data))" )
-                let cardAccess = try CardAccess(data)
-                passport.cardAccess = cardAccess
-
-                trackingDelegate?.readCardAccess(cardAccess: cardAccess)
-
-                Logger.passportReader.info( "Starting Password Authenticated Connection Establishment (PACE)" )
-                 
-                let paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
-                try await paceHandler.doPACE(mrzKey: mrzKey )
-                passport.PACEStatus = .success
-                Logger.passportReader.debug( "PACE Succeeded" )
-
-                trackingDelegate?.paceSucceeded()
-            } catch {
-                trackingDelegate?.paceFailed()
-
-                passport.PACEStatus = .failed
-                Logger.passportReader.error( "PACE Failed - falling back to BAC" )
-            }
-            
-            _ = try await tagReader.selectPassportApplication()
+        // Try the configured primary authentication method, falling back to the other if it fails
+        do {
+            authenticationMethod == .PACE ? try await doPACE(tagReader: tagReader) : try await doBACAuthentication(tagReader: tagReader)
+        } catch {
+            Logger.passportReader.error( "\(self.authenticationMethod) authentication failed - falling back to the other method" )
+            authenticationMethod == .PACE ? try await doBACAuthentication(tagReader: tagReader) : try await doPACE(tagReader: tagReader)
         }
-        
-        // If either PACE isn't supported, we failed whilst doing PACE or we didn't even attempt it, then fall back to BAC
-        if passport.PACEStatus != .success {
-            do {
-                trackingDelegate?.bacStarted()
-                try await doBACAuthentication(tagReader : tagReader)
-                trackingDelegate?.bacSucceeded()
-            } catch {
-                trackingDelegate?.bacFailed()
-                throw error
-            }
-        }
-        
+        _ = try await tagReader.selectPassportApplication()
+
         // Now to read the datagroups
         try await readDataGroups(tagReader: tagReader)
 
@@ -325,25 +289,66 @@ extension PassportReader {
 
         Logger.passportReader.info( "Performing Active Authentication" )
 
-        let challenge = aaChallenge ?? generateRandomUInt8Array(8)
-        Logger.passportReader.debug( "Generated Active Authentication challange - \(binToHexRep(challenge))")
+        let challenge: [UInt8]
+        if let existingChallenge = aaChallenge {
+            challenge = existingChallenge
+            Logger.passportReader.debug("Using existing Active Authentication challenge - \(binToHexRep(challenge))")
+        } else {
+            challenge = generateRandomUInt8Array(8)
+            Logger.passportReader.debug("Generated new Active Authentication challenge - \(binToHexRep(challenge))")
+        }
+
         let response = try await tagReader.doInternalAuthentication(challenge: challenge, useExtendedMode: useExtendedMode)
         self.passport.verifyActiveAuthentication( challenge:challenge, signature:response.data )
     }
     
 
+    func doPACE(tagReader : TagReader) async throws {
+        trackingDelegate?.paceStarted()
+        do {
+            let data = try await tagReader.readCardAccess()
+            Logger.passportReader.debug( "Read CardAccess - data \(binToHexRep(data))" )
+            let cardAccess = try CardAccess(data)
+            passport.cardAccess = cardAccess
+
+            trackingDelegate?.readCardAccess(cardAccess: cardAccess)
+
+            Logger.passportReader.info( "Starting Password Authenticated Connection Establishment (PACE)" )
+
+            let paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
+            try await paceHandler.doPACE(mrzKey: mrzKey )
+            passport.PACEStatus = .success
+            Logger.passportReader.debug( "PACE Succeeded" )
+
+            trackingDelegate?.paceSucceeded()
+        } catch {
+            passport.PACEStatus = .failed
+            trackingDelegate?.paceFailed()
+            Logger.passportReader.error( "PACE failed" )
+            throw error
+        }
+    }
+
+
     func doBACAuthentication(tagReader : TagReader) async throws {
         self.currentlyReadingDataGroup = nil
 
+        trackingDelegate?.bacStarted()
         Logger.passportReader.info( "Starting Basic Access Control (BAC)" )
-        
+
         self.passport.BACStatus = .failed
 
-        self.bacHandler = BACHandler( tagReader: tagReader )
-        try await bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey )
-        Logger.passportReader.info( "Basic Access Control (BAC) - SUCCESS!" )
+        do {
+            let bacHandler = BACHandler( tagReader: tagReader )
+            try await bacHandler.performBACAndGetSessionKeys( mrzKey: mrzKey )
+            Logger.passportReader.info( "Basic Access Control (BAC) - SUCCESS!" )
 
-        self.passport.BACStatus = .success
+            self.passport.BACStatus = .success
+            trackingDelegate?.bacSucceeded()
+        } catch {
+            trackingDelegate?.bacFailed()
+            throw error
+        }
     }
 
     func readDataGroups( tagReader: TagReader ) async throws {

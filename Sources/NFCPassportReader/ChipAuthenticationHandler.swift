@@ -44,7 +44,10 @@ class ChipAuthenticationHandler {
         }
         
         if chipAuthPublicKeyInfos.count > 0 {
+            Logger.chipAuth.info( "Chip Authentication supported: \(self.chipAuthPublicKeyInfos.count) public keys" )
             isChipAuthenticationSupported = true
+        } else {
+            Logger.chipAuth.info( "Chip Authentication not supported: \(self.chipAuthPublicKeyInfos.count) public keys" )
         }
     }
 
