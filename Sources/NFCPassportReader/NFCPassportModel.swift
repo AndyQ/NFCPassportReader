@@ -74,6 +74,13 @@ public class NFCPassportModel {
               let telephone = dg11.telephone else { return nil }
         return telephone
     }()
+
+    /// date of issue
+    public private(set) lazy var dateOfIssue : String? = {
+        guard let dg12 = dataGroupsRead[.DG12] as? DataGroup12,
+              let dateOfIssue = dg12.dateOfIssue else { return nil }
+        return dateOfIssue
+    }()
     
     /// personal number
     public private(set) lazy var personalNumber : String? = {
