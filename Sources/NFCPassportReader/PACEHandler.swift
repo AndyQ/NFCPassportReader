@@ -104,8 +104,8 @@ public class PACEHandler {
         Logger.pace.debug("paceKey - \(binToHexRep(self.paceKey, asArray:true))" )
 
         // First start the initial auth call
-        _ = try await tagReader.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType)
-            
+        _ = try await tagReader.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType, parameterId: paceInfo.getParameterId())
+
         let decryptedNonce = try await self.doStep1()
 
         let ephemeralParams = try await self.doStep2(passportNonce: decryptedNonce)
