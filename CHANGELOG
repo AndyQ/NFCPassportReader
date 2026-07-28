@@ -1,3 +1,5 @@
+V2.3.3
+   Added Optional Data element to passport model - pulls out element 53 from DG1
 V2.3.2
    Updated to OpenSSL 3.6 - hoping to fix issue with missing DSYMS
 V2.3.1
