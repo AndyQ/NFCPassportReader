@@ -81,7 +81,8 @@ class PassportUtils {
     }
 
     static func getLogEntries() throws -> [String] {
-        let subsystem = Bundle.main.bundleIdentifier!
+        let appSubsystem = Bundle.main.bundleIdentifier!
+        let nfcSubsystem = "com.apple.nfc"
         
         print( "Getting logs since \(lastPassportScanTime)")
         
@@ -92,7 +93,7 @@ class PassportUtils {
         // FB8518539: Using NSPredicate to filter the subsystem doesn't seem to work.
         return allEntries
             .compactMap { $0 as? OSLogEntryLog }
-            .filter { $0.subsystem == subsystem && $0.date > lastPassportScanTime }
+            .filter { ($0.subsystem == appSubsystem || $0.subsystem == nfcSubsystem) && $0.date > lastPassportScanTime }
             .map { "\($0.level.rawValue),\($0.date),\($0.subsystem),\($0.category),\"\($0.composedMessage)\"" }
     }
 }
