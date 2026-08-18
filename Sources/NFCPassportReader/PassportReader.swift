@@ -53,6 +53,8 @@ public class PassportReader : NSObject {
     private var skipSecureElements = true
     private var skipCA = false
     private var skipPACE = false
+    /// If PACE is attempted and fails, fall back to BAC. Default true keeps existing behavior.
+    public var allowBACFallback: Bool = true
     
     // Extended mode is used for reading eMRTD's that support extended length APDUs
     private var useExtendedMode = false
@@ -283,7 +285,12 @@ extension PassportReader {
                 trackingDelegate?.paceFailed()
 
                 passport.PACEStatus = .failed
-                Logger.passportReader.error( "PACE Failed - falling back to BAC" )
+                if allowBACFallback {
+                    Logger.passportReader.error( "PACE Failed - falling back to BAC" )
+                } else {
+                    Logger.passportReader.error( "PACE Failed" )
+                    throw error
+                }
             }
             
             _ = try await tagReader.selectPassportApplication()
