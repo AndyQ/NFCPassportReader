@@ -689,38 +689,46 @@ public class OpenSSLUtils {
             
             secret = [UInt8](repeating: 0, count: Int(DH_size(dh)))
             let len = DH_compute_key(&secret, bn, dh);
-            
-            Logger.openSSL.debug( "OpenSSLUtils.computeSharedSecret - DH secret len - \(len) - \(secret)" )
+            if len <= 0 {
+                Logger.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+                return []
+            }
+            secret = Array(secret.prefix(Int(len)))
+            Logger.openSSL.debug( "OpenSSLUtils.computeSharedSecret - DH secret len - \(len)" )
         } else {
             let ctx = EVP_PKEY_CTX_new(privateKeyPair, nil)
+            guard ctx != nil else {
+                return []
+            }
             defer{ EVP_PKEY_CTX_free(ctx) }
             
             if EVP_PKEY_derive_init(ctx) != 1 {
-                // error
                 Logger.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+                return []
             }
             
             // Set the public key
             if EVP_PKEY_derive_set_peer( ctx, publicKey ) != 1 {
-                // error
                 Logger.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+                return []
             }
             
             // get buffer length needed for shared secret
             var keyLen = 0
             if EVP_PKEY_derive(ctx, nil, &keyLen) != 1 {
-                // Error
                 Logger.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+                return []
             }
             
             // Derive the shared secret
             secret = [UInt8](repeating: 0, count: keyLen)
-            if EVP_PKEY_derive(ctx, &secret, &keyLen) != 1 {
-                // Error
+            if EVP_PKEY_derive(ctx, &secret, &keyLen) != 1 || keyLen <= 0 {
                 Logger.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+                return []
             }
+            secret = Array(secret.prefix(keyLen))
             
-            Logger.openSSL.debug( "OpenSSLUtils.computeSharedSecret - secret len - \(keyLen), secret - \(secret)" )
+            Logger.openSSL.debug( "OpenSSLUtils.computeSharedSecret - secret len - \(keyLen)" )
 
         }
         return secret

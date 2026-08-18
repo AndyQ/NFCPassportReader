@@ -100,8 +100,6 @@ public class PACEHandler {
         Logger.pace.debug("cipherAlg - \(self.cipherAlg)" )
         Logger.pace.debug("digestAlg - \(self.digestAlg)" )
         Logger.pace.debug("keyLength - \(self.keyLength)" )
-        Logger.pace.debug("keyLength - \(mrzKey)" )
-        Logger.pace.debug("paceKey - \(binToHexRep(self.paceKey, asArray:true))" )
 
         // First start the initial auth call
         _ = try await tagReader.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType)
@@ -316,21 +314,20 @@ public class PACEHandler {
 
         Logger.pace.debug( "Computing shared secret...")
         let sharedSecret = OpenSSLUtils.computeSharedSecret(privateKeyPair: pcdKeyPair, publicKey: passportPublicKey)
-        Logger.pace.debug( "Shared secret - \(binToHexRep(sharedSecret, asArray:true))")
+        guard !sharedSecret.isEmpty else {
+            throw NFCPassportReaderError.PACEError( "Step4 KeyAgreement", "Unable to compute shared secret" )
+        }
 
         Logger.pace.debug( "Deriving ksEnc and ksMac keys from shared secret")
         let gen = SecureMessagingSessionKeyGenerator()
-        let encKey = try! gen.deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: .ENC_MODE)
-        let macKey = try! gen.deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: .MAC_MODE)
-        Logger.pace.debug( "encKey - \(binToHexRep(encKey, asArray:true))")
-        Logger.pace.debug( "macKey - \(binToHexRep(macKey, asArray:true))")
+        let encKey = try gen.deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: .ENC_MODE)
+        let macKey = try gen.deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: .MAC_MODE)
 
         // Step 4 - generate authentication token
         Logger.pace.debug( "Generating authentication token")
         guard let pcdAuthToken = try? generateAuthenticationToken( publicKey: passportPublicKey, macKey: macKey) else {
             throw NFCPassportReaderError.PACEError( "Step3 KeyAgreement", "Unable to generate authentication token using passports public key" )
         }
-        Logger.pace.debug( "authentication token - \(pcdAuthToken)")
 
         Logger.pace.debug( "Sending auth token to passport")
         let step4Data = wrapDO(b:0x85, arr:pcdAuthToken)
