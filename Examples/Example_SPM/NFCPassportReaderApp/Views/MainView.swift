@@ -172,7 +172,7 @@ extension MainView {
         
         let df = DateFormatter()
         df.timeZone = TimeZone(secondsFromGMT: 0)
-        df.dateFormat = "YYMMdd"
+        df.dateFormat = "yyMMdd"
         
         let pptNr = settings.passportNumber
         let dob = df.string(from:settings.dateOfBirth)
