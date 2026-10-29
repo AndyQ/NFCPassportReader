@@ -18,6 +18,7 @@ let appLogging = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "app
 
 struct MainView : View {
     @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var trace: TraceStore
     @Environment(\.colorScheme) var colorScheme
 
     @State private var showingAlert = false
@@ -29,6 +30,8 @@ struct MainView : View {
     @State private var showScanMRZ : Bool = false
     @State private var showSavedPassports : Bool = false
     @State private var gettingLogs : Bool = false
+    @State private var showTrace : Bool = false
+    @State private var showPassportSim : Bool = false
 
     @State var page = 0
     
@@ -42,6 +45,7 @@ struct MainView : View {
                 NavigationLink( destination: SettingsView(), isActive: $showSettings) { Text("") }
                 NavigationLink( destination: PassportView(), isActive: $showDetails) { Text("") }
                 NavigationLink( destination: StoredPassportView(), isActive: $showSavedPassports) { Text("") }
+                NavigationLink( destination: TraceView(), isActive: $showTrace) { Text("") }
                 NavigationLink( destination: MRZScanner(completionHandler: { mrz in
                     
                     if let (docNr, dob, doe) = parse( mrz:mrz ) {
@@ -76,6 +80,10 @@ struct MainView : View {
                             .font(.footnote)
                             .padding(.leading)
                         Spacer()
+                        Button(action: { showTrace = true }) {
+                            Label("Trace", systemImage: "waveform.path.ecg")
+                                .foregroundColor(.secondary)
+                        }.padding(.trailing)
                         Button(action: {
                             shareLogs()
                         }) {
@@ -115,12 +123,34 @@ struct MainView : View {
                         Button(action: {self.showSavedPassports.toggle()}) {
                             Label("Show saved passports", systemImage: "doc")
                         }
+                        Button(action: { showTrace = true }) {
+                            Label("Trace", systemImage: "waveform.path.ecg")
+                        }
+                        #if targetEnvironment(simulator)
+                        Button(action: { showPassportSim = true }) {
+                            Label("Read from PassportSim", systemImage: "network")
+                        }
+                        #endif
                     } label: {
                         Image(systemName: "gear")
                             .foregroundColor(Color.secondary)
                     }
                 }
             }
+            .sheet(isPresented: $showPassportSim) {
+                PassportSimReadView(passportReader: passportReader) { passport in
+                    self.settings.passport = passport
+                    self.showDetails = true
+                }
+                .environmentObject(settings)
+                .onAppear {
+                    passportReader.traceHandler = trace.handler
+                    if let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem") {
+                        passportReader.setMasterListURL(masterListURL)
+                    }
+                }
+            }
+            .onAppear(perform: autoReadFromPassportSim)
             .alert(isPresented: $showingAlert) {
                     Alert(title: Text(alertTitle), message:
                         Text(alertMessage), dismissButton: .default(Text("Got it!")))
@@ -155,6 +185,30 @@ extension MainView {
 // MARK: Action Functions
 extension MainView {
 
+    /// Simulator only: launch with `-passportSimAutoRead <preset>` to read that PassportSim preset from
+    /// the APDU server on 127.0.0.1:9077 at start-up and open the Trace view.
+    func autoReadFromPassportSim() {
+        #if targetEnvironment(simulator)
+        guard let preset = UserDefaults.standard.string(forKey: "passportSimAutoRead"), !preset.isEmpty else { return }
+        UserDefaults.standard.removeObject(forKey: "passportSimAutoRead")
+        passportReader.traceHandler = trace.handler
+        if let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem") {
+            passportReader.setMasterListURL(masterListURL)
+        }
+        Task {
+            do {
+                let tag = try PassportSimTag(host: "127.0.0.1", port: 9077)
+                let mrzKey = try tag.selectProfile(preset)
+                let passport = try await passportReader.readPassport(tag: tag, mrzKey: mrzKey)
+                await MainActor.run { self.settings.passport = passport }
+            } catch {
+                appLogging.error("PassportSim auto read failed: \(error.localizedDescription)")
+            }
+            await MainActor.run { self.showTrace = true }
+        }
+        #endif
+    }
+
     func shareLogs() {
         gettingLogs = true
         Task {
@@ -183,6 +237,9 @@ extension MainView {
 
         let passportUtils = PassportUtils()
         let mrzKey = passportUtils.getMRZKey( passportNumber: pptNr, dateOfBirth: dob, dateOfExpiry: doe)
+
+        // Record an APDU trace for the Trace view
+        passportReader.traceHandler = trace.handler
 
         // Set the masterListURL on the Passport Reader to allow auto passport verification
         let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem")!
@@ -246,13 +303,16 @@ struct ContentView_Previews : PreviewProvider {
 
     static var previews: some View {
         let settings = SettingsStore()
-        
+        let trace = TraceStore()
+
         return Group {
             MainView()
                 .environmentObject(settings)
+                .environmentObject(trace)
                 .environment( \.colorScheme, .light)
             MainView()
                 .environmentObject(settings)
+                .environmentObject(trace)
                 .environment( \.colorScheme, .dark)
         }
     }

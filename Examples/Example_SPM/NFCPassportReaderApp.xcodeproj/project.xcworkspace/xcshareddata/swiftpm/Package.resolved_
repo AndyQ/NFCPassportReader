@@ -1,0 +1,25 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "MRZParser",
+        "repositoryURL": "https://github.com/appintheair/MRZParser",
+        "state": {
+          "branch": null,
+          "revision": "64b73fae8092b31d0a378f0d000c244470c7ac44",
+          "version": "1.1.3"
+        }
+      },
+      {
+        "package": "OpenSSL",
+        "repositoryURL": "https://github.com/krzyzanowskim/OpenSSL.git",
+        "state": {
+          "branch": null,
+          "revision": "7137604ef4bffe1ae1beee8212c561134582f7ff",
+          "version": "1.1.2300"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

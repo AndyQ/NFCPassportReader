@@ -13,7 +13,7 @@ Supported features:
 * Passive Authentication
 * Active Authentication
 * Chip Authentication (ECDH DES and AES keys tested, DH DES AES keys implemented ad should work but currently not tested)
-* PACE - currently only Generic Mapping (GM) supported
+* PACE - ECDH Generic Mapping (GM) and Integrated Mapping (IM) with the MRZ password
 * Ability to dump passport stream and read it back in
 * Uses Async/Await
 
@@ -138,7 +138,7 @@ e.g. 12345678<870052332507237 would be the key used.
 
 ## To do
 There are a number of things I'd like to implement in no particular order:
- * Finish off PACE authentication (IM and CAM)
+ * Finish off PACE authentication (CAM, DH-IM)
  
 
 ## Thanks

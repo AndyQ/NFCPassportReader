@@ -103,6 +103,9 @@ public class PACEHandler {
         Logger.pace.debug("keyLength - \(mrzKey)" )
         Logger.pace.debug("paceKey - \(binToHexRep(self.paceKey, asArray:true))" )
 
+        tagReader.tracer?.emit(.info, "PACE: \(self.paceInfo.getProtocolOIDString())",
+                               detail: "OID=\(paceOID) parameterId=\(paceInfo.getParameterId().map(String.init) ?? "-") K_pi=\(binToHexRep(paceKey))")
+
         // First start the initial auth call
         _ = try await tagReader.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType)
             
@@ -165,6 +168,7 @@ public class PACEHandler {
         }
 
         Logger.pace.debug( "Decrypted nonce - \(binToHexRep(decryptedNonce, asArray:true) )" )
+        tagReader.tracer?.emit(.info, "PACE step 1: nonce decrypted", detail: "z=\(binToHexRep(encryptedNonce)) s=\(binToHexRep(decryptedNonce))")
         return decryptedNonce
     }
     
@@ -210,6 +214,8 @@ public class PACEHandler {
         let response = try await tagReader.sendGeneralAuthenticate(data:step2Data, isLast:false)
 
         let piccMappingEncodedPublicKey = try unwrapDO(tag: 0x82, wrappedData: response.data)
+        tagReader.tracer?.emit(.info, "PACE step 2: generic mapping",
+                               detail: "PKmap_PCD=\(binToHexRep(pcdMappingEncodedPublicKey)) PKmap_PICC=\(binToHexRep(piccMappingEncodedPublicKey))")
             
         Logger.pace.debug( "Received passports public mapping key")
         Logger.pace.debug( "   public mapping key - \(binToHexRep(piccMappingEncodedPublicKey, asArray: true))")
@@ -239,9 +245,43 @@ public class PACEHandler {
         return ephemeralParams
     }
     
+    /// Performs PACE Step 2 using Integrated Mapping (ICAO 9303 Part 11, 4.4.3.3.2)
+    ///
+    /// We choose a nonce t and send it to the passport in clear. Both sides then compute the
+    /// mapped generator G^ = f_G(R_p(s, t)) from the passport's nonce s and t.
+    /// - Parameters:
+    ///   - passportNonce: The decrypted nonce s received from the passport
     func doPACEStep2IM( passportNonce: [UInt8] ) async throws -> OpaquePointer {
-        // Not implemented yet
-        throw NFCPassportReaderError.PACEError( "Step2IM", "IM not yet implemented" )
+        guard self.agreementAlg == "ECDH" else {
+            throw NFCPassportReaderError.PACEError( "Step2IM", "DH Integrated Mapping not supported" )
+        }
+
+        // t is k bits long (the key size of the PACE cipher; 128 for 3DES)
+        let (_, k) = try PACEIntegratedMapping.lengths(cipherAlg: self.cipherAlg, keyLength: self.keyLength)
+        let pcdNonce = generateRandomUInt8Array(k / 8)
+        Logger.pace.debug( "Sending nonce t to passport - \(binToHexRep(pcdNonce, asArray:true))")
+
+        let step2Data = wrapDO(b:0x81, arr:pcdNonce)
+        let response = try await tagReader.sendGeneralAuthenticate(data:step2Data, isLast:false)
+
+        // DO'82' SHALL be empty for the Integrated Mapping (9303-11, 4.4.5.2.2)
+        if !response.data.isEmpty {
+            let mappingData = try unwrapDO(tag: 0x82, wrappedData: response.data)
+            if !mappingData.isEmpty {
+                Logger.pace.warning( "Integrated Mapping: expected an empty DO'82', got \(mappingData.count) bytes" )
+            }
+        }
+
+        let mapping = try PACEIntegratedMapping.map(s: passportNonce, t: pcdNonce, curveName: self.parameterSpec, cipherAlg: self.cipherAlg, keyLength: self.keyLength)
+        Logger.pace.debug( "R(s,t) - \(binToHexRep(mapping.pseudoRandom))" )
+        Logger.pace.debug( "Rp(s,t) - \(binToHexRep(mapping.rp))" )
+        Logger.pace.debug( "Mapped generator G^ - x: \(binToHexRep(mapping.generatorX)) y: \(binToHexRep(mapping.generatorY))" )
+        tagReader.tracer?.emit(.info, "PACE step 2: integrated mapping",
+                               detail: "s=\(binToHexRep(passportNonce)) t=\(binToHexRep(pcdNonce)) R(s,t)=\(binToHexRep(mapping.pseudoRandom)) " +
+                                   "Rp=\(binToHexRep(mapping.rp)) G'x=\(binToHexRep(mapping.generatorX)) G'y=\(binToHexRep(mapping.generatorY))")
+
+        // ephmeralParams are free'd in stage 3
+        return try mapping.ephemeralParameters()
     }
     
     /// Generates an ephemeral public/private key pair based on mapping parameters from step 2, and then sends
@@ -295,6 +335,8 @@ public class PACEHandler {
         }
 
         Logger.pace.debug( "Received passports ephemeral public key - \(binToHexRep(passportEncodedPublicKey!, asArray: true))" )
+        tagReader.tracer?.emit(.info, "PACE step 3: ephemeral keys exchanged",
+                               detail: "PK_PCD=\(binToHexRep(publicKey)) PK_PICC=\(binToHexRep(passportEncodedPublicKey!))")
         defer { ephKeyPair = nil } // prevent free to return the value on success path
         return (ephemeralKeyPair, passportPublicKey)
     }
@@ -349,11 +391,16 @@ public class PACEHandler {
         Logger.pace.debug( "Received authentication token from passport - \(piccToken)")
 
         guard piccToken == expectedPICCToken else {
+            tagReader.tracer?.emit(.error, "PACE step 4: PICC token mismatch",
+                                   detail: "got=\(binToHexRep(piccToken)) expected=\(binToHexRep(expectedPICCToken)) K=\(binToHexRep(sharedSecret)) KSmac=\(binToHexRep(macKey))")
             Logger.pace.error( "Error PICC Token mismatch!\npicToken - \(piccToken)\nexpectedPICCToken - \(expectedPICCToken)" )
             throw NFCPassportReaderError.PACEError( "Step3 KeyAgreement", "Error PICC Token mismatch!\npicToken - \(piccToken)\nexpectedPICCToken - \(expectedPICCToken)" )
         }
         
         Logger.pace.debug( "Auth token from passport matches expected token!" )
+        tagReader.tracer?.emit(.info, "PACE step 4: tokens verified",
+                               detail: "K=\(binToHexRep(sharedSecret)) KSenc=\(binToHexRep(encKey)) KSmac=\(binToHexRep(macKey)) " +
+                                   "T_PCD=\(binToHexRep(pcdAuthToken)) T_PICC=\(binToHexRep(piccToken))")
         
         // This will be added for CAM when supported
         // var encryptedChipAuthenticationData : [UInt8]? = nil

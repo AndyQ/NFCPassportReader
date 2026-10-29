@@ -24,8 +24,12 @@
 		A17134C022C8F0A600C457C3 /* PassportUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17134BF22C8F0A600C457C3 /* PassportUtils.swift */; };
 		A17375F525F78B0D005995DA /* PACETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17375F425F78B0C005995DA /* PACETests.swift */; };
 		A1769DF725D3E318006002D1 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1769DF625D3E318006002D1 /* SettingsStore.swift */; };
+		B1E0C0010000000000000004 /* PassportSimTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E0C0010000000000000003 /* PassportSimTag.swift */; };
+		B1E0C0010000000000000002 /* TraceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E0C0010000000000000001 /* TraceStore.swift */; };
 		A1816E9C22C9059F00F546A0 /* PassportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1816E9B22C9059F00F546A0 /* PassportView.swift */; };
 		A18248C22369D17300581384 /* DetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18248C12369D17300581384 /* DetailsView.swift */; };
+		B1E0C0010000000000000008 /* PassportSimReadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E0C0010000000000000007 /* PassportSimReadView.swift */; };
+		B1E0C0010000000000000006 /* TraceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E0C0010000000000000005 /* TraceView.swift */; };
 		A182DE6125DD6F1300341204 /* StoredPassportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A182DE6025DD6F1300341204 /* StoredPassportView.swift */; };
 		A182DE6325DD730D00341204 /* FileManagerExt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A182DE6225DD730D00341204 /* FileManagerExt.swift */; };
 		A1A13B9525B8A29E0026074C /* UIApplicationExt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A13B9425B8A29E0026074C /* UIApplicationExt.swift */; };
@@ -68,8 +72,12 @@
 		A17134BF22C8F0A600C457C3 /* PassportUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PassportUtils.swift; sourceTree = "<group>"; };
 		A17375F425F78B0C005995DA /* PACETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PACETests.swift; sourceTree = "<group>"; };
 		A1769DF625D3E318006002D1 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
+		B1E0C0010000000000000003 /* PassportSimTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassportSimTag.swift; sourceTree = "<group>"; };
+		B1E0C0010000000000000001 /* TraceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceStore.swift; sourceTree = "<group>"; };
 		A1816E9B22C9059F00F546A0 /* PassportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassportView.swift; sourceTree = "<group>"; };
 		A18248C12369D17300581384 /* DetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailsView.swift; sourceTree = "<group>"; };
+		B1E0C0010000000000000007 /* PassportSimReadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassportSimReadView.swift; sourceTree = "<group>"; };
+		B1E0C0010000000000000005 /* TraceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceView.swift; sourceTree = "<group>"; };
 		A182DE6025DD6F1300341204 /* StoredPassportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredPassportView.swift; sourceTree = "<group>"; };
 		A182DE6225DD730D00341204 /* FileManagerExt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileManagerExt.swift; sourceTree = "<group>"; };
 		A182DE6725DD7EA600341204 /* MRZScannerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MRZScannerViewController.swift; sourceTree = "<group>"; };
@@ -191,6 +199,8 @@
 			children = (
 				A17134BF22C8F0A600C457C3 /* PassportUtils.swift */,
 				A1769DF625D3E318006002D1 /* SettingsStore.swift */,
+				B1E0C0010000000000000003 /* PassportSimTag.swift */,
+				B1E0C0010000000000000001 /* TraceStore.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -205,6 +215,8 @@
 				A1816E9B22C9059F00F546A0 /* PassportView.swift */,
 				A1C234C125DD19DE003FFD79 /* PassportSummaryView.swift */,
 				A18248C12369D17300581384 /* DetailsView.swift */,
+				B1E0C0010000000000000007 /* PassportSimReadView.swift */,
+				B1E0C0010000000000000005 /* TraceView.swift */,
 				A182DE6025DD6F1300341204 /* StoredPassportView.swift */,
 				A1614B9125D5856600191749 /* ExportPassportView.swift */,
 				A182DE6725DD7EA600341204 /* MRZScannerViewController.swift */,
@@ -342,6 +354,8 @@
 				A1816E9C22C9059F00F546A0 /* PassportView.swift in Sources */,
 				A117B7EF2695AD2400E13C18 /* StringUtils.swift in Sources */,
 				A1769DF725D3E318006002D1 /* SettingsStore.swift in Sources */,
+				B1E0C0010000000000000004 /* PassportSimTag.swift in Sources */,
+				B1E0C0010000000000000002 /* TraceStore.swift in Sources */,
 				A1298C9F25D53A5C00F5713E /* ViewExt.swift in Sources */,
 				A182DE6325DD730D00341204 /* FileManagerExt.swift in Sources */,
 				A1FDC52E25D3F15D00D22FF4 /* SettingsView.swift in Sources */,
@@ -350,6 +364,8 @@
 				A1C234C225DD19DE003FFD79 /* PassportSummaryView.swift in Sources */,
 				A1614B9225D5856600191749 /* ExportPassportView.swift in Sources */,
 				A18248C22369D17300581384 /* DetailsView.swift in Sources */,
+				B1E0C0010000000000000008 /* PassportSimReadView.swift in Sources */,
+				B1E0C0010000000000000006 /* TraceView.swift in Sources */,
 				A1FDC53425D3F1DE00D22FF4 /* CheckBoxView.swift in Sources */,
 				A1A13B9525B8A29E0026074C /* UIApplicationExt.swift in Sources */,
 				A16EB23322A9E9E10008F53F /* SceneDelegate.swift in Sources */,

@@ -19,6 +19,10 @@ public class TagReader {
     var maxDataLengthToRead : Int = 0xA0  // Should be able to use 256 to read arbitrary amounts of data at full speed BUT this isn't supported across all passports so for reliability just use the smaller amount.
 
     var progress : ((Int)->())?
+    /// Receives an APDU-level trace when set (see PassportReader.traceHandler).
+    var tracer : ReaderTracer?
+    /// The last file selected, for READ BINARY trace summaries.
+    private var currentFile : String?
 
     init( tag: NFCISO7816Tag ) {
         self.tag = tag
@@ -261,8 +265,17 @@ public class TagReader {
             toSend = try sm.protect(apdu:cmd, useExtendedMode: useExtendedMode)
             Logger.tagReader.debug("TagReader - [SM] \(toSend)" )
         }
-        
-        var (data, sw1, sw2) = try await tag.sendCommand(apdu: toSend)
+        if let tracer = tracer, tracer.isEnabled {
+            tracer.emit(.command, describe(cmd), wire: encode(toSend), plain: secureMessaging != nil ? encode(cmd) : nil)
+        }
+
+        var (data, sw1, sw2): (Data, UInt8, UInt8)
+        do {
+            (data, sw1, sw2) = try await tag.sendCommand(apdu: toSend)
+        } catch {
+            tracer?.emit(.error, "Transmit failed: \(error.localizedDescription)")
+            throw error
+        }
         Logger.tagReader.debug( "TagReader - Received response, size \(data.count)b" )
 
         // Some commands may have bigger response than expected. Read the whole response using INS 0xC0 (GET RESPONSE).
@@ -270,19 +283,30 @@ public class TagReader {
             let getResponseCmd = NFCISO7816APDU(instructionClass: 0x0, instructionCode: 0xC0, p1Parameter: 0x0, p2Parameter: 0x0, data: Data(), expectedResponseLength: Int(sw2))
             let nextSegment: Data
             // Overwrite sw1 and sw2.
+            tracer?.emit(.command, "GET RESPONSE Le=\(sw2)", wire: encode(getResponseCmd))
             (nextSegment, sw1, sw2) = try await tag.sendCommand(apdu: getResponseCmd)
             Logger.tagReader.debug("Read remaining data. Accumulated: \(data.count + nextSegment.count)b. Last batch \(nextSegment.count)b. Still remaining: \(sw2)b")
             data += nextSegment
         }
 
         var rep = ResponseAPDU(data: [UInt8](data), sw1: sw1, sw2: sw2)
-        
+        let wireResponse = [UInt8](data) + [sw1, sw2]
+
         if let sm = self.secureMessaging {
-            rep = try sm.unprotect(rapdu:rep)
+            do {
+                rep = try sm.unprotect(rapdu:rep)
+            } catch {
+                tracer?.emit(.response, ReaderTracer.describe(sw1: sw1, sw2: sw2), wire: wireResponse)
+                tracer?.emit(.error, "Secure messaging: \(error.localizedDescription)")
+                throw error
+            }
+            tracer?.emit(.response, ReaderTracer.describe(sw1: rep.sw1, sw2: rep.sw2) + " (SM)" + (rep.data.isEmpty ? "" : " \(rep.data.count) bytes"),
+                         wire: wireResponse, plain: rep.data + [rep.sw1, rep.sw2])
             Logger.tagReader.debug("\(String(format:"TagReader [SM - unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2))" )
         } else {
             Logger.tagReader.debug("\(String(format:"TagReader [unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2))" )
-            
+            tracer?.emit(.response, ReaderTracer.describe(sw1: rep.sw1, sw2: rep.sw2) + (rep.data.isEmpty ? "" : " \(rep.data.count) bytes"), wire: wireResponse)
+
         }
         
         if rep.sw1 != 0x90 && rep.sw2 != 0x00 {
@@ -368,6 +392,66 @@ public class TagReader {
         }
         
         return "Unknown error - sw1: 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2)) "
+    }
+}
+
+
+// MARK: - Trace helpers
+@available(iOS 15, *)
+extension TagReader {
+    /// ISO 7816-4 encoding of a command (short, or extended when needed).
+    func encode(_ apdu: NFCISO7816APDU) -> [UInt8] {
+        let data = [UInt8](apdu.data ?? Data())
+        let le = apdu.expectedResponseLength
+        var out: [UInt8] = [apdu.instructionClass, apdu.instructionCode, apdu.p1Parameter, apdu.p2Parameter]
+        let extended = data.count > 255 || le > 256
+        if !data.isEmpty {
+            out += extended ? [0x00, UInt8(data.count >> 8), UInt8(data.count & 0xFF)] : [UInt8(data.count)]
+            out += data
+        }
+        if le > 0 {
+            if extended {
+                if data.isEmpty { out.append(0x00) }
+                let v = le >= 65536 ? 0 : le
+                out += [UInt8((v >> 8) & 0xFF), UInt8(v & 0xFF)]
+            } else {
+                out.append(le >= 256 ? 0x00 : UInt8(le))
+            }
+        }
+        return out
+    }
+
+    /// One-line description of a (plain) command, e.g. "SELECT DG2" or "READ BINARY DG2 offset=160 len=160".
+    func describe(_ apdu: NFCISO7816APDU) -> String {
+        let data = [UInt8](apdu.data ?? Data())
+        let le = apdu.expectedResponseLength
+        let chained = apdu.instructionClass & 0x10 != 0 ? " (chained)" : ""
+        switch apdu.instructionCode {
+            case 0xA4:
+                if apdu.p1Parameter == 0x04 {
+                    currentFile = nil
+                    return data == [0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01] ? "SELECT eMRTD application" : "SELECT AID \(binToHexRep(data))"
+                }
+                let name = data.isEmpty ? "MF" : ReaderTracer.fileName(data)
+                currentFile = name
+                return "SELECT \(name)"
+            case 0xB0:
+                let offset = (Int(apdu.p1Parameter & 0x7F) << 8) | Int(apdu.p2Parameter)
+                return "READ BINARY \(currentFile ?? "?") offset=\(offset) len=\(le > 0 ? String(le) : "-")"
+            case 0x84: return "GET CHALLENGE"
+            case 0x82: return "EXTERNAL AUTHENTICATE"
+            case 0x88: return "INTERNAL AUTHENTICATE"
+            case 0xC0: return "GET RESPONSE"
+            case 0x22:
+                switch (apdu.p1Parameter, apdu.p2Parameter) {
+                    case (0xC1, 0xA4): return "MSE:Set AT (PACE)"
+                    case (0x41, 0xA4): return "MSE:Set AT (CA)"
+                    case (0x41, 0xA6): return "MSE:Set KAT (CA)"
+                    default: return String(format: "MSE %02X%02X", apdu.p1Parameter, apdu.p2Parameter)
+                }
+            case 0x86: return "GENERAL AUTHENTICATE" + chained
+            default: return String(format: "INS %02X", apdu.instructionCode)
+        }
     }
 }
 

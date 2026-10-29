@@ -28,6 +28,7 @@ let package = Package(
         .testTarget(
             name: "NFCPassportReaderTests",
             dependencies: [
+              "NFCPassportReader",
               .product(name: "OpenSSL", package: "OpenSSL-Package")
             ]),
     ]
