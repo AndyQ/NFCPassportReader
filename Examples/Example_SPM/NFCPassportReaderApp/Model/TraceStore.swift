@@ -8,7 +8,7 @@
 import Foundation
 import NFCPassportReader
 
-final class TraceStore: ObservableObject {
+final class TraceStore: ObservableObject, @unchecked Sendable {
     @Published private(set) var events: [ReaderTraceEvent] = []
 
     /// Keeps memory bounded on long sessions.
@@ -17,7 +17,7 @@ final class TraceStore: ObservableObject {
     private var generation = 0
 
     /// Hand this to PassportReader.logHandler. Safe to call from any thread.
-    lazy var handler: (ReaderTraceEvent) -> Void = { [weak self] event in
+    lazy var handler: PassportLogHandler = { [weak self] event in
         guard let self = self else { return }
         let eventGeneration = self.currentGeneration()
         DispatchQueue.main.async {

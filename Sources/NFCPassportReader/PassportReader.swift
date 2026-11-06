@@ -43,9 +43,12 @@ public class PassportReader : NSObject {
 
     public weak var trackingDelegate: PassportReaderTrackingDelegate?
 
-    /// Receives all library log and protocol trace events. Called synchronously on the logging thread;
+    /// Receives all library log and protocol trace events for this reader. This is the library's only log
+    /// output; nothing is logged when it is `nil`. Use `PassportLogHandlers.osLog()` for Console output.
+    ///
+    /// Called synchronously inside the APDU loop on the reader's thread — hand events off quickly and
     /// hop to the main queue before updating UI.
-    public var logHandler: ((PassportLogEvent) -> Void)? {
+    public var logHandler: PassportLogHandler? {
         get { logger.handler }
         set { logger.handler = newValue }
     }
@@ -54,6 +57,19 @@ public class PassportReader : NSObject {
     public var logConfiguration: PassportLogConfiguration {
         get { logger.configuration }
         set { logger.configuration = newValue }
+    }
+
+    /// Receives events logged outside a read, e.g. from `NFCPassportModel(from:)` or a direct
+    /// `NFCPassportModel.verifyPassport` call.
+    public static var defaultLogHandler: PassportLogHandler? {
+        get { PassportLogger.shared.handler }
+        set { PassportLogger.shared.handler = newValue }
+    }
+
+    /// Filtering applied to `defaultLogHandler`.
+    public static var defaultLogConfiguration: PassportLogConfiguration {
+        get { PassportLogger.shared.configuration }
+        set { PassportLogger.shared.configuration = newValue }
     }
 
     private let logger = PassportLogger()

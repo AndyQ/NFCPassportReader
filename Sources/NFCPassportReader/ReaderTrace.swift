@@ -31,29 +31,41 @@ final class ReaderTracer {
         self.logger = logger
     }
 
-    var handler: ((ReaderTraceEvent) -> Void)? {
-        get { logger.handler }
-        set { logger.handler = newValue }
-    }
-
-    var isEnabled: Bool { handler != nil }
-
     func startSession() {
         logger.startSession()
     }
 
     var session: Int { logger.session }
 
+    /// `level` defaults to `.debug` for APDU commands/responses, `.error` for errors and `.info` otherwise.
     func emit(
         _ kind: ReaderTraceKind,
-        _ summary: String,
-        wire: [UInt8]? = nil,
-        plain: [UInt8]? = nil,
-        detail: String? = nil,
+        _ summary: @autoclosure () -> String,
+        wire: @autoclosure () -> [UInt8]? = nil,
+        plain: @autoclosure () -> [UInt8]? = nil,
+        detail: @autoclosure () -> String? = nil,
         component: PassportLogComponent = .passportReader,
+        level: PassportLogLevel? = nil,
         sensitive: Bool = false
     ) {
-        logger.emitTrace(kind, component: component, summary, wire: wire, plain: plain, detail: detail, sensitive: sensitive)
+        logger.emit(
+            kind: kind,
+            level: level ?? Self.defaultLevel(for: kind),
+            component: component,
+            summary: summary,
+            detail: detail,
+            wire: wire,
+            plain: plain,
+            sensitive: sensitive
+        )
+    }
+
+    static func defaultLevel(for kind: ReaderTraceKind) -> PassportLogLevel {
+        switch kind {
+            case .error: return .error
+            case .command, .response: return .debug
+            case .info, .log: return .info
+        }
     }
 
     static func hex(_ bytes: [UInt8]) -> String {

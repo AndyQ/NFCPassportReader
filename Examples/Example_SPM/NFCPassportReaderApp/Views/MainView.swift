@@ -161,7 +161,7 @@ extension MainView {
         configuration.minimumLevel = PassportLogLevel(rawValue: settings.logLevel) ?? .debug
         configuration.includeSensitiveDataInHandler = settings.includeSensitiveTraceData
         passportReader.logConfiguration = configuration
-        passportReader.logHandler = trace.handler
+        passportReader.logHandler = PassportLogHandlers.combine(PassportLogHandlers.osLog(), trace.handler)
     }
 
     

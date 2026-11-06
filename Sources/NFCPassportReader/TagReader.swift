@@ -279,10 +279,8 @@ public class TagReader {
                 redactedMessage: "Secure-messaging APDU protected"
             )
         }
-        if let tracer = tracer, tracer.isEnabled {
-            tracer.emit(.command, describe(cmd), wire: encode(toSend), plain: secureMessaging != nil ? encode(cmd) : nil,
-                        component: .tagReader, sensitive: true)
-        }
+        tracer?.emit(.command, describe(cmd), wire: encode(toSend), plain: secureMessaging != nil ? encode(cmd) : nil,
+                     component: .tagReader, sensitive: true)
 
         var (data, sw1, sw2): (Data, UInt8, UInt8)
         do {

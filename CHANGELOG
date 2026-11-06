@@ -1,7 +1,12 @@
 V3.0.0
    Added PACE ECDH Integrated Mapping (ICAO 9303 Part 11 4.4.3.3.2 / Appendix B), tested against the Appendix H.1 worked example
    Added PACELiveSimulatorTests - end-to-end PACE (GM and IM), Chip Authentication and secure messaging against the PassportSim chip simulator over TCP (skipped unless PASSPORTSIM_PORT is set)
-   Unified component/level logs and APDU traces into PassportReader.logHandler events, retaining OSLog categories sensitive handler details are redacted unless explicitly enabled
+   Unified component/level logs and APDU traces into PassportReader.logHandler events; sensitive handler details are redacted unless explicitly enabled
+   BREAKING: The library no longer writes to OSLog itself - logging is off unless logHandler is set. Use PassportLogHandlers.osLog() for the previous Console output (same categories, sensitive content private)
+   Added PassportLogHandlers.osLog(subsystem:) and PassportLogHandlers.combine(...)
+   BREAKING: logHandler is now @Sendable (PassportLogHandler typealias)
+   Added PassportReader.defaultLogHandler / defaultLogConfiguration for logs emitted outside a read (e.g. NFCPassportModel(from:), verifyPassport)
+   BREAKING: APDU command/response traces are now logged at .debug (were .info); sensitive trace detail is replaced with a redaction placeholder instead of being dropped
    Updated the demo app sample trace screen to display library logs and APDU events with an opt-in sensitive-data toggle
    Added separate log titles and expandable content, readable hexadecimal APDU/key/hash output, and grouped secure-messaging details
    Added PassportReader.readPassport(tag:mrzKey:...) to read from an already connected NFCISO7816Tag (for chip simulators)

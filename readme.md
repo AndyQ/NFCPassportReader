@@ -86,7 +86,15 @@ A custom Active Authentiion challenge can be provided to the PassportReader to e
 
 
 ## Logging
-The library sends structured log and protocol-trace events through one pipeline. OSLog remains enabled by default, using the existing component categories. A `PassportReader` can also forward events to an application handler:
+The library sends structured log and protocol-trace events through one pipeline: `logHandler`. Logging is off unless you set `logHandler` — the library never writes to the system log itself. For the previous Console output use `PassportLogHandlers.osLog()`:
+
+```
+reader.logHandler = PassportLogHandlers.osLog()
+// or fan out to several handlers:
+reader.logHandler = PassportLogHandlers.combine(PassportLogHandlers.osLog(), myTraceHandler)
+```
+
+A custom handler receives each `PassportLogEvent` directly:
 
 ```
 let reader = PassportReader()
@@ -100,7 +108,15 @@ reader.logHandler = { event in
 }
 ```
 
-The handler runs synchronously on the thread emitting the event; dispatch to the main queue before updating UI. Sensitive details are redacted from handler events by default. Enable `includeSensitiveDataInHandler` only for controlled debugging: traces may then contain authentication material or passport data. OSLog continues to mark sensitive messages private.
+The handler is `@Sendable` and runs synchronously inside the APDU loop on the reader's thread; hand events off quickly and dispatch to the main queue before updating UI. Sensitive details are redacted from handler events by default. Enable `includeSensitiveDataInHandler` only for controlled debugging: traces may then contain authentication material or passport data. `PassportLogHandlers.osLog()` marks sensitive content private.
+
+APDU command/response traces are logged at `.debug`, so set `minimumLevel: .debug` to see them.
+
+Logs emitted outside a read (for example from `NFCPassportModel(from:)` or a direct `verifyPassport` call) go to `PassportReader.defaultLogHandler`, filtered by `PassportReader.defaultLogConfiguration`:
+
+```
+PassportReader.defaultLogHandler = PassportLogHandlers.osLog()
+```
 
 ## Other info
 

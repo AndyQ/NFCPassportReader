@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import OSLog
 
 public enum PassportLogLevel: Int, CaseIterable, Comparable, Codable, Sendable {
     case debug
@@ -31,7 +30,7 @@ public enum PassportLogComponent: String, CaseIterable, Codable, Sendable {
 public struct PassportLogConfiguration: Sendable {
     public var minimumLevel: PassportLogLevel
     public var enabledComponents: Set<PassportLogComponent>
-    /// Sensitive details are always private in OSLog and are redacted from the handler by default.
+    /// Sensitive details are redacted from the handler unless this is enabled.
     public var includeSensitiveDataInHandler: Bool
 
     public init(
@@ -62,24 +61,19 @@ public struct PassportLogEvent: Codable, Identifiable, Sendable {
     public let isSensitive: Bool
 }
 
-/// Contextual logger for one reader. OSLog remains the default sink; a handler can observe the
-/// same filtered events for a UI trace or application-specific logging.
-final class PassportLogger {
-    private static let subsystem = Bundle.main.bundleIdentifier ?? "NFCPassportReader"
-    private static let passportReaderOSLog = Logger(subsystem: subsystem, category: "passportReader")
-    private static let tagReaderOSLog = Logger(subsystem: subsystem, category: "tagReader")
-    private static let secureMessagingOSLog = Logger(subsystem: subsystem, category: "secureMessaging")
-    private static let openSSLOSLog = Logger(subsystem: subsystem, category: "openSSL")
-    private static let bacOSLog = Logger(subsystem: subsystem, category: "BAC")
-    private static let chipAuthenticationOSLog = Logger(subsystem: subsystem, category: "chipAuthentication")
-    private static let paceOSLog = Logger(subsystem: subsystem, category: "PACE")
+/// Receives library log and trace events.
+public typealias PassportLogHandler = @Sendable (PassportLogEvent) -> Void
+
+/// Contextual logger for one reader. The handler is the only output; with no handler nothing is formatted.
+final class PassportLogger: @unchecked Sendable {
+    /// Used for logs emitted outside a reader-scoped context, e.g. `NFCPassportModel(from:)`.
     static let shared = PassportLogger()
 
     private let lock = NSLock()
     private var nextId = 0
     private var currentSession = 0
     private var currentConfiguration = PassportLogConfiguration()
-    private var currentHandler: ((PassportLogEvent) -> Void)?
+    private var currentHandler: PassportLogHandler?
 
     var session: Int {
         lock.lock()
@@ -100,7 +94,7 @@ final class PassportLogger {
         }
     }
 
-    var handler: ((PassportLogEvent) -> Void)? {
+    var handler: PassportLogHandler? {
         get {
             lock.lock()
             defer { lock.unlock() }
@@ -122,153 +116,65 @@ final class PassportLogger {
     func isEnabled(_ level: PassportLogLevel, component: PassportLogComponent) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        return level >= currentConfiguration.minimumLevel && currentConfiguration.enabledComponents.contains(component)
+        return currentHandler != nil
+            && level >= currentConfiguration.minimumLevel
+            && currentConfiguration.enabledComponents.contains(component)
     }
 
-    func log(
-        _ level: PassportLogLevel,
+    /// Single entry point for log messages and protocol traces: filter, redact, then call the handler.
+    func emit(
+        kind: ReaderTraceKind,
+        level: PassportLogLevel,
         component: PassportLogComponent,
-        message: () -> String,
-        content: () -> String? = { nil },
+        summary: () -> String,
+        detail: () -> String? = { nil },
+        wire: () -> [UInt8]? = { nil },
+        plain: () -> [UInt8]? = { nil },
         sensitive: Bool = false,
         redactedMessage: String? = nil
     ) {
         lock.lock()
-        let configuration = currentConfiguration
-        let handler = currentHandler
-        guard level >= configuration.minimumLevel, configuration.enabledComponents.contains(component) else {
+        guard let handler = currentHandler,
+              level >= currentConfiguration.minimumLevel,
+              currentConfiguration.enabledComponents.contains(component) else {
             lock.unlock()
             return
         }
+        let configuration = currentConfiguration
         let id = nextId
         let session = currentSession
         nextId += 1
         lock.unlock()
 
-        let title = message()
-        let detail = content()
-        logToOSLog(title, content: detail, level: level, component: component, sensitive: sensitive)
+        var title = summary()
+        var detail = detail()
+        var wire = wire().map(ReaderTracer.hex)
+        var plain = plain().map(ReaderTracer.hex)
 
-        guard let handler else { return }
-        let visibleTitle: String
-        let visibleDetail: String?
         if sensitive && !configuration.includeSensitiveDataInHandler {
-            if detail == nil {
-                visibleTitle = redactedMessage ?? "Sensitive \(component.rawValue) log redacted"
-                visibleDetail = nil
-            } else {
+            if detail == nil && wire == nil && plain == nil {
+                title = redactedMessage ?? "Sensitive \(component.rawValue) log redacted"
+            } else if detail != nil {
                 // Structured entries keep their safe title visible while redacting the content.
-                visibleTitle = title
-                visibleDetail = redactedMessage ?? "Sensitive details redacted"
+                detail = redactedMessage ?? "Sensitive details redacted"
             }
-        } else {
-            visibleTitle = title
-            visibleDetail = detail
+            wire = nil
+            plain = nil
         }
+
         handler(PassportLogEvent(
-            id: id,
-            timestamp: Date(),
-            session: session,
-            kind: level == .error || level == .fault ? .error : .log,
-            level: level,
-            component: component,
-            summary: visibleTitle,
-            wire: nil,
-            plain: nil,
-            detail: visibleDetail,
-            isSensitive: sensitive
-        ))
-    }
-
-    func emitTrace(
-        _ kind: ReaderTraceKind,
-        component: PassportLogComponent,
-        _ summary: String,
-        wire: [UInt8]? = nil,
-        plain: [UInt8]? = nil,
-        detail: String? = nil,
-        sensitive: Bool = false
-    ) {
-        let level: PassportLogLevel
-        switch kind {
-            case .error: level = .error
-            case .command, .response: level = .info
-            case .info, .log: level = .info
-        }
-
-        lock.lock()
-        let configuration = currentConfiguration
-        let handler = currentHandler
-        guard level >= configuration.minimumLevel, configuration.enabledComponents.contains(component) else {
-            lock.unlock()
-            return
-        }
-        let id = nextId
-        let session = currentSession
-        nextId += 1
-        lock.unlock()
-
-        if kind != .command && kind != .response {
-            logToOSLog(summary, content: nil, level: level, component: component, sensitive: sensitive)
-        }
-
-        let includeSensitive = !sensitive || configuration.includeSensitiveDataInHandler
-        let event = PassportLogEvent(
             id: id,
             timestamp: Date(),
             session: session,
             kind: kind,
             level: level,
             component: component,
-            summary: summary,
-            wire: includeSensitive ? wire.map(ReaderTracer.hex) : nil,
-            plain: includeSensitive ? plain.map(ReaderTracer.hex) : nil,
-            detail: includeSensitive ? detail : nil,
+            summary: title,
+            wire: wire,
+            plain: plain,
+            detail: detail,
             isSensitive: sensitive
-        )
-        handler?(event)
-    }
-
-    private func logToOSLog(
-        _ message: String,
-        content: String?,
-        level: PassportLogLevel,
-        component: PassportLogComponent,
-        sensitive: Bool
-    ) {
-        let logger: Logger
-        switch component {
-            case .passportReader: logger = Self.passportReaderOSLog
-            case .tagReader: logger = Self.tagReaderOSLog
-            case .secureMessaging: logger = Self.secureMessagingOSLog
-            case .openSSL: logger = Self.openSSLOSLog
-            case .bac: logger = Self.bacOSLog
-            case .chipAuthentication: logger = Self.chipAuthenticationOSLog
-            case .pace: logger = Self.paceOSLog
-        }
-        if sensitive, let content = content {
-            switch level {
-                case .debug: logger.debug("\(message, privacy: .public)\n\(content, privacy: .private)")
-                case .info: logger.info("\(message, privacy: .public)\n\(content, privacy: .private)")
-                case .warning: logger.warning("\(message, privacy: .public)\n\(content, privacy: .private)")
-                case .error: logger.error("\(message, privacy: .public)\n\(content, privacy: .private)")
-                case .fault: logger.fault("\(message, privacy: .public)\n\(content, privacy: .private)")
-            }
-            return
-        }
-        let osLogMessage = content.map { "\(message)\n\($0)" } ?? message
-        switch (level, sensitive) {
-            case (.debug, true): logger.debug("\(osLogMessage, privacy: .private)")
-            case (.info, true): logger.info("\(osLogMessage, privacy: .private)")
-            case (.warning, true): logger.warning("\(osLogMessage, privacy: .private)")
-            case (.error, true): logger.error("\(osLogMessage, privacy: .private)")
-            case (.fault, true): logger.fault("\(osLogMessage, privacy: .private)")
-            case (.debug, false): logger.debug("\(osLogMessage, privacy: .public)")
-            case (.info, false): logger.info("\(osLogMessage, privacy: .public)")
-            case (.warning, false): logger.warning("\(osLogMessage, privacy: .public)")
-            case (.error, false): logger.error("\(osLogMessage, privacy: .public)")
-            case (.fault, false): logger.fault("\(osLogMessage, privacy: .public)")
-        }
+        ))
     }
 }
 
@@ -299,10 +205,7 @@ struct PassportLogCategory {
         sensitive: Bool = false,
         redactedMessage: String? = nil
     ) {
-        PassportLogContext.current.log(
-            .debug, component: component, message: message, content: content,
-            sensitive: sensitive, redactedMessage: redactedMessage
-        )
+        log(.debug, message, content, sensitive, redactedMessage)
     }
 
     func info(
@@ -311,10 +214,7 @@ struct PassportLogCategory {
         sensitive: Bool = false,
         redactedMessage: String? = nil
     ) {
-        PassportLogContext.current.log(
-            .info, component: component, message: message, content: content,
-            sensitive: sensitive, redactedMessage: redactedMessage
-        )
+        log(.info, message, content, sensitive, redactedMessage)
     }
 
     func warning(
@@ -323,10 +223,7 @@ struct PassportLogCategory {
         sensitive: Bool = false,
         redactedMessage: String? = nil
     ) {
-        PassportLogContext.current.log(
-            .warning, component: component, message: message, content: content,
-            sensitive: sensitive, redactedMessage: redactedMessage
-        )
+        log(.warning, message, content, sensitive, redactedMessage)
     }
 
     func error(
@@ -335,10 +232,7 @@ struct PassportLogCategory {
         sensitive: Bool = false,
         redactedMessage: String? = nil
     ) {
-        PassportLogContext.current.log(
-            .error, component: component, message: message, content: content,
-            sensitive: sensitive, redactedMessage: redactedMessage
-        )
+        log(.error, message, content, sensitive, redactedMessage)
     }
 
     func fault(
@@ -347,9 +241,24 @@ struct PassportLogCategory {
         sensitive: Bool = false,
         redactedMessage: String? = nil
     ) {
-        PassportLogContext.current.log(
-            .fault, component: component, message: message, content: content,
-            sensitive: sensitive, redactedMessage: redactedMessage
+        log(.fault, message, content, sensitive, redactedMessage)
+    }
+
+    private func log(
+        _ level: PassportLogLevel,
+        _ message: () -> String,
+        _ content: () -> String?,
+        _ sensitive: Bool,
+        _ redactedMessage: String?
+    ) {
+        PassportLogContext.current.emit(
+            kind: level >= .error ? .error : .log,
+            level: level,
+            component: component,
+            summary: message,
+            detail: content,
+            sensitive: sensitive,
+            redactedMessage: redactedMessage
         )
     }
 }
