@@ -12,6 +12,7 @@ import NFCPassportReader
 struct PassportSimReadView: View {
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var trace: TraceStore
 
     @AppStorage("passportSim.host") private var host = "127.0.0.1"
     @AppStorage("passportSim.port") private var port = "9077"
@@ -71,6 +72,7 @@ struct PassportSimReadView: View {
 
     private func read() {
         guard let portNumber = UInt16(port) else { return }
+        trace.clear()
         reading = true
         error = nil
         let preset = self.preset

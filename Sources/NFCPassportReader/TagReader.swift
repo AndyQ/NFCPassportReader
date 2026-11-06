@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import OSLog
 
 #if !os(macOS)
 import CoreNFC
@@ -187,7 +186,7 @@ public class TagReader {
         
         var data = [UInt8](resp.data[..<amountRead])
         
-        Logger.tagReader.debug( "TagReader - Number of data bytes to read - \(remaining)" )
+        PassportLog.tagReader.debug( "TagReader - Number of data bytes to read - \(remaining)" )
         
         var readAmount : Int = maxDataLengthToRead
         while remaining > 0 {
@@ -198,7 +197,7 @@ public class TagReader {
             self.progress?( Int(Float(amountRead) / Float(remaining+amountRead ) * 100))
             let offset = intToBin(amountRead, pad:4)
 
-            Logger.tagReader.debug( "TagReader - data bytes remaining: \(remaining), will read : \(readAmount)" )
+            PassportLog.tagReader.debug( "TagReader - data bytes remaining: \(remaining), will read : \(readAmount)" )
             let cmd = NFCISO7816APDU(
                 instructionClass: 00,
                 instructionCode: 0xB0,
@@ -209,12 +208,17 @@ public class TagReader {
             )
             resp = try await self.send( cmd: cmd )
 
-            Logger.tagReader.debug( "TagReader - got resp - \(binToHexRep(resp.data, asArray: true)), sw1 : \(resp.sw1), sw2 : \(resp.sw2)" )
+            PassportLog.tagReader.debug(
+                "Data group response",
+                content: "Data: \(ReaderTracer.hex(resp.data))\nSW1: 0x\(binToHexRep(resp.sw1))\nSW2: 0x\(binToHexRep(resp.sw2))",
+                sensitive: true,
+                redactedMessage: "Data group response received"
+            )
             data += resp.data
             
             remaining -= resp.data.count
             amountRead += resp.data.count
-            Logger.tagReader.debug( "TagReader - Amount of data left to read - \(remaining)" )
+            PassportLog.tagReader.debug( "TagReader - Amount of data left to read - \(remaining)" )
         }
         
         return data
@@ -243,7 +247,7 @@ public class TagReader {
     
     func selectPassportApplication() async throws -> ResponseAPDU {
         // Finally reselect the eMRTD application so the rest of the reading works as normal
-        Logger.tagReader.debug( "Re-selecting eMRTD Application" )
+        PassportLog.tagReader.debug( "Re-selecting eMRTD Application" )
         let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 0x00, instructionCode: 0xA4, p1Parameter: 0x04, p2Parameter: 0x0C, data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]), expectedResponseLength: -1)
         
         let response = try await self.send( cmd: cmd)
@@ -259,14 +263,25 @@ public class TagReader {
     }
 
     func send( cmd: NFCISO7816APDU, useExtendedMode : Bool = false ) async throws -> ResponseAPDU {
-        Logger.tagReader.debug( "TagReader - sending \(cmd)" )
+        PassportLog.tagReader.debug(
+            "Sending APDU",
+            content: ReaderTracer.hex(encode(cmd)),
+            sensitive: true,
+            redactedMessage: "APDU command sent"
+        )
         var toSend = cmd
         if let sm = secureMessaging {
             toSend = try sm.protect(apdu:cmd, useExtendedMode: useExtendedMode)
-            Logger.tagReader.debug("TagReader - [SM] \(toSend)" )
+            PassportLog.tagReader.debug(
+                "Protected APDU",
+                content: ReaderTracer.hex(encode(toSend)),
+                sensitive: true,
+                redactedMessage: "Secure-messaging APDU protected"
+            )
         }
         if let tracer = tracer, tracer.isEnabled {
-            tracer.emit(.command, describe(cmd), wire: encode(toSend), plain: secureMessaging != nil ? encode(cmd) : nil)
+            tracer.emit(.command, describe(cmd), wire: encode(toSend), plain: secureMessaging != nil ? encode(cmd) : nil,
+                        component: .tagReader, sensitive: true)
         }
 
         var (data, sw1, sw2): (Data, UInt8, UInt8)
@@ -276,16 +291,16 @@ public class TagReader {
             tracer?.emit(.error, "Transmit failed: \(error.localizedDescription)")
             throw error
         }
-        Logger.tagReader.debug( "TagReader - Received response, size \(data.count)b" )
+        PassportLog.tagReader.debug( "TagReader - Received response, size \(data.count)b" )
 
         // Some commands may have bigger response than expected. Read the whole response using INS 0xC0 (GET RESPONSE).
         while (sw1 == 0x61) {
             let getResponseCmd = NFCISO7816APDU(instructionClass: 0x0, instructionCode: 0xC0, p1Parameter: 0x0, p2Parameter: 0x0, data: Data(), expectedResponseLength: Int(sw2))
             let nextSegment: Data
             // Overwrite sw1 and sw2.
-            tracer?.emit(.command, "GET RESPONSE Le=\(sw2)", wire: encode(getResponseCmd))
+            tracer?.emit(.command, "GET RESPONSE Le=\(sw2)", wire: encode(getResponseCmd), component: .tagReader)
             (nextSegment, sw1, sw2) = try await tag.sendCommand(apdu: getResponseCmd)
-            Logger.tagReader.debug("Read remaining data. Accumulated: \(data.count + nextSegment.count)b. Last batch \(nextSegment.count)b. Still remaining: \(sw2)b")
+            PassportLog.tagReader.debug("Read remaining data. Accumulated: \(data.count + nextSegment.count)b. Last batch \(nextSegment.count)b. Still remaining: \(sw2)b")
             data += nextSegment
         }
 
@@ -296,27 +311,39 @@ public class TagReader {
             do {
                 rep = try sm.unprotect(rapdu:rep)
             } catch {
-                tracer?.emit(.response, ReaderTracer.describe(sw1: sw1, sw2: sw2), wire: wireResponse)
+                tracer?.emit(.response, ReaderTracer.describe(sw1: sw1, sw2: sw2), wire: wireResponse,
+                             component: .tagReader, sensitive: true)
                 tracer?.emit(.error, "Secure messaging: \(error.localizedDescription)")
                 throw error
             }
             tracer?.emit(.response, ReaderTracer.describe(sw1: rep.sw1, sw2: rep.sw2) + " (SM)" + (rep.data.isEmpty ? "" : " \(rep.data.count) bytes"),
-                         wire: wireResponse, plain: rep.data + [rep.sw1, rep.sw2])
-            Logger.tagReader.debug("\(String(format:"TagReader [SM - unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2))" )
+                         wire: wireResponse, plain: rep.data + [rep.sw1, rep.sw2], component: .tagReader, sensitive: true)
+            PassportLog.tagReader.debug(
+                "Secure-messaging response unprotected",
+                content: "Data: \(ReaderTracer.hex(rep.data))\nSW1: 0x\(binToHexRep(rep.sw1))\nSW2: 0x\(binToHexRep(rep.sw2))",
+                sensitive: true,
+                redactedMessage: "Secure-messaging response unprotected"
+            )
         } else {
-            Logger.tagReader.debug("\(String(format:"TagReader [unprotected] \(binToHexRep(rep.data, asArray:true)), sw1:0x%02x sw2:0x%02x", rep.sw1, rep.sw2))" )
-            tracer?.emit(.response, ReaderTracer.describe(sw1: rep.sw1, sw2: rep.sw2) + (rep.data.isEmpty ? "" : " \(rep.data.count) bytes"), wire: wireResponse)
+            PassportLog.tagReader.debug(
+                "APDU response received",
+                content: "Data: \(ReaderTracer.hex(rep.data))\nSW1: 0x\(binToHexRep(rep.sw1))\nSW2: 0x\(binToHexRep(rep.sw2))",
+                sensitive: true,
+                redactedMessage: "APDU response received"
+            )
+            tracer?.emit(.response, ReaderTracer.describe(sw1: rep.sw1, sw2: rep.sw2) + (rep.data.isEmpty ? "" : " \(rep.data.count) bytes"),
+                         wire: wireResponse, component: .tagReader, sensitive: true)
 
         }
         
         if rep.sw1 != 0x90 && rep.sw2 != 0x00 {
-            Logger.tagReader.error( "Error reading tag: sw1 - 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2))" )
+            PassportLog.tagReader.error( "Error reading tag: sw1 - 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2))" )
             let tagError: NFCPassportReaderError
             if (rep.sw1 == 0x63 && rep.sw2 == 0x00) {
                 tagError = NFCPassportReaderError.InvalidMRZKey
             } else {
                 let errorMsg = self.decodeError(sw1: rep.sw1, sw2: rep.sw2)
-                Logger.tagReader.error( "reason: \(errorMsg)" )
+                PassportLog.tagReader.error( "reason: \(errorMsg)" )
                 tagError = NFCPassportReaderError.ResponseError( errorMsg, sw1, sw2 )
             }
             throw tagError

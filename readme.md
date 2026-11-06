@@ -22,27 +22,9 @@ This is still very early days - the code is by no means perfect and there are st
 It reads and verifies my passport (and others I've been able to test) fine, however your mileage may vary.
 
 ## Installation
-### Swift Package Manager (recommended)
+### Swift Package Manager
 
 NFCPassportReader may be installed via Swift Package Manager, by pointing to this repo's URL.
-
-
-### CocoaPods **(deprecated and unsupported)**
-
-Install using [CocoaPods](http://cocoapods.org) by adding this line to your Podfile:
-
-```ruby
-use_frameworks!
-pod 'NFCPassportReader', git:'https://github.com/AndyQ/NFCPassportReader.git'  
-```
-
-Then, run the following command:
-
-```bash
-$ pod install
-```
-
-Note - ** Don't use Bitcode ** - its not supported by this and has been deprecated by Apple
 
 ## Usage 
 To use, you first need to create the Passport MRZ Key which consists of the passport number, date of birth and expiry date (including the checksums).
@@ -104,14 +86,21 @@ A custom Active Authentiion challenge can be provided to the PassportReader to e
 
 
 ## Logging
-Additional logging (very verbose)  can be enabled on the PassportReader by passing in a log level on creation:
-e.g.
+The library sends structured log and protocol-trace events through one pipeline. OSLog remains enabled by default, using the existing component categories. A `PassportReader` can also forward events to an application handler:
 
 ```
-let reader = PassportReader(logLevel: .debug)
+let reader = PassportReader()
+reader.logConfiguration = PassportLogConfiguration(
+    minimumLevel: .debug,
+    enabledComponents: [.pace, .tagReader],
+    includeSensitiveDataInHandler: false
+)
+reader.logHandler = { event in
+    print("[\(event.level)] [\(event.component)] \(event.summary)")
+}
 ```
 
-NOTE - currently this is just printing out to the console - I'd like to implement better logging later - probably using SwiftyBeaver 
+The handler runs synchronously on the thread emitting the event; dispatch to the main queue before updating UI. Sensitive details are redacted from handler events by default. Enable `includeSensitiveDataInHandler` only for controlled debugging: traces may then contain authentication material or passport data. OSLog continues to mark sensitive messages private.
 
 ## Other info
 
@@ -147,4 +136,3 @@ I'd like to thank the writers of pypassport (Jean-Francois Houzard and Olivier R
 The EPassport section on YobiWiki (http://wiki.yobi.be/wiki/EPassport)  This has been an invaluable resource especially around Passive Authentication.
 
 Marcin Krzyżanowski for his OpenSSL-Universal repo.
-

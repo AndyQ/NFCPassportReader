@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import OSLog
 
 public enum SecureMessagingSupportedAlgorithms {
     case DES
@@ -30,6 +29,8 @@ public class SecureMessaging {
     private var ssc : [UInt8]
     private let algoName : SecureMessagingSupportedAlgorithms
     private let padLength : Int
+    // Collect operation intermediates into one redacted trace event when debug logging is enabled.
+    private var debugTrace: [String]?
         
     public init( encryptionAlgorithm : SecureMessagingSupportedAlgorithms = .DES, ksenc : [UInt8], ksmac : [UInt8], ssc : [UInt8]) {
         self.ksenc = ksenc
@@ -39,15 +40,38 @@ public class SecureMessaging {
         self.padLength = algoName == .DES ? 8 : 16
     }
 
+    private func beginDebugTrace() {
+        debugTrace = PassportLog.secureMessaging.isDebugEnabled ? [] : nil
+    }
+
+    private func recordDebugValue(_ title: String, bytes: [UInt8]) {
+        guard debugTrace != nil else { return }
+        debugTrace?.append("\(title): \(ReaderTracer.hex(bytes))")
+    }
+
+    private func recordDebugValue(_ line: String) {
+        debugTrace?.append(line)
+    }
+
+    private func finishDebugTrace(_ title: String, redactedMessage: String) {
+        guard let debugTrace = debugTrace else { return }
+        self.debugTrace = nil
+        PassportLog.secureMessaging.debug(
+            title,
+            content: debugTrace.joined(separator: "\n"),
+            sensitive: true,
+            redactedMessage: redactedMessage
+        )
+    }
+
     /// Protect the apdu following the doc9303 specification
     func protect(apdu : NFCISO7816APDU, useExtendedMode: Bool = false ) throws -> NFCISO7816APDU {
-    
-        Logger.secureMessaging.debug("\t\tSSC: \(binToHexRep(self.ssc))")
+        beginDebugTrace()
+        defer { finishDebugTrace("Protect secure-messaging command", redactedMessage: "Command details redacted") }
+
+        recordDebugValue("SSC before command", bytes: self.ssc)
         self.ssc = self.incSSC()
         let paddedSSC = algoName == .DES ? self.ssc : [UInt8](repeating: 0, count: 8) + ssc
-        Logger.secureMessaging.debug("\tIncrement SSC with 1")
-        Logger.secureMessaging.debug("\t\tSSC: \(binToHexRep(self.ssc))")
-
 
         let cmdHeader = self.maskClassAndPad(apdu: apdu)
         var do87 : [UInt8] = []
@@ -66,21 +90,17 @@ public class SecureMessaging {
         }
         
         let M = cmdHeader + do87 + do97
-        Logger.secureMessaging.debug("\(tmp)")
-        Logger.secureMessaging.debug("\tM: \(binToHexRep(M))")
-        
-        Logger.secureMessaging.debug("Compute MAC of M")
+        recordDebugValue("Command objects: \(tmp)")
+        recordDebugValue("M", bytes: M)
         
         let N = pad(paddedSSC + M, blockSize:padLength)
-        Logger.secureMessaging.debug("\tConcatenate SSC and M and add padding")
-        Logger.secureMessaging.debug("\t\tN: \(binToHexRep(N))")
+        recordDebugValue("N (MAC input)", bytes: N)
 
         var CC = mac(algoName: algoName, key: self.ksmac, msg: N)
         if CC.count > 8 {
             CC = [UInt8](CC[0..<8])
         }
-        Logger.secureMessaging.debug("\tCompute MAC over N with KSmac")
-        Logger.secureMessaging.debug("\t\tCC: \(binToHexRep(CC))")
+        recordDebugValue("CC (command MAC)", bytes: CC)
         
         let do8e = self.buildD08E(mac: CC)
         
@@ -103,8 +123,7 @@ public class SecureMessaging {
         } else {
             protectedAPDU += [0x00]
         }
-        Logger.secureMessaging.debug("Construct and send protected APDU")
-        Logger.secureMessaging.debug("\tProtectedAPDU: \(binToHexRep(protectedAPDU))")
+        recordDebugValue("Protected APDU", bytes: protectedAPDU)
         
         let newAPDU = NFCISO7816APDU(data:Data(protectedAPDU))!
         return newAPDU
@@ -112,6 +131,9 @@ public class SecureMessaging {
 
     /// Unprotect the APDU following the iso7816 specification
     func unprotect(rapdu : ResponseAPDU ) throws -> ResponseAPDU {
+        beginDebugTrace()
+        defer { finishDebugTrace("Unprotect secure-messaging response", redactedMessage: "Response details redacted") }
+
         var needCC = false
         var do87 : [UInt8] = []
         var do87Data : [UInt8] = []
@@ -119,19 +141,18 @@ public class SecureMessaging {
         //var do8e : [UInt8] = []
         var offset = 0
         
+        recordDebugValue("SSC before response", bytes: self.ssc)
         self.ssc = self.incSSC()
         let paddedSSC = algoName == .DES ? self.ssc : [UInt8](repeating: 0, count: 8) + ssc
-        Logger.secureMessaging.debug("\tIncrement SSC with 1")
-        Logger.secureMessaging.debug("\t\tSSC: \(binToHexRep(self.ssc))")
                 
         // Check for a SM error
         if(rapdu.sw1 != 0x90 || rapdu.sw2 != 0x00) {
+            recordDebugValue("Response status: \(binToHexRep(rapdu.sw1)) \(binToHexRep(rapdu.sw2))")
             return rapdu
         }
 
         let rapduBin = rapdu.data + [rapdu.sw1, rapdu.sw2]
-        Logger.secureMessaging.debug("Receive response APDU of MRTD's chip")
-        Logger.secureMessaging.debug("\tRAPDU: \(binToHexRep(rapduBin))")
+        recordDebugValue("Protected RAPDU", bytes: rapduBin)
         
         // DO'87'
         // Mandatory if data is returned, otherwise absent
@@ -147,12 +168,13 @@ public class SecureMessaging {
             do87Data = [UInt8](rapduBin[offset+1 ..< offset + Int(encDataLength)])
             offset += Int(encDataLength)
             needCC = true
+            recordDebugValue("DO'87'", bytes: do87)
         }
         
         //DO'99'
         // Mandatory, only absent if SM error occurs
         guard rapduBin.count >= offset + 5 else {
-            Logger.secureMessaging.error("size error")
+            PassportLog.secureMessaging.error("size error")
             let returnSw1 = (rapduBin.count >= offset+3) ? rapduBin[offset+2] : 0;
             let returnSw2 = (rapduBin.count >= offset+4) ? rapduBin[offset+3] : 0;
             return ResponseAPDU(data: [], sw1: returnSw1, sw2: returnSw2);
@@ -163,6 +185,7 @@ public class SecureMessaging {
         let sw2 = rapduBin[offset+3]
         offset += 4
         needCC = true
+        recordDebugValue("DO'99'", bytes: do99)
         
         if do99[0] != 0x99 && do99[1] != 0x02 {
             //SM error, return the error code
@@ -174,6 +197,7 @@ public class SecureMessaging {
         if rapduBin[offset] == 0x8E {
             let ccLength : Int = Int(binToHex(rapduBin[offset+1]))
             let CC = [UInt8](rapduBin[offset+2 ..< offset+2+ccLength])
+            recordDebugValue("DO'8E'", bytes: [UInt8](rapduBin[offset ..< offset+2+ccLength]))
             // do8e = [UInt8](rapduBin[offset ..< offset+2+ccLength])
             
             // CheckCC
@@ -184,22 +208,18 @@ public class SecureMessaging {
             if do99.count > 0 {
                 tmp += " DO'99"
             }
-            Logger.secureMessaging.debug("Verify RAPDU CC by computing MAC of \(tmp)")
-            
+            recordDebugValue("MAC input objects:\(tmp)")
             let K = pad(paddedSSC + do87 + do99, blockSize:padLength)
-            Logger.secureMessaging.debug("\tConcatenate SSC and \(tmp) and add padding")
-            Logger.secureMessaging.debug("\t\tK: \(binToHexRep(K))")
-            
-            Logger.secureMessaging.debug("\tCompute MAC with KSmac")
+            recordDebugValue("K (MAC input)", bytes: K)
             var CCb = mac(algoName: algoName, key: self.ksmac, msg: K)
             if CCb.count > 8 {
                 CCb = [UInt8](CC[0..<8])
             }
-            Logger.secureMessaging.debug("\t\tCC: \(binToHexRep(CCb))")
+            recordDebugValue("CC expected", bytes: CCb)
             
             let res = (CC == CCb)
-            Logger.secureMessaging.debug("\tCompare CC with data of DO'8E of RAPDU")
-            Logger.secureMessaging.debug("\t\t\(binToHexRep(CC))  == \(binToHexRep(CCb)) ? \(res)")
+            recordDebugValue("CC received", bytes: CC)
+            recordDebugValue("MAC matches: \(res)")
             
             if !res {
                 throw NFCPassportReaderError.InvalidResponseChecksum
@@ -224,26 +244,24 @@ public class SecureMessaging {
 
             // There is a payload
             data = unpad(dec)
-            Logger.secureMessaging.debug("Decrypt data of DO'87 with KSenc")
-            Logger.secureMessaging.debug("\tDecryptedData: \(binToHexRep(data))")
+            recordDebugValue("Decrypted response data", bytes: data)
         }
         
-        Logger.secureMessaging.debug("Unprotected APDU: [\(binToHexRep(data))] \(binToHexRep(sw1)) \(binToHexRep(sw2))" )
+        recordDebugValue("Unprotected response data", bytes: data)
+        recordDebugValue("Response status: \(binToHexRep(sw1)) \(binToHexRep(sw2))")
         return ResponseAPDU(data: data, sw1: sw1, sw2: sw2)
     }
 
     func maskClassAndPad(apdu : NFCISO7816APDU ) -> [UInt8] {
-        Logger.secureMessaging.debug("Mask class byte and pad command header")
         let res = pad([0x0c, apdu.instructionCode, apdu.p1Parameter, apdu.p2Parameter], blockSize: padLength)
-        Logger.secureMessaging.debug("\tCmdHeader: \(binToHexRep(res))")
+        recordDebugValue("Padded command header", bytes: res)
         return res
     }
     
     func buildD087(apdu : NFCISO7816APDU) throws -> [UInt8] {
         let cipher = [0x01] + self.padAndEncryptData(apdu)
         let res = try [0x87] + toAsn1Length(cipher.count) + cipher
-        Logger.secureMessaging.debug("Build DO'87")
-        Logger.secureMessaging.debug("\tDO87: \(binToHexRep(res))")
+        recordDebugValue("DO'87'", bytes: res)
         return res
     }
     
@@ -262,10 +280,8 @@ public class SecureMessaging {
             enc = AESEncrypt(key: self.ksenc, message: paddedData, iv: iv)
         }
         
-        Logger.secureMessaging.debug("Pad data")
-        Logger.secureMessaging.debug("\tData: \(binToHexRep(paddedData))")
-        Logger.secureMessaging.debug("Encrypt data with KSenc")
-        Logger.secureMessaging.debug("\tEncryptedData: \(binToHexRep(enc))")
+        recordDebugValue("Padded command data", bytes: paddedData)
+        recordDebugValue("Encrypted command data", bytes: enc)
         return enc
     }
     
@@ -274,13 +290,14 @@ public class SecureMessaging {
         
         // This needs to be fully zero padded - to 8 bytes = i.e. if SSC is 1 it should return [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1]
         // NOT [0x1]
-        return withUnsafeBytes(of: val.bigEndian, Array.init)
+        let updatedSSC = withUnsafeBytes(of: val.bigEndian, Array.init)
+        recordDebugValue("SSC", bytes: updatedSSC)
+        return updatedSSC
     }
     
     func buildD08E(mac : [UInt8]) -> [UInt8] {
         let res : [UInt8] = [0x8E, UInt8(mac.count)] + mac
-        Logger.secureMessaging.debug("Build DO'8E")
-        Logger.secureMessaging.debug("\tDO8E: \(binToHexRep(res))" )
+        recordDebugValue("DO'8E'", bytes: res)
         return res
     }
 
@@ -292,8 +309,7 @@ public class SecureMessaging {
         }
         
         let res : [UInt8] = try [0x97] + toAsn1Length(binLe.count) + binLe
-        Logger.secureMessaging.debug("Build DO'97")
-        Logger.secureMessaging.debug("\tDO97: \(res)")
+        recordDebugValue("DO'97'", bytes: res)
         return res
     }
     

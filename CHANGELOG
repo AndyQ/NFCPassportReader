@@ -1,12 +1,10 @@
-Unreleased
+V3.0.0
    Added PACE ECDH Integrated Mapping (ICAO 9303 Part 11 4.4.3.3.2 / Appendix B), tested against the Appendix H.1 worked example
-   Added PACELiveSimulatorTests - end-to-end PACE (GM and IM), Chip Authentication and secure messaging against the
-      PassportSim chip simulator over TCP (skipped unless PASSPORTSIM_PORT is set)
-   Fixed the test target not depending on the NFCPassportReader target
-   Added PassportReader.traceHandler - an APDU-level trace (commands, responses with SM removed, protocol steps and
-      PACE intermediate values) - and a Trace screen in the SPM sample app
-   Added PassportReader.readPassport(tag:mrzKey:...) to read from an already connected NFCISO7816Tag (for chip simulators);
-      the sample app can read from PassportSim's APDU server when running in the iOS simulator
+   Added PACELiveSimulatorTests - end-to-end PACE (GM and IM), Chip Authentication and secure messaging against the PassportSim chip simulator over TCP (skipped unless PASSPORTSIM_PORT is set)
+   Unified component/level logs and APDU traces into PassportReader.logHandler events, retaining OSLog categories sensitive handler details are redacted unless explicitly enabled
+   Updated the demo app sample trace screen to display library logs and APDU events with an opt-in sensitive-data toggle
+   Added separate log titles and expandable content, readable hexadecimal APDU/key/hash output, and grouped secure-messaging details
+   Added PassportReader.readPassport(tag:mrzKey:...) to read from an already connected NFCISO7816Tag (for chip simulators)
 V2.3.3
    Added Optional Data element to passport model - pulls out element 53 from DG1
 V2.3.2

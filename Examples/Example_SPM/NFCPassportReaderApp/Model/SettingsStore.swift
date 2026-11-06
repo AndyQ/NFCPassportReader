@@ -15,6 +15,7 @@ final class SettingsStore: ObservableObject {
     private enum Keys {
         static let captureLog = "captureLog"
         static let logLevel = "logLevel"
+        static let includeSensitiveTraceData = "includeSensitiveTraceData"
         static let useNewVerification = "useNewVerification"
         static let savePassportOnScan = "savePassportOnScan"
         static let useExtendedMode = "useExtendedMode"
@@ -25,8 +26,23 @@ final class SettingsStore: ObservableObject {
         static let dateOfExpiry = "dateOfExpiry"
     }
     
-    private let cancellable: Cancellable
+    private var cancellable: Cancellable?
     private let defaults: UserDefaults
+    private var observedSettings: [String: AnyHashable] = [:]
+
+    private static let observedSettingKeys = [
+        Keys.captureLog,
+        Keys.logLevel,
+        Keys.includeSensitiveTraceData,
+        Keys.useNewVerification,
+        Keys.savePassportOnScan,
+        Keys.useExtendedMode,
+        Keys.skipPACE,
+        Keys.skipCA,
+        Keys.passportNumber,
+        Keys.dateOfBirth,
+        Keys.dateOfExpiry
+    ]
     
     let objectWillChange = PassthroughSubject<Void, Never>()
     
@@ -36,7 +52,8 @@ final class SettingsStore: ObservableObject {
 
         defaults.register(defaults: [
             Keys.captureLog: true,
-            Keys.logLevel: 1,
+            Keys.logLevel: PassportLogLevel.debug.rawValue,
+            Keys.includeSensitiveTraceData: false,
             Keys.useNewVerification: true,
             Keys.savePassportOnScan: false,
             Keys.useExtendedMode: false,
@@ -46,11 +63,15 @@ final class SettingsStore: ObservableObject {
             Keys.dateOfBirth: Date().timeIntervalSince1970,
             Keys.dateOfExpiry: Date().timeIntervalSince1970,
         ])
-        
+
+        // Ignore unrelated UserDefaults changes, such as the trace view's AppStorage filters.
+        observedSettings = Self.settingsValues(from: defaults)
         cancellable = NotificationCenter.default
             .publisher(for: UserDefaults.didChangeNotification)
-            .map { _ in () }
-            .subscribe(objectWillChange)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.publishChangesIfSettingsChanged()
+            }
     }
     
     func reset() {
@@ -62,6 +83,16 @@ final class SettingsStore: ObservableObject {
     var shouldCaptureLogs: Bool {
         set { defaults.set(newValue, forKey: Keys.captureLog) }
         get { defaults.bool(forKey: Keys.captureLog) }
+    }
+
+    var logLevel: Int {
+        set { defaults.set(newValue, forKey: Keys.logLevel) }
+        get { defaults.integer(forKey: Keys.logLevel) }
+    }
+
+    var includeSensitiveTraceData: Bool {
+        set { defaults.set(newValue, forKey: Keys.includeSensitiveTraceData) }
+        get { defaults.bool(forKey: Keys.includeSensitiveTraceData) }
     }
     
     var useNewVerificationMethod: Bool {
@@ -111,6 +142,23 @@ final class SettingsStore: ObservableObject {
             let d = Date(timeIntervalSince1970: defaults.double(forKey: Keys.dateOfExpiry))
             return d
         }
+    }
+
+    private func publishChangesIfSettingsChanged() {
+        let currentSettings = Self.settingsValues(from: defaults)
+        guard currentSettings != observedSettings else { return }
+        observedSettings = currentSettings
+        objectWillChange.send()
+    }
+
+    private static func settingsValues(from defaults: UserDefaults) -> [String: AnyHashable] {
+        var values: [String: AnyHashable] = [:]
+        for key in observedSettingKeys {
+            if let value = defaults.object(forKey: key) as? AnyHashable {
+                values[key] = value
+            }
+        }
+        return values
     }
     
     @Published var passport : NFCPassportModel?

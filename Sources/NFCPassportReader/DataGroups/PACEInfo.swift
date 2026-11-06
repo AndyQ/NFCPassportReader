@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import OSLog
 import OpenSSL
 
 public enum PACEMappingType {
@@ -127,18 +126,18 @@ public class PACEInfo : SecurityInfo {
         
         switch try getKeyAgreementAlgorithm() {
             case "DH":
-                Logger.pace.debug( "Generating DH mapping keys")
+                PassportLog.pace.debug( "Generating DH mapping keys")
                 //The EVP_PKEY_CTX_set_dh_rfc5114() and EVP_PKEY_CTX_set_dhx_rfc5114() macros are synonymous. They set the DH parameters to the values defined in RFC5114. The rfc5114 parameter must be 1, 2 or 3 corresponding to RFC5114 sections 2.1, 2.2 and 2.3. or 0 to clear the stored value. This macro can be called during parameter generation. The ctx must have a key type of EVP_PKEY_DHX. The rfc5114 parameter and the nid parameter are mutually exclusive.
                 var dhKey : OpaquePointer? = nil
                 switch try getParameterSpec() {
                     case 0:
-                        Logger.pace.debug( "Using DH_get_1024_160" )
+                        PassportLog.pace.debug( "Using DH_get_1024_160" )
                         dhKey = DH_get_1024_160()
                     case 1:
-                        Logger.pace.debug( "Using DH_get_2048_224" )
+                        PassportLog.pace.debug( "Using DH_get_2048_224" )
                         dhKey = DH_get_2048_224()
                     case 2:
-                        Logger.pace.debug( "Using DH_get_2048_256" )
+                        PassportLog.pace.debug( "Using DH_get_2048_256" )
                         dhKey = DH_get_2048_256()
                     default:
                         // Error
@@ -154,7 +153,7 @@ public class PACEInfo : SecurityInfo {
             
             case "ECDH":
                 let parameterSpec = try getParameterSpec()
-                Logger.pace.debug( "Generating ECDH mapping keys from parameterSpec - \(parameterSpec)")
+                PassportLog.pace.debug( "Generating ECDH mapping keys from parameterSpec - \(parameterSpec)")
                 guard let ecKey = EC_KEY_new_by_curve_name(parameterSpec) else {
                     throw NFCPassportReaderError.InvalidDataPassed("Unable to create EC mapping key")
                  }

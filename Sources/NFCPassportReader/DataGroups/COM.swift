@@ -5,7 +5,6 @@
 //
 
 import Foundation
-import OSLog
 
 @available(iOS 13, macOS 10.15, *)
 public class COM : DataGroup {
@@ -56,6 +55,9 @@ public class COM : DataGroup {
                 dataGroupsPresent.append( DataGroupParser.dataGroupNames[index] )
             }
         }
-        Logger.passportReader.debug( "DG Found - \(self.dataGroupsPresent)" )
+        PassportLog.passportReader.debug(
+            "Data groups found",
+            content: self.dataGroupsPresent.joined(separator: ", ")
+        )
     }
 }

@@ -25,10 +25,10 @@ extension NFCViewDisplayMessage {
                 return "Hold your iPhone near an NFC enabled passport."
             case .authenticatingWithPassport(let progress):
                 let progressString = handleProgress(percentualProgress: progress)
-                return "Authenticating with passport.....\n\n\(progressString)"
+                return "Authenticating with passport \(progressString)"
             case .readingDataGroupProgress(let dataGroup, let progress):
                 let progressString = handleProgress(percentualProgress: progress)
-                return "Reading \(dataGroup).....\n\n\(progressString)"
+                return "Reading \(dataGroup) \(progressString)"
             case .error(let tagError):
                 switch tagError {
                     case NFCPassportReaderError.TagNotValid:

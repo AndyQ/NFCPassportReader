@@ -80,10 +80,6 @@ struct MainView : View {
                             .font(.footnote)
                             .padding(.leading)
                         Spacer()
-                        Button(action: { showTrace = true }) {
-                            Label("Trace", systemImage: "waveform.path.ecg")
-                                .foregroundColor(.secondary)
-                        }.padding(.trailing)
                         Button(action: {
                             shareLogs()
                         }) {
@@ -123,9 +119,6 @@ struct MainView : View {
                         Button(action: {self.showSavedPassports.toggle()}) {
                             Label("Show saved passports", systemImage: "doc")
                         }
-                        Button(action: { showTrace = true }) {
-                            Label("Trace", systemImage: "waveform.path.ecg")
-                        }
                         #if targetEnvironment(simulator)
                         Button(action: { showPassportSim = true }) {
                             Label("Read from PassportSim", systemImage: "network")
@@ -143,8 +136,9 @@ struct MainView : View {
                     self.showDetails = true
                 }
                 .environmentObject(settings)
+                .environmentObject(trace)
                 .onAppear {
-                    passportReader.traceHandler = trace.handler
+                    configureLogging()
                     if let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem") {
                         passportReader.setMasterListURL(masterListURL)
                     }
@@ -162,6 +156,14 @@ struct MainView : View {
 
 // MARK: View functions - functions that affect the view
 extension MainView {
+    func configureLogging() {
+        var configuration = passportReader.logConfiguration
+        configuration.minimumLevel = PassportLogLevel(rawValue: settings.logLevel) ?? .debug
+        configuration.includeSensitiveDataInHandler = settings.includeSensitiveTraceData
+        passportReader.logConfiguration = configuration
+        passportReader.logHandler = trace.handler
+    }
+
     
     var isValid : Bool {
         return settings.passportNumber.count >= 8
@@ -191,7 +193,8 @@ extension MainView {
         #if targetEnvironment(simulator)
         guard let preset = UserDefaults.standard.string(forKey: "passportSimAutoRead"), !preset.isEmpty else { return }
         UserDefaults.standard.removeObject(forKey: "passportSimAutoRead")
-        passportReader.traceHandler = trace.handler
+        trace.clear()
+        configureLogging()
         if let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem") {
             passportReader.setMasterListURL(masterListURL)
         }
@@ -223,6 +226,7 @@ extension MainView {
 
         hideKeyboard()
         self.showDetails = false
+        trace.clear()
         
         let df = DateFormatter()
         df.timeZone = TimeZone(secondsFromGMT: 0)
@@ -239,7 +243,7 @@ extension MainView {
         let mrzKey = passportUtils.getMRZKey( passportNumber: pptNr, dateOfBirth: dob, dateOfExpiry: doe)
 
         // Record an APDU trace for the Trace view
-        passportReader.traceHandler = trace.handler
+        configureLogging()
 
         // Set the masterListURL on the Passport Reader to allow auto passport verification
         let masterListURL = Bundle.main.url(forResource: "masterList", withExtension: ".pem")!
@@ -318,6 +322,3 @@ struct ContentView_Previews : PreviewProvider {
     }
 }
 #endif
-
-
-

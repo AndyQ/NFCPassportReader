@@ -13,7 +13,7 @@ struct TraceView: View {
     @EnvironmentObject var trace: TraceStore
 
     @AppStorage("trace.showApdus") private var showApdus = true
-    @AppStorage("trace.showWire") private var showWire = false
+    @AppStorage("trace.expandAll") private var expandAll = false
     @AppStorage("trace.follow") private var follow = true
     @State private var exportURL: URL?
     @State private var showShare = false
@@ -27,8 +27,8 @@ struct TraceView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ToggleChip(title: "APDUs", isOn: $showApdus)
-                    ToggleChip(title: "Wire bytes", isOn: $showWire)
-                    ToggleChip(title: "Follow", isOn: $follow)
+                    ToggleChip(title: "Expand all", isOn: $expandAll)
+                    ToggleChip(title: "Auto-scroll", isOn: $follow)
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
@@ -56,7 +56,7 @@ struct TraceView: View {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(visible) { event in
-                                TraceRow(event: event, showWire: showWire)
+                                TraceRow(event: event, expandAll: expandAll)
                                     .id(event.id)
                                 Divider().opacity(0.4)
                             }
@@ -100,8 +100,8 @@ struct TraceView: View {
 
 private struct TraceRow: View {
     let event: ReaderTraceEvent
-    let showWire: Bool
-    @State private var expanded = false
+    let expandAll: Bool
+    @State private var expandedOverride: Bool?
 
     private static let timeFormat: DateFormatter = {
         let f = DateFormatter()
@@ -109,13 +109,32 @@ private struct TraceRow: View {
         return f
     }()
 
-    private var marker: (String, Color) {
+    private var marker: (String, Color)? {
         switch event.kind {
             case .command: return ("→", .accentColor)
             case .response: return ("←", .teal)
             case .info: return ("•", .secondary)
             case .error: return ("✖", .red)
+            case .log: return nil
         }
+    }
+
+    private var levelColor: Color {
+        switch event.level {
+            case .debug: return .gray
+            case .info: return .blue
+            case .warning: return .orange
+            case .error: return .red
+            case .fault: return .purple
+        }
+    }
+
+    private var hasMoreInfo: Bool {
+        event.detail != nil || event.wire != nil || event.plain != nil
+    }
+
+    private var isExpanded: Bool {
+        expandedOverride ?? expandAll
     }
 
     var body: some View {
@@ -124,26 +143,41 @@ private struct TraceRow: View {
                 Text(Self.timeFormat.string(from: event.timestamp))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundColor(.secondary)
-                Text(marker.0)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundColor(marker.1)
-                Text(event.summary)
+                if event.kind == .log {
+                    Circle()
+                        .fill(levelColor)
+                        .frame(width: 7, height: 7)
+                        .frame(width: 12, height: 16)
+                        .accessibilityLabel("\(event.level) log level")
+                } else if let marker = marker {
+                    Text(marker.0)
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundColor(marker.1)
+                }
+                if hasMoreInfo {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .accessibilityLabel(isExpanded ? "Hide details" : "Show details")
+                }
+                Text(event.kind == .log ? "\(event.component.rawValue): \(event.summary)" : event.summary)
                     .font(.footnote)
-                    .foregroundColor(event.kind == .info ? .primary : marker.1)
+                    .foregroundColor(summaryColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if showWire || expanded {
+            if isExpanded {
                 if let plain = event.plain { Mono("plain: \(plain)") }
                 if let wire = event.wire { Mono("wire:  \(wire)") }
             }
-            if expanded, let detail = event.detail {
+            if isExpanded, let detail = event.detail {
                 Mono(detail)
             }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .contentShape(Rectangle())
-        .onTapGesture { expanded.toggle() }
+        .onTapGesture { expandedOverride = !(expandedOverride ?? expandAll) }
+        .onChange(of: expandAll) { _ in expandedOverride = nil }
         .contextMenu {
             Button {
                 UIPasteboard.general.string = [event.summary, event.plain.map { "plain: \($0)" }, event.wire.map { "wire: \($0)" }, event.detail]
@@ -152,6 +186,16 @@ private struct TraceRow: View {
                 Label("Copy", systemImage: "doc.on.doc")
             }
         }
+    }
+
+    private var summaryColor: Color {
+        if event.kind == .log {
+            return event.level < .warning ? .primary : levelColor
+        }
+        if event.kind == .info {
+            return .primary
+        }
+        return marker?.1 ?? .primary
     }
 }
 

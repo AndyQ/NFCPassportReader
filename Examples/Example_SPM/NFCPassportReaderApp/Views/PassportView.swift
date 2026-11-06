@@ -35,6 +35,14 @@ struct PassportView : View {
         }
         .navigationTitle("Passport Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                NavigationLink(destination: TraceView()) {
+                    Image(systemName: "waveform.path.ecg")
+                }
+                .accessibilityLabel("Trace")
+            }
+        }
     }
 }
 
@@ -60,10 +68,12 @@ struct PassportView_Previews : PreviewProvider {
         }
         let settings = SettingsStore()
         settings.passport = passport
+        let trace = TraceStore()
         
         return NavigationView {
             PassportView()
                 .environmentObject(settings)
+                .environmentObject(trace)
                 .environment( \.colorScheme, .light)
                 .navigationTitle("WEEE")
                 .navigationBarTitleDisplayMode(.inline)

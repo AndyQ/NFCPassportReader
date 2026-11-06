@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import OSLog
 
 import CommonCrypto
 import CryptoTokenKit
@@ -185,24 +184,40 @@ public func desMAC(key : [UInt8], msg : [UInt8]) -> [UInt8]{
     
     let size = msg.count / 8
     var y : [UInt8] = [0,0,0,0,0,0,0,0]
-    
-    Logger.passportReader.debug("Calc mac" )
+    let shouldTrace = PassportLog.passportReader.isDebugEnabled
+    var traceValues: [(name: String, value: [UInt8])] = []
+
     for i in 0 ..< size {
         let tmp = [UInt8](msg[i*8 ..< i*8+8])
-        Logger.passportReader.debug("x\(i): \(binToHexRep(tmp))" )
+        if shouldTrace {
+            traceValues.append(("X[\(i)]", tmp))
+        }
         y = DESEncrypt(key: [UInt8](key[0..<8]), message: tmp, iv: y)
-        Logger.passportReader.debug("y\(i): \(binToHexRep(y))" )
+        if shouldTrace {
+            traceValues.append(("Y[\(i)]", y))
+        }
     }
-    
-    Logger.passportReader.debug("y: \(binToHexRep(y))" )
-    Logger.passportReader.debug("bkey: \(binToHexRep([UInt8](key[8..<16])))" )
-    Logger.passportReader.debug("akey: \(binToHexRep([UInt8](key[0..<8])))" )
+    if shouldTrace {
+        traceValues.append(("Y", y))
+        traceValues.append(("K_B", [UInt8](key[8..<16])))
+        traceValues.append(("K_A", [UInt8](key[0..<8])))
+    }
     let iv : [UInt8] = [0,0,0,0,0,0,0,0]
     let b = DESDecrypt(key: [UInt8](key[8..<16]), message: y, iv: iv, options:UInt32(kCCOptionECBMode))
-    Logger.passportReader.debug( "b: \(binToHexRep(b))" )
+    if shouldTrace {
+        traceValues.append(("B", b))
+    }
     let a = DESEncrypt(key: [UInt8](key[0..<8]), message: b, iv: iv, options:UInt32(kCCOptionECBMode))
-    Logger.passportReader.debug( "a: \(binToHexRep(a))" )
-    
+    if shouldTrace {
+        traceValues.append(("A", a))
+        PassportLog.passportReader.debug(
+            "DES MAC intermediate values",
+            content: traceValues.map { "\($0.name): \(ReaderTracer.hex($0.value))" }.joined(separator: "\n"),
+            sensitive: true,
+            redactedMessage: "DES MAC computed"
+        )
+    }
+
     return a
 }
 
@@ -427,4 +442,3 @@ public func calcSHA384Hash( _ data: [UInt8] ) -> [UInt8] {
     fatalError("Couldn't import CryptoKit")
     #endif
 }
-

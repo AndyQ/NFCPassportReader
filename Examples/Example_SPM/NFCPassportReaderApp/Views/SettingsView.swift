@@ -11,8 +11,6 @@ import NFCPassportReader
 
 struct SettingsView: View {
     @EnvironmentObject var settings: SettingsStore
-    
-    private var logLevels = ["Verbose", "Debug", "Info", "Warning", "Error", "None"]
 
     var body: some View {
         Form {
@@ -40,9 +38,31 @@ struct SettingsView: View {
                     }
                 }
             }
-
+            Section(header: Text("Diagnostics")) {
+                Picker("Minimum log level", selection: $settings.logLevel) {
+                    ForEach(PassportLogLevel.allCases, id: \.rawValue) { level in
+                        Text(title(for: level)).tag(level.rawValue)
+                    }
+                }
+                Toggle(isOn: $settings.includeSensitiveTraceData) {
+                    Text("Include sensitive trace data")
+                }
+                Text("May include passport data and authentication details in the trace and exported file. Off by default.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
         }
         .navigationBarTitle(Text("Settings"))
+    }
+
+    private func title(for level: PassportLogLevel) -> LocalizedStringKey {
+        switch level {
+            case .debug: return "Debug"
+            case .info: return "Info"
+            case .warning: return "Warning"
+            case .error: return "Error"
+            case .fault: return "Fault"
+        }
     }
 }
 

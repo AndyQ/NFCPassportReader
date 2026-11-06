@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import OSLog
 
 #if !os(macOS)
 import CoreNFC
@@ -39,36 +38,46 @@ public class BACHandler {
             throw NFCPassportReaderError.NoConnectedTag
         }
         
-        Logger.bac.debug( "BACHandler - deriving Document Basic Access Keys" )
+        PassportLog.bac.debug( "BACHandler - deriving Document Basic Access Keys" )
         _ = try self.deriveDocumentBasicAccessKeys(mrz: mrzKey)
         
         // Make sure we clear secure messaging (could happen if we read an invalid DG or we hit a secure error
         tagReader.secureMessaging = nil
         
         // get Challenge
-        Logger.bac.debug( "BACHandler - Getting initial challenge" )
+        PassportLog.bac.debug( "BACHandler - Getting initial challenge" )
         let response = try await tagReader.getChallenge()
     
-        Logger.bac.debug( "DATA - \(response.data)" )
+        PassportLog.bac.debug(
+            "BAC challenge received",
+            content: ReaderTracer.hex([UInt8](response.data)),
+            sensitive: true,
+            redactedMessage: "BAC challenge received"
+        )
         
-        Logger.bac.debug( "BACHandler - Doing mutual authentication" )
+        PassportLog.bac.debug( "BACHandler - Doing mutual authentication" )
         let cmd_data = self.authentication(rnd_icc: [UInt8](response.data))
         let maResponse = try await tagReader.doMutualAuthentication(cmdData: Data(cmd_data))
-        Logger.bac.debug( "DATA - \(maResponse.data)" )
+        PassportLog.bac.debug(
+            "BAC mutual authentication response",
+            content: ReaderTracer.hex([UInt8](maResponse.data)),
+            sensitive: true,
+            redactedMessage: "BAC mutual authentication response received"
+        )
         guard maResponse.data.count > 0 else {
             throw NFCPassportReaderError.InvalidMRZKey
         }
         
         let (KSenc, KSmac, ssc) = try self.sessionKeys(data: [UInt8](maResponse.data))
         tagReader.secureMessaging = SecureMessaging(ksenc: KSenc, ksmac: KSmac, ssc: ssc)
-        Logger.bac.debug( "BACHandler - complete" )
+        PassportLog.bac.debug( "BACHandler - complete" )
     }
 
 
     func deriveDocumentBasicAccessKeys(mrz: String) throws -> ([UInt8], [UInt8]) {
         let kseed = generateInitialKseed(kmrz:mrz)
     
-        Logger.bac.debug("Calculate the Basic Access Keys (Kenc and Kmac) using TR-SAC 1.01, 4.2")
+        PassportLog.bac.debug("Calculate the Basic Access Keys (Kenc and Kmac) using TR-SAC 1.01, 4.2")
         let smskg = SecureMessagingSessionKeyGenerator()
         self.ksenc = try smskg.deriveKey(keySeed: kseed, mode: .ENC_MODE)
         self.ksmac = try smskg.deriveKey(keySeed: kseed, mode: .MAC_MODE)
@@ -89,15 +98,30 @@ public class BACHandler {
     ///
     func generateInitialKseed(kmrz : String ) -> [UInt8] {
         
-        Logger.bac.debug("Calculate the SHA-1 hash of MRZ_information")
-        Logger.bac.debug("\tMRZ KEY - \(kmrz)")
+        PassportLog.bac.debug("Calculate the SHA-1 hash of MRZ_information")
+        PassportLog.bac.debug(
+            "BAC MRZ key",
+            content: kmrz,
+            sensitive: true,
+            redactedMessage: "BAC access key derived"
+        )
         let hash = calcSHA1Hash( [UInt8](kmrz.data(using:.utf8)!) )
         
-        Logger.bac.debug("\tsha1(MRZ_information): \(binToHexRep(hash))")
+        PassportLog.bac.debug(
+            "BAC MRZ information hash",
+            content: binToHexRep(hash),
+            sensitive: true,
+            redactedMessage: "BAC password hash computed"
+        )
         
         let subHash = Array(hash[0..<16])
-        Logger.bac.debug("Take the most significant 16 bytes to form the Kseed")
-        Logger.bac.debug("\tKseed: \(binToHexRep(subHash))" )
+        PassportLog.bac.debug("Take the most significant 16 bytes to form the Kseed")
+        PassportLog.bac.debug(
+            "BAC seed",
+            content: binToHexRep(subHash),
+            sensitive: true,
+            redactedMessage: "BAC seed derived"
+        )
         
         return Array(subHash)
     }
@@ -117,38 +141,73 @@ public class BACHandler {
     func authentication( rnd_icc : [UInt8]) -> [UInt8] {
         self.rnd_icc = rnd_icc
         
-        Logger.bac.debug("Request an 8 byte random number from the MRTD's chip")
-        Logger.bac.debug("\tRND.ICC: '(binToHexRep(self.rnd_icc))")
+        PassportLog.bac.debug("Request an 8 byte random number from the MRTD's chip")
+        PassportLog.bac.debug(
+            "BAC chip challenge RND.ICC",
+            content: ReaderTracer.hex(self.rnd_icc),
+            sensitive: true,
+            redactedMessage: "BAC chip challenge received"
+        )
         
         self.rnd_icc = rnd_icc
 
         let rnd_ifd = generateRandomUInt8Array(8)
         let kifd = generateRandomUInt8Array(16)
         
-        Logger.bac.debug("Generate an 8 byte random and a 16 byte random")
-        Logger.bac.debug("\tRND.IFD: \(binToHexRep(rnd_ifd))" )
-        Logger.bac.debug("\tRND.Kifd: \(binToHexRep(kifd))")
+        PassportLog.bac.debug("Generate an 8 byte random and a 16 byte random")
+        PassportLog.bac.debug(
+            "BAC reader challenge RND.IFD",
+            content: ReaderTracer.hex(rnd_ifd),
+            sensitive: true,
+            redactedMessage: "BAC reader challenge generated"
+        )
+        PassportLog.bac.debug(
+            "BAC reader key material RND.Kifd",
+            content: ReaderTracer.hex(kifd),
+            sensitive: true,
+            redactedMessage: "BAC reader key material generated"
+        )
         
         let s = rnd_ifd + rnd_icc + kifd
         
-        Logger.bac.debug("Concatenate RND.IFD, RND.ICC and Kifd")
-        Logger.bac.debug("\tS: \(binToHexRep(s))")
+        PassportLog.bac.debug("Concatenate RND.IFD, RND.ICC and Kifd")
+        PassportLog.bac.debug(
+            "BAC authentication input S",
+            content: ReaderTracer.hex(s),
+            sensitive: true,
+            redactedMessage: "BAC authentication input constructed"
+        )
         
         let iv : [UInt8] = [0, 0, 0, 0, 0, 0, 0, 0]
         let eifd = tripleDESEncrypt(key: ksenc,message: s, iv: iv)
         
-        Logger.bac.debug("Encrypt S with TDES key Kenc as calculated in Appendix 5.2")
-        Logger.bac.debug("\tEifd: \(binToHexRep(eifd))")
+        PassportLog.bac.debug("Encrypt S with TDES key Kenc as calculated in Appendix 5.2")
+        PassportLog.bac.debug(
+            "BAC encrypted authentication data E.IFD",
+            content: ReaderTracer.hex(eifd),
+            sensitive: true,
+            redactedMessage: "BAC authentication data encrypted"
+        )
         
         let mifd = mac(algoName: .DES, key: ksmac, msg: pad(eifd, blockSize:8))
 
-        Logger.bac.debug("Compute MAC over eifd with TDES key Kmac as calculated in-Appendix 5.2")
-        Logger.bac.debug("\tMifd: \(binToHexRep(mifd))")
+        PassportLog.bac.debug("Compute MAC over eifd with TDES key Kmac as calculated in-Appendix 5.2")
+        PassportLog.bac.debug(
+            "BAC authentication MAC M.IFD",
+            content: ReaderTracer.hex(mifd),
+            sensitive: true,
+            redactedMessage: "BAC authentication MAC computed"
+        )
         // Construct APDU
         
         let cmd_data = eifd + mifd
-        Logger.bac.debug("Construct command data for MUTUAL AUTHENTICATE")
-        Logger.bac.debug("\tcmd_data: \(binToHexRep(cmd_data))")
+        PassportLog.bac.debug("Construct command data for MUTUAL AUTHENTICATE")
+        PassportLog.bac.debug(
+            "BAC mutual authentication command data",
+            content: ReaderTracer.hex(cmd_data),
+            sensitive: true,
+            redactedMessage: "BAC mutual authentication command constructed"
+        )
         
         self.rnd_ifd = rnd_ifd
         self.kifd = kifd
@@ -163,14 +222,24 @@ public class BACHandler {
     /// @type data: a binary string
     /// @return: A set of two 16 bytes keys (KSenc, KSmac) and the SSC
     public func sessionKeys(data : [UInt8] ) throws -> ([UInt8], [UInt8], [UInt8]) {
-        Logger.bac.debug("Decrypt and verify received data and compare received RND.IFD with generated RND.IFD \(binToHexRep(self.ksmac))" )
+        PassportLog.bac.debug(
+            "Verify BAC mutual authentication response",
+            content: "K.SMAC: \(binToHexRep(self.ksmac))\nData: \(ReaderTracer.hex(data))",
+            sensitive: true,
+            redactedMessage: "BAC mutual authentication response verified"
+        )
         
         let response = tripleDESDecrypt(key: self.ksenc, message: [UInt8](data[0..<32]), iv: [0,0,0,0,0,0,0,0] )
 
         let response_kicc = [UInt8](response[16..<32])
         let Kseed = xor(self.kifd, response_kicc)
-        Logger.bac.debug("Calculate XOR of Kifd and Kicc")
-        Logger.bac.debug("\tKseed: \(binToHexRep(Kseed))" )
+        PassportLog.bac.debug("Calculate XOR of Kifd and Kicc")
+        PassportLog.bac.debug(
+            "BAC session seed",
+            content: ReaderTracer.hex(Kseed),
+            sensitive: true,
+            redactedMessage: "BAC session seed derived"
+        )
         
         let smskg = SecureMessagingSessionKeyGenerator()
         let KSenc = try smskg.deriveKey(keySeed: Kseed, mode: .ENC_MODE)
@@ -179,14 +248,29 @@ public class BACHandler {
 //        let KSenc = self.keyDerivation(kseed: Kseed,c: KENC)
 //        let KSmac = self.keyDerivation(kseed: Kseed,c: KMAC)
         
-        Logger.bac.debug("Calculate Session Keys (KSenc and KSmac) using Appendix 5.1")
-        Logger.bac.debug("\tKSenc: \(binToHexRep(KSenc))" )
-        Logger.bac.debug("\tKSmac: \(binToHexRep(KSmac))" )
+        PassportLog.bac.debug("Calculate Session Keys (KSenc and KSmac) using Appendix 5.1")
+        PassportLog.bac.debug(
+            "BAC encryption key KS.ENC",
+            content: ReaderTracer.hex(KSenc),
+            sensitive: true,
+            redactedMessage: "BAC encryption key derived"
+        )
+        PassportLog.bac.debug(
+            "BAC MAC key KS.MAC",
+            content: ReaderTracer.hex(KSmac),
+            sensitive: true,
+            redactedMessage: "BAC MAC key derived"
+        )
         
         
         let ssc = [UInt8](self.rnd_icc.suffix(4) + self.rnd_ifd.suffix(4))
-        Logger.bac.debug("Calculate Send Sequence Counter")
-        Logger.bac.debug("\tSSC: \(binToHexRep(ssc))" )
+        PassportLog.bac.debug("Calculate Send Sequence Counter")
+        PassportLog.bac.debug(
+            "BAC send sequence counter",
+            content: ReaderTracer.hex(ssc),
+            sensitive: true,
+            redactedMessage: "BAC send sequence counter initialized"
+        )
         return (KSenc, KSmac, ssc)
     }
     

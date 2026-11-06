@@ -8,6 +8,8 @@
 import Foundation
 
 public enum ReaderTraceKind: String, Codable, Sendable {
+    /// A regular library log message.
+    case log
     /// A command sent to the chip.
     case command
     /// The chip's response.
@@ -18,46 +20,40 @@ public enum ReaderTraceKind: String, Codable, Sendable {
     case error
 }
 
-/// One trace entry. Hex strings are upper case, bytes separated by spaces.
-public struct ReaderTraceEvent: Codable, Identifiable, Sendable {
-    public let id: Int
-    public let timestamp: Date
-    /// Increments for every readPassport call.
-    public let session: Int
-    public let kind: ReaderTraceKind
-    /// One line, for example "SELECT DG2", "READ BINARY DG2 offset=160 len=160" or "9000 OK (SM)".
-    public let summary: String
-    /// The bytes on the wire (secure messaging protected, if active).
-    public let wire: String?
-    /// The plain command or response, when secure messaging is active.
-    public let plain: String?
-    /// Extra information, such as PACE intermediate values or session keys.
-    public let detail: String?
-}
+/// One log or trace event. Hex strings are upper case, bytes separated by spaces.
+public typealias ReaderTraceEvent = PassportLogEvent
 
 /// Numbers and forwards trace events. One per PassportReader; shared with the handlers it creates.
 final class ReaderTracer {
-    private let lock = NSLock()
-    private var nextId = 0
-    private(set) var session = 0
-    var handler: ((ReaderTraceEvent) -> Void)?
+    private let logger: PassportLogger
+
+    init(logger: PassportLogger = .shared) {
+        self.logger = logger
+    }
+
+    var handler: ((ReaderTraceEvent) -> Void)? {
+        get { logger.handler }
+        set { logger.handler = newValue }
+    }
 
     var isEnabled: Bool { handler != nil }
 
     func startSession() {
-        lock.lock(); session += 1; lock.unlock()
+        logger.startSession()
     }
 
-    func emit(_ kind: ReaderTraceKind, _ summary: String, wire: [UInt8]? = nil, plain: [UInt8]? = nil, detail: String? = nil) {
-        guard let handler = handler else { return }
-        lock.lock()
-        let event = ReaderTraceEvent(
-            id: nextId, timestamp: Date(), session: session, kind: kind, summary: summary,
-            wire: wire.map { ReaderTracer.hex($0) }, plain: plain.map { ReaderTracer.hex($0) }, detail: detail
-        )
-        nextId += 1
-        lock.unlock()
-        handler(event)
+    var session: Int { logger.session }
+
+    func emit(
+        _ kind: ReaderTraceKind,
+        _ summary: String,
+        wire: [UInt8]? = nil,
+        plain: [UInt8]? = nil,
+        detail: String? = nil,
+        component: PassportLogComponent = .passportReader,
+        sensitive: Bool = false
+    ) {
+        logger.emitTrace(kind, component: component, summary, wire: wire, plain: plain, detail: detail, sensitive: sensitive)
     }
 
     static func hex(_ bytes: [UInt8]) -> String {
