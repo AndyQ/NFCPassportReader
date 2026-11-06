@@ -2,9 +2,11 @@
 
 This package handles reading an NFC Enabled passport using iOS 15 CoreNFC APIS
 
-**Version 2 (and the main branch) now uses Swift Async/Await for communication.  If you need an earlier version, please use 1.1.9 or below!**
+**Version 3 contains breaking changes - mainly around log handling.  OSLog is no longer written to by default - see the logging section below
 
-**NOTE: I shall continue to release updates through Cocoapods until it changes to read-only (end of 2026) however consider this deprecated and unsupported - please use Swift Package Manager**
+In addition, initial PACE-IM support has been implemented - but NOT yet tested against real passports**
+
+**NOTE: Cocoapods is no longer supported and the Cocapods sample code has been removed. If you wish to contnue to use Cocoapods please refer to the 2.x branches.**
 
 Supported features:
 * Basic Access Control (BAC)
