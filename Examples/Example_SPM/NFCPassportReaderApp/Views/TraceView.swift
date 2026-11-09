@@ -148,7 +148,7 @@ private struct TraceRow: View {
                         .fill(levelColor)
                         .frame(width: 7, height: 7)
                         .frame(width: 12, height: 16)
-                        .accessibilityLabel("\(event.level) log level")
+                        .accessibilityLabel("\(String(describing: event.level)) log level")
                 } else if let marker = marker {
                     Text(marker.0)
                         .font(.system(.body, design: .monospaced))

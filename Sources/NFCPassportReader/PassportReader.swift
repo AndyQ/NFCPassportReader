@@ -290,7 +290,7 @@ extension PassportReader : NFCTagReaderSessionDelegate {
                         tagReader.overrideDataAmountToRead(newAmount: newAmount)
                     }
 
-                    tagReader.progress = { [unowned self] (progress) in
+                    tagReader.progress = { (progress) in
                         if let dgId = self.currentlyReadingDataGroup {
                             self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.readingDataGroupProgress(dgId, progress) )
                         } else {
