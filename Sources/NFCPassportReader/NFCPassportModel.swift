@@ -441,7 +441,7 @@ public class NFCPassportModel {
         }
 
         // Get SOD Content and verify that its correctly signed by the Document Signing Certificate
-        var signedData : Data
+        let signedData : Data
         documentSigningCertificateVerified = false
         do {
             if useCMSVerification {
@@ -451,7 +451,10 @@ public class NFCPassportModel {
             }
             documentSigningCertificateVerified = true
         } catch {
-            signedData = try sod.getEncapsulatedContent()
+            // Do not hash-check unsigned SOD content. Matching DG hashes
+            // would set passportDataNotTampered while the signature is invalid.
+            PassportLog.passportReader.error( "SOD signature verification failed - \(error)" )
+            throw error
         }
                 
         // Now Verify passport data by comparing compare Hashes in SOD against
@@ -527,7 +530,7 @@ public class NFCPassportModel {
             } else if line.contains("d=3" ) && line.contains( "OCTET STRING" ) {
                 if let range = line.range(of: "[HEX DUMP]:") {
                     let val = line[range.upperBound..<line.endIndex]
-                    if currentDG != "", let id = Int(currentDG, radix:16) {
+                    if currentDG != "", let id = Int(currentDG, radix:16), dgList.indices.contains(id) {
                         sodHashes[dgList[id]] = String(val)
                         currentDG = ""
                     }

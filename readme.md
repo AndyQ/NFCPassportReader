@@ -2,9 +2,9 @@
 
 This package handles reading an NFC Enabled passport using iOS 15 CoreNFC APIS
 
-**Version 3 contains breaking changes - mainly around log handling.  OSLog is no longer written to by default - see the logging section below
+**Version 3 contains breaking changes - mainly around log handling.  OSLog is no longer written to by default - see the logging section below**
 
-In addition, initial PACE-IM support has been implemented - but NOT yet tested against real passports**
+**In addition, initial PACE-IM support has been implemented - but NOT yet tested against real passports**
 
 **NOTE: Cocoapods is no longer supported and the Cocapods sample code has been removed. If you wish to contnue to use Cocoapods please refer to the 2.x branches.**
 
@@ -19,7 +19,7 @@ Supported features:
 * Ability to dump passport stream and read it back in
 * Uses Async/Await
 
-This is still very early days - the code is by no means perfect and there are still some rough edges  - there ARE most definitely bugs and I'm sure I'm not doing things perfectly. 
+The code is by no means perfect and there are still some rough edges  - there ARE most definitely bugs and I'm sure I'm not doing things perfectly. 
 
 It reads and verifies my passport (and others I've been able to test) fine, however your mileage may vary.
 
@@ -145,8 +145,7 @@ e.g. 12345678<870052332507237 would be the key used.
 
 ## To do
 There are a number of things I'd like to implement in no particular order:
- * Finish off PACE authentication (CAM, DH-IM)
- 
+ * Finish off PACE authentication (CAM, DH-IM) 
 
 ## Thanks
 I'd like to thank the writers of pypassport (Jean-Francois Houzard and Olivier Roger - can't find their website but referenced from https://github.com/andrew867/epassportviewer) who's work this is based on.

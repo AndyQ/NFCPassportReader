@@ -213,7 +213,7 @@ public class SecureMessaging {
             recordDebugValue("K (MAC input)", bytes: K)
             var CCb = mac(algoName: algoName, key: self.ksmac, msg: K)
             if CCb.count > 8 {
-                CCb = [UInt8](CC[0..<8])
+                CCb = [UInt8](CCb[0..<8])
             }
             recordDebugValue("CC expected", bytes: CCb)
             

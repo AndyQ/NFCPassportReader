@@ -125,6 +125,9 @@ class ChipAuthenticationHandler {
         // Use our ephemeral private key and the passports public key to generate a shared secret
         // (the passport with do the same thing with their private key and our public key)
         let sharedSecret = OpenSSLUtils.computeSharedSecret(privateKeyPair:ephemeralKeyPair!, publicKey:publicKey)
+        guard !sharedSecret.isEmpty else {
+            throw NFCPassportReaderError.ChipAuthenticationFailed
+        }
         
         // Now try to restart Secure Messaging using the new shared secret and
         try restartSecureMessaging( oid : oid, sharedSecret : sharedSecret, maxTranceiveLength : 1, shouldCheckMAC : true)

@@ -148,8 +148,6 @@ public class BACHandler {
             sensitive: true,
             redactedMessage: "BAC chip challenge received"
         )
-        
-        self.rnd_icc = rnd_icc
 
         let rnd_ifd = generateRandomUInt8Array(8)
         let kifd = generateRandomUInt8Array(16)
@@ -229,9 +227,30 @@ public class BACHandler {
             redactedMessage: "BAC mutual authentication response verified"
         )
         
-        let response = tripleDESDecrypt(key: self.ksenc, message: [UInt8](data[0..<32]), iv: [0,0,0,0,0,0,0,0] )
+        // ICAO 9303-11: response is E_ICC (32) || M_ICC (8)
+        guard data.count >= 40 else {
+            throw NFCPassportReaderError.InvalidMRZKey
+        }
 
+        let eicc = [UInt8](data[0..<32])
+        let micc = [UInt8](data[32..<40])
+        let computedMac = mac(algoName: .DES, key: self.ksmac, msg: pad(eicc, blockSize: 8))
+        guard computedMac == micc else {
+            throw NFCPassportReaderError.InvalidResponseChecksum
+        }
+
+        let response = tripleDESDecrypt(key: self.ksenc, message: eicc, iv: [0,0,0,0,0,0,0,0] )
+        guard response.count >= 32 else {
+            throw NFCPassportReaderError.InvalidMRZKey
+        }
+
+        let response_rndicc = [UInt8](response[0..<8])
+        let response_rndifd = [UInt8](response[8..<16])
         let response_kicc = [UInt8](response[16..<32])
+        guard response_rndicc == self.rnd_icc, response_rndifd == self.rnd_ifd else {
+            throw NFCPassportReaderError.InvalidMRZKey
+        }
+
         let Kseed = xor(self.kifd, response_kicc)
         PassportLog.bac.debug("Calculate XOR of Kifd and Kicc")
         PassportLog.bac.debug(
@@ -244,10 +263,6 @@ public class BACHandler {
         let smskg = SecureMessagingSessionKeyGenerator()
         let KSenc = try smskg.deriveKey(keySeed: Kseed, mode: .ENC_MODE)
         let KSmac = try smskg.deriveKey(keySeed: Kseed, mode: .MAC_MODE)
-
-//        let KSenc = self.keyDerivation(kseed: Kseed,c: KENC)
-//        let KSmac = self.keyDerivation(kseed: Kseed,c: KMAC)
-        
         PassportLog.bac.debug("Calculate Session Keys (KSenc and KSmac) using Appendix 5.1")
         PassportLog.bac.debug(
             "BAC encryption key KS.ENC",

@@ -84,6 +84,8 @@ public class PassportReader : NSObject {
     private var skipSecureElements = true
     private var skipCA = false
     private var skipPACE = false
+    /// If PACE is attempted and fails, fall back to BAC. Default true keeps existing behavior.
+    public var allowBACFallback: Bool = true
     
     // Extended mode is used for reading eMRTD's that support extended length APDUs
     private var useExtendedMode = false
@@ -363,8 +365,15 @@ extension PassportReader {
                 trackingDelegate?.paceFailed()
 
                 passport.PACEStatus = .failed
-                PassportLog.passportReader.error( "PACE Failed - falling back to BAC" )
-                tracer.emit(.error, "PACE failed, falling back to BAC: \((error as? NFCPassportReaderError)?.value ?? error.localizedDescription)")
+                let reason = (error as? NFCPassportReaderError)?.value ?? error.localizedDescription
+                if allowBACFallback {
+                    PassportLog.passportReader.error( "PACE Failed - falling back to BAC" )
+                    tracer.emit(.error, "PACE failed, falling back to BAC: \(reason)")
+                } else {
+                    PassportLog.passportReader.error( "PACE Failed" )
+                    tracer.emit(.error, "PACE failed: \(reason)")
+                    throw error
+                }
             }
             
             _ = try await tagReader.selectPassportApplication()
@@ -464,6 +473,12 @@ extension PassportReader {
                             // Do Chip authentication and then continue reading datagroups
                             tracer.emit(.info, "Chip Authentication started")
                             try await caHandler.doChipAuthentication()
+
+                            // CA only authenticates the chip implicitly, by the new session keys working
+                            // (ICAO 9303-11, 6.2). The chip can accept MSE:Set KAT / GENERAL AUTHENTICATE and
+                            // still derive different keys, so prove them with one command before reporting success.
+                            tracer.emit(.info, "Chip Authentication: verifying the new session keys")
+                            _ = try await tagReader.selectFile(tag: [0x01, 0x1E])
                             self.passport.chipAuthenticationStatus = .success
                             tracer.emit(.info, "Chip Authentication succeeded")
                         } catch {

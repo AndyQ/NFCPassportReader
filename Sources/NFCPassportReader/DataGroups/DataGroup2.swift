@@ -91,7 +91,10 @@ public class DataGroup2 : DataGroup {
     
     func parseISO19794_5( data : [UInt8] ) throws {
         // Validate header - 'F', 'A' 'C' 0x00 - 0x46414300
-        if data[0] != 0x46 && data[1] != 0x41 && data[2] != 0x43 && data[3] != 0x00 {
+        guard data.count >= 4 else {
+            throw NFCPassportReaderError.UnknownImageFormat
+        }
+        if data[0] != 0x46 || data[1] != 0x41 || data[2] != 0x43 || data[3] != 0x00 {
             throw NFCPassportReaderError.InvalidResponse(
                 dataGroupId: datagroupType,
                 expectedTag: 0x46,

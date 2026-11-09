@@ -42,6 +42,14 @@ final class DataGroupParsingTests: XCTestCase {
         }
         
     }
+
+    func testDatagroup2RejectsInvalidFACHeader() {
+        // Same truncated DG2 as JPEG2000, but FAC trailer 0x00 replaced with 0x01.
+        // The old `&&` header check only rejected when every byte was wrong.
+        let dg2 = hexRepToBin("75617F61570201017F6082203FA1128002010081010282010087020101880200085F2E38464143013031300000002026000100002018000000000000000000010000000000000001000000000000000000000000000C6A5020200D0A")
+        let dgp = DataGroupParser()
+        XCTAssertThrowsError(try dgp.parseDG(data: dg2))
+    }
     
     func testDatagroup2ParsingJPEG() {
         

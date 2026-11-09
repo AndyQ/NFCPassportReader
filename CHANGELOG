@@ -1,4 +1,6 @@
 V3.0.0
+   Fixed Chip Authentication being reported as successful when the chip accepted the key but derived different session
+      keys: CA is now only reported as successful once a command under the new keys succeeds (ICAO 9303-11 6.2)
    Added PACE ECDH Integrated Mapping (ICAO 9303 Part 11 4.4.3.3.2 / Appendix B), tested against the Appendix H.1 worked example
    Added PACELiveSimulatorTests - end-to-end PACE (GM and IM), Chip Authentication and secure messaging against the PassportSim chip simulator over TCP (skipped unless PASSPORTSIM_PORT is set)
    Unified component/level logs and APDU traces into PassportReader.logHandler events; sensitive handler details are redacted unless explicitly enabled
@@ -10,14 +12,28 @@ V3.0.0
    Updated the demo app sample trace screen to display library logs and APDU events with an opt-in sensitive-data toggle
    Added separate log titles and expandable content, readable hexadecimal APDU/key/hash output, and grouped secure-messaging details
    Added PassportReader.readPassport(tag:mrzKey:...) to read from an already connected NFCISO7816Tag (for chip simulators)
+   Fixed PACE access control failures on some eIDs - MSE:Set AT now sends the domain parameter ID (tag 0x84) when advertised - thanks @gbrickley
+   Fixed inverted status word check in TagReader.send() - any non-9000 response (e.g. 6300 wrong MRZ key) is now treated as an error - thanks @alikarababa
+   Fixed AES secure messaging unprotect() comparing the received MAC against itself instead of the computed MAC - thanks @bahadirtmzr
+   Fixed unsigned SOD content being hash-checked when the SOD signature fails, which could mark data as not tampered - thanks @bahadirtmzr
+   Fixed BAC not verifying the chip's mutual authentication MAC and echoed RND.IFD - thanks @bahadirtmzr
+   Added PassportReader.allowBACFallback (default true) to disable falling back to BAC when PACE fails - thanks @bahadirtmzr
+   Fixed PACE and Chip Authentication continuing with an empty shared secret when ECDH/DH key derivation fails - thanks @bahadirtmzr
+      (DH shared secrets are now also left-padded to the modulus size)
+   Fixed DG2 FAC header check only rejecting images when every header byte was wrong - thanks @bahadirtmzr
+   Sensitive NFC debug logs (decrypted APDU payloads, MAC keys) are now redacted by default via the new logging - thanks @bahadirtmzr for reporting
+  
 V2.3.3
    Added Optional Data element to passport model - pulls out element 53 from DG1
+
 V2.3.2
    Updated to OpenSSL 3.6 - hoping to fix issue with missing DSYMS
+
 V2.3.1
    Fixed issue reading some JPEG2000 images - they had additional padding after them causeing the image reader to think
       there was another container
    Fixed MasterList script parser to handle new LDIF binary format from ICAO PKD
+
 V2.3.0
    Added fix for OpenSSL 3.3 breaking SOD X509 certificate verification - thanks @SteveDove for reporting and testing
    Added ability to provide a custom AA Challenge key for supporting backend AA challenges and eliminating replay attacks - thanks @Premeide

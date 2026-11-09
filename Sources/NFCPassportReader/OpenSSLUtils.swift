@@ -691,8 +691,15 @@ public class OpenSSLUtils {
             var bn = BN_new()
             DH_get0_key( dh_pub, &bn, nil )
             
-            secret = [UInt8](repeating: 0, count: Int(DH_size(dh)))
+            let size = Int(DH_size(dh))
+            secret = [UInt8](repeating: 0, count: size)
             let len = DH_compute_key(&secret, bn, dh);
+            if len <= 0 {
+                PassportLog.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+                return []
+            }
+            // DH_compute_key strips leading zeros; key derivation needs the secret padded to the size of p.
+            secret = [UInt8](repeating: 0, count: size - Int(len)) + secret.prefix(Int(len))
             
             PassportLog.openSSL.debug(
                 "Diffie-Hellman shared secret",
@@ -701,33 +708,37 @@ public class OpenSSLUtils {
                 redactedMessage: "Diffie-Hellman shared secret computed"
             )
         } else {
-            let ctx = EVP_PKEY_CTX_new(privateKeyPair, nil)
+            guard let ctx = EVP_PKEY_CTX_new(privateKeyPair, nil) else {
+                PassportLog.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+                return []
+            }
             defer{ EVP_PKEY_CTX_free(ctx) }
             
             if EVP_PKEY_derive_init(ctx) != 1 {
-                // error
                 PassportLog.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+                return []
             }
             
             // Set the public key
             if EVP_PKEY_derive_set_peer( ctx, publicKey ) != 1 {
-                // error
                 PassportLog.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+                return []
             }
             
             // get buffer length needed for shared secret
             var keyLen = 0
             if EVP_PKEY_derive(ctx, nil, &keyLen) != 1 {
-                // Error
                 PassportLog.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+                return []
             }
             
             // Derive the shared secret
             secret = [UInt8](repeating: 0, count: keyLen)
-            if EVP_PKEY_derive(ctx, &secret, &keyLen) != 1 {
-                // Error
+            if EVP_PKEY_derive(ctx, &secret, &keyLen) != 1 || keyLen <= 0 {
                 PassportLog.openSSL.error( "ERROR - \(OpenSSLUtils.getOpenSSLError())" )
+                return []
             }
+            secret = Array(secret.prefix(keyLen))
             
             PassportLog.openSSL.debug(
                 "ECDH shared secret",

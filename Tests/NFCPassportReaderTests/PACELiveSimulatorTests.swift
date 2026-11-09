@@ -82,6 +82,36 @@ final class PACELiveSimulatorTests: XCTestCase {
         XCTAssertEqual(dg1.first, 0x61)
         _ = try await tagReader.readDataGroup(dataGroup: .DG15)
     }
+
+    /// Full PassportReader flow: CA status as reported to the app.
+    private func readPassport(preset: String) async throws -> NFCPassportModel {
+        let (tag, mrzKey) = try connect(preset: preset)
+        return try await PassportReader().readPassport(tag: tag, mrzKey: mrzKey)
+    }
+
+    func testChipAuthenticationReportedAsSuccess() async throws {
+        for preset in ["full", "bac-ca-aes", "pace-full"] {
+            let passport = try await readPassport(preset: preset)
+            XCTAssertEqual(passport.chipAuthenticationStatus, .success, preset)
+        }
+    }
+
+    /// The chip accepts MSE:Set KAT but derives its keys from a corrupted shared secret, so the first
+    /// command under the new keys fails its MAC check (6988). CA must be reported as failed, and the
+    /// reader should fall back to BAC and still read the passport.
+    func testChipAuthenticationWithWrongChipSecretIsReportedAsFailed() async throws {
+        let passport = try await readPassport(preset: "neg-ca-wrong-secret")
+        XCTAssertEqual(passport.chipAuthenticationStatus, .failed)
+        XCTAssertEqual(passport.BACStatus, .success)
+        XCTAssertFalse(passport.documentNumber.isEmpty)
+    }
+
+    /// The chip rejects MSE:Set KAT outright (6A80); already reported as failed before this fix.
+    func testChipAuthenticationRejectedIsReportedAsFailed() async throws {
+        let passport = try await readPassport(preset: "neg-ca-rejected")
+        XCTAssertEqual(passport.chipAuthenticationStatus, .failed)
+        XCTAssertFalse(passport.documentNumber.isEmpty)
+    }
 }
 
 // MARK: - A CoreNFC ISO 7816 tag backed by a TCP connection to PassportSim's apduServer

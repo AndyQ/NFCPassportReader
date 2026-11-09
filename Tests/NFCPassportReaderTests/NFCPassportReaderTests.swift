@@ -218,6 +218,65 @@ final class NFCPassportReaderTests: XCTestCase {
 
         }
     }
+
+    func testAESUnprotectAcceptsValidMAC() throws {
+        let ksenc = [UInt8](repeating: 0x11, count: 16)
+        let ksmac = [UInt8](repeating: 0x22, count: 16)
+        let ssc = [UInt8](repeating: 0x00, count: 8)
+        let sm = SecureMessaging(encryptionAlgorithm: .AES, ksenc: ksenc, ksmac: ksmac, ssc: ssc)
+
+        let plaintext: [UInt8] = [0x61, 0x5B, 0x5F, 0x1F]
+        let rapdu = try buildAESSecureMessagingResponse(ksenc: ksenc, ksmac: ksmac, ssc: ssc, plaintext: plaintext)
+
+        let unprotected = try sm.unprotect(rapdu: rapdu)
+        XCTAssertEqual(unprotected.data, plaintext)
+        XCTAssertEqual(unprotected.sw1, 0x90)
+        XCTAssertEqual(unprotected.sw2, 0x00)
+    }
+
+    func testAESUnprotectRejectsModifiedCiphertext() throws {
+        let ksenc = [UInt8](repeating: 0x11, count: 16)
+        let ksmac = [UInt8](repeating: 0x22, count: 16)
+        let ssc = [UInt8](repeating: 0x00, count: 8)
+        let sm = SecureMessaging(encryptionAlgorithm: .AES, ksenc: ksenc, ksmac: ksmac, ssc: ssc)
+
+        let plaintext: [UInt8] = [0x61, 0x5B, 0x5F, 0x1F]
+        var rapdu = try buildAESSecureMessagingResponse(ksenc: ksenc, ksmac: ksmac, ssc: ssc, plaintext: plaintext)
+
+        // Flip one ciphertext byte. The MAC in DO'8E is left unchanged, so a
+        // correct unprotect() must reject the response.
+        rapdu.data[4] ^= 0x01
+
+        XCTAssertThrowsError(try sm.unprotect(rapdu: rapdu)) { error in
+            guard case NFCPassportReaderError.InvalidResponseChecksum = error else {
+                XCTFail("expected InvalidResponseChecksum, got \(error)")
+                return
+            }
+        }
+    }
+
+    /// Builds an AES SM response APDU whose MAC is computed the same way
+    /// `SecureMessaging.unprotect` verifies it (SSC incremented once, then
+    /// AES-CMAC truncated to 8 bytes over DO'87 || DO'99).
+    private func buildAESSecureMessagingResponse(ksenc: [UInt8], ksmac: [UInt8], ssc: [UInt8], plaintext: [UInt8]) throws -> ResponseAPDU {
+        let sscAfterInc: [UInt8] = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
+        XCTAssertEqual(binToHex(ssc) + 1, binToHex(sscAfterInc))
+
+        let paddedSSC = [UInt8](repeating: 0, count: 8) + sscAfterInc
+        let iv = AESECBEncrypt(key: ksenc, message: paddedSSC)
+        let enc = AESEncrypt(key: ksenc, message: pad(plaintext, blockSize: 16), iv: iv)
+        let cipher = [0x01] + enc
+        let do87 = try [0x87] + toAsn1Length(cipher.count) + cipher
+        let do99: [UInt8] = [0x99, 0x02, 0x90, 0x00]
+
+        let K = pad(paddedSSC + do87 + do99, blockSize: 16)
+        var cc = mac(algoName: .AES, key: ksmac, msg: K)
+        XCTAssertGreaterThan(cc.count, 8, "AES CMAC must be longer than 8 bytes for this test to exercise the truncation path")
+        cc = [UInt8](cc[0..<8])
+
+        let body = do87 + do99 + [0x8E, 0x08] + cc + [0x90, 0x00]
+        return ResponseAPDU(data: body, sw1: 0x90, sw2: 0x00)
+    }
     
     
     func testConvertECDSAPlainTODer() {
@@ -257,5 +316,7 @@ final class NFCPassportReaderTests: XCTestCase {
         ("testSecureMessagingProtect", testSecureMessagingProtect),
         ("testSecureMessagingUnprotectNoData", testSecureMessagingUnprotectNoData),
         ("testSecureMessagingUnprotectWithData", testSecureMessagingUnprotectWithData),
+        ("testAESUnprotectAcceptsValidMAC", testAESUnprotectAcceptsValidMAC),
+        ("testAESUnprotectRejectsModifiedCiphertext", testAESUnprotectRejectsModifiedCiphertext),
     ]
 }

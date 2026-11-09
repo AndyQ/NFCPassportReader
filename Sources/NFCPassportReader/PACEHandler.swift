@@ -121,7 +121,7 @@ public class PACEHandler {
                                sensitive: true)
 
         // First start the initial auth call
-        _ = try await tagReader.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType)
+        _ = try await tagReader.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType, parameterId: paceInfo.getParameterId())
             
         let decryptedNonce = try await self.doStep1()
 
@@ -401,6 +401,9 @@ public class PACEHandler {
 
         PassportLog.pace.debug( "Computing shared secret...")
         let sharedSecret = OpenSSLUtils.computeSharedSecret(privateKeyPair: pcdKeyPair, publicKey: passportPublicKey)
+        guard !sharedSecret.isEmpty else {
+            throw NFCPassportReaderError.PACEError( "Step4 KeyAgreement", "Unable to compute shared secret" )
+        }
         PassportLog.pace.debug(
             "PACE shared secret",
             content: ReaderTracer.hex(sharedSecret),
@@ -410,8 +413,8 @@ public class PACEHandler {
 
         PassportLog.pace.debug( "Deriving ksEnc and ksMac keys from shared secret")
         let gen = SecureMessagingSessionKeyGenerator()
-        let encKey = try! gen.deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: .ENC_MODE)
-        let macKey = try! gen.deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: .MAC_MODE)
+        let encKey = try gen.deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: .ENC_MODE)
+        let macKey = try gen.deriveKey(keySeed: sharedSecret, cipherAlgName: cipherAlg, keyLength: keyLength, mode: .MAC_MODE)
         PassportLog.pace.debug(
             "PACE encryption key",
             content: ReaderTracer.hex(encKey),
