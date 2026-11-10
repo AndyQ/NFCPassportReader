@@ -46,11 +46,14 @@ final class PassportSimTag: NSObject, NFCISO7816Tag {
 
     deinit { close(fd) }
 
-    /// Chooses the PassportSim preset for this session and returns its MRZ key.
-    func selectProfile(_ preset: String) throws -> String {
+    /// Chooses the PassportSim preset for this session and returns its MRZ key and the CAN printed on its
+    /// data page, if any. The server replies "OK <mrzKey> [<can>]".
+    func selectProfile(_ preset: String) throws -> (mrzKey: String, can: String?) {
         let reply = String(decoding: try exchange([UInt8]("PROFILE \(preset)".utf8)), as: UTF8.self)
         guard reply.hasPrefix("OK ") else { throw SimError.profileRejected(reply) }
-        return String(reply.dropFirst(3))
+        let fields = reply.dropFirst(3).split(separator: " ").map(String.init)
+        guard let mrzKey = fields.first else { throw SimError.profileRejected(reply) }
+        return (mrzKey, fields.count > 1 ? fields[1] : nil)
     }
 
     private func exchange(_ payload: [UInt8]) throws -> [UInt8] {

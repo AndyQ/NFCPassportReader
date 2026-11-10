@@ -93,7 +93,7 @@ public class PassportReader : NSObject {
     private var bacHandler : BACHandler?
     private var caHandler : ChipAuthenticationHandler?
     private var paceHandler : PACEHandler?
-    private var mrzKey : String = ""
+    private var accessKey : PassportAccessKey = .mrz("")
     private var aaChallenge: [UInt8]?
     private var dataAmountToReadOverride : Int? = nil
     
@@ -125,8 +125,19 @@ public class PassportReader : NSObject {
     }
     
     /// - Parameter customDisplayMessage: Return a replacement message, or `nil` to use the default description.
+    @available(*, deprecated, renamed: "readPassport(accessKey:tags:aaChallenge:skipSecureElements:skipCA:skipPACE:useExtendedMode:customDisplayMessage:)")
     public func readPassport( mrzKey : String, tags : [DataGroupId] = [], aaChallenge: [UInt8]? = nil, skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, useExtendedMode : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
-        prepareRead(mrzKey: mrzKey, tags: tags, aaChallenge: aaChallenge, skipSecureElements: skipSecureElements, skipCA: skipCA, skipPACE: skipPACE, useExtendedMode: useExtendedMode, customDisplayMessage: customDisplayMessage)
+        try await readPassport(accessKey: .mrz(mrzKey), tags: tags, aaChallenge: aaChallenge, skipSecureElements: skipSecureElements, skipCA: skipCA, skipPACE: skipPACE, useExtendedMode: useExtendedMode, customDisplayMessage: customDisplayMessage)
+    }
+
+    /// Reads a passport over NFC, unlocking the chip with the MRZ or the CAN.
+    ///
+    /// With `.mrz`, PACE is tried first (when the chip supports it) and BAC is the fallback. With `.can`, only PACE
+    /// can be used: a chip without PACE, `skipPACE`, a wrong CAN (`InvalidCAN`) or a chip that doesn't accept the
+    /// CAN all end the read, as there is no MRZ for BAC.
+    /// - Parameter customDisplayMessage: Return a replacement message, or `nil` to use the default description.
+    public func readPassport( accessKey : PassportAccessKey, tags : [DataGroupId] = [], aaChallenge: [UInt8]? = nil, skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, useExtendedMode : Bool = false, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)? = nil) async throws -> NFCPassportModel {
+        prepareRead(accessKey: accessKey, tags: tags, aaChallenge: aaChallenge, skipSecureElements: skipSecureElements, skipCA: skipCA, skipPACE: skipPACE, useExtendedMode: useExtendedMode, customDisplayMessage: customDisplayMessage)
 
         guard NFCNDEFReaderSession.readingAvailable else {
             throw NFCPassportReaderError.NFCNotSupported
@@ -146,9 +157,16 @@ public class PassportReader : NSObject {
 
     /// Reads a passport from an already connected ISO 7816 tag, without starting an NFC reader session.
     /// Intended for testing against chip simulators (for example PassportSim's apduServer reached through a
-    /// socket-backed NFCISO7816Tag); real passports are read with readPassport(mrzKey:...).
+    /// socket-backed NFCISO7816Tag); real passports are read with readPassport(accessKey:...).
+    @available(*, deprecated, renamed: "readPassport(tag:accessKey:tags:aaChallenge:skipSecureElements:skipCA:skipPACE:useExtendedMode:)")
     public func readPassport( tag : NFCISO7816Tag, mrzKey : String, tags : [DataGroupId] = [], aaChallenge: [UInt8]? = nil, skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, useExtendedMode : Bool = false) async throws -> NFCPassportModel {
-        prepareRead(mrzKey: mrzKey, tags: tags, aaChallenge: aaChallenge, skipSecureElements: skipSecureElements, skipCA: skipCA, skipPACE: skipPACE, useExtendedMode: useExtendedMode, customDisplayMessage: nil)
+        try await readPassport(tag: tag, accessKey: .mrz(mrzKey), tags: tags, aaChallenge: aaChallenge, skipSecureElements: skipSecureElements, skipCA: skipCA, skipPACE: skipPACE, useExtendedMode: useExtendedMode)
+    }
+
+    /// Reads a passport from an already connected ISO 7816 tag, without starting an NFC reader session.
+    /// Intended for testing against chip simulators; see readPassport(accessKey:...) for how the access key is used.
+    public func readPassport( tag : NFCISO7816Tag, accessKey : PassportAccessKey, tags : [DataGroupId] = [], aaChallenge: [UInt8]? = nil, skipSecureElements : Bool = true, skipCA : Bool = false, skipPACE : Bool = false, useExtendedMode : Bool = false) async throws -> NFCPassportModel {
+        prepareRead(accessKey: accessKey, tags: tags, aaChallenge: aaChallenge, skipSecureElements: skipSecureElements, skipCA: skipCA, skipPACE: skipPACE, useExtendedMode: useExtendedMode, customDisplayMessage: nil)
         let tagReader = TagReader(tag: tag)
         tagReader.tracer = tracer
         if let newAmount = dataAmountToReadOverride {
@@ -165,10 +183,10 @@ public class PassportReader : NSObject {
         }
     }
 
-    private func prepareRead( mrzKey : String, tags : [DataGroupId], aaChallenge: [UInt8]?, skipSecureElements : Bool, skipCA : Bool, skipPACE : Bool, useExtendedMode : Bool, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)?) {
+    private func prepareRead( accessKey : PassportAccessKey, tags : [DataGroupId], aaChallenge: [UInt8]?, skipSecureElements : Bool, skipCA : Bool, skipPACE : Bool, useExtendedMode : Bool, customDisplayMessage : ((NFCViewDisplayMessage) -> String?)?) {
         
         self.passport = NFCPassportModel()
-        self.mrzKey = mrzKey
+        self.accessKey = accessKey
         self.aaChallenge = aaChallenge
         self.skipCA = skipCA
         self.skipPACE = skipPACE
@@ -340,12 +358,22 @@ extension PassportReader {
     func startReading(tagReader : TagReader) async throws -> NFCPassportModel {
         trackingDelegate?.nfcTagDetected()
 
+        if case .can = accessKey, skipPACE {
+            throw NFCPassportReaderError.InvalidDataPassed("The CAN can only be used with PACE, but skipPACE is set")
+        }
+
         if !skipPACE {
             do {
                 trackingDelegate?.paceStarted()
 
                 tracer.emit(.info, "PACE: reading EF.CardAccess")
-                let data = try await tagReader.readCardAccess()
+                let data: [UInt8]
+                do {
+                    data = try await tagReader.readCardAccess()
+                } catch where accessKey.mrzKey == nil {
+                    // No EF.CardAccess means no PACE, and BAC needs the MRZ.
+                    throw NFCPassportReaderError.InvalidDataPassed("The CAN can only be used with PACE, and this document doesn't support PACE (no EF.CardAccess)")
+                }
                 PassportLog.passportReader.debug("EF.CardAccess read", content: ReaderTracer.hex(data))
                 let cardAccess = try CardAccess(data)
                 passport.cardAccess = cardAccess
@@ -355,7 +383,8 @@ extension PassportReader {
                 PassportLog.passportReader.info( "Starting Password Authenticated Connection Establishment (PACE)" )
                  
                 let paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
-                try await paceHandler.doPACE(mrzKey: mrzKey )
+                self.paceHandler = paceHandler
+                try await paceHandler.doPACE(accessKey: accessKey )
                 passport.PACEStatus = .success
                 tracer.emit(.info, "PACE succeeded")
                 PassportLog.passportReader.debug( "PACE Succeeded" )
@@ -366,7 +395,11 @@ extension PassportReader {
 
                 passport.PACEStatus = .failed
                 let reason = (error as? NFCPassportReaderError)?.value ?? error.localizedDescription
-                if allowBACFallback {
+                if accessKey.mrzKey == nil {
+                    PassportLog.passportReader.error( "PACE with the CAN failed" )
+                    tracer.emit(.error, "PACE failed: \(reason). BAC fallback not possible with the CAN")
+                    throw error
+                } else if allowBACFallback {
                     PassportLog.passportReader.error( "PACE Failed - falling back to BAC" )
                     tracer.emit(.error, "PACE failed, falling back to BAC: \(reason)")
                 } else {
@@ -403,7 +436,7 @@ extension PassportReader {
         // If we have a masterlist url set then use that and verify the passport now
         self.passport.verifyPassport(masterListURL: self.masterListURL, useCMSVerification: self.passiveAuthenticationUsesOpenSSL)
         tracer.emit(.info, "Read complete",
-                    detail: "PACE=\(passport.PACEStatus) BAC=\(passport.BACStatus) CA=\(passport.chipAuthenticationStatus) " +
+                    detail: "password=\(accessKey.passwordName) PACE=\(passport.PACEStatus) BAC=\(passport.BACStatus) CA=\(passport.chipAuthenticationStatus) " +
                         "SOD signature=\(passport.passportCorrectlySigned) DSC chain=\(passport.documentSigningCertificateVerified) " +
                         "DG hashes=\(passport.passportDataNotTampered)")
 
@@ -437,12 +470,29 @@ extension PassportReader {
         
         self.passport.BACStatus = .failed
 
+        guard let mrzKey = accessKey.mrzKey else {
+            throw NFCPassportReaderError.InvalidDataPassed("BAC needs the MRZ; it can't be done with the CAN")
+        }
         self.bacHandler = BACHandler( tagReader: tagReader )
         try await bacHandler?.performBACAndGetSessionKeys( mrzKey: mrzKey )
         PassportLog.passportReader.info( "Basic Access Control (BAC) - SUCCESS!" )
         tracer.emit(.info, "BAC succeeded")
 
         self.passport.BACStatus = .success
+    }
+
+    /// Starts a fresh secure messaging session after CA failed or the chip dropped the session: BAC with the MRZ,
+    /// or PACE again with the CAN (there's no MRZ for BAC).
+    func reestablishSecureMessaging(tagReader : TagReader) async throws {
+        guard accessKey.mrzKey == nil, let paceHandler else {
+            try await doBACAuthentication(tagReader : tagReader)
+            return
+        }
+        tracer.emit(.info, "Re-establishing secure messaging with PACE (CAN)")
+        tagReader.secureMessaging = nil
+        _ = try await tagReader.selectMasterFile()
+        try await paceHandler.doPACE(accessKey: accessKey)
+        _ = try await tagReader.selectPassportApplication()
     }
 
     func readDataGroups( tagReader: TagReader ) async throws {
@@ -482,12 +532,12 @@ extension PassportReader {
                             self.passport.chipAuthenticationStatus = .success
                             tracer.emit(.info, "Chip Authentication succeeded")
                         } catch {
-                            PassportLog.passportReader.info( "Chip Authentication failed - re-establishing BAC")
-                            tracer.emit(.error, "Chip Authentication failed, redoing BAC: \(error.localizedDescription)")
+                            PassportLog.passportReader.info( "Chip Authentication failed - re-establishing secure messaging")
+                            tracer.emit(.error, "Chip Authentication failed, redoing \(accessKey.mrzKey == nil ? "PACE" : "BAC"): \(error.localizedDescription)")
                             self.passport.chipAuthenticationStatus = .failed
                             
-                            // Failed Chip Auth, need to re-establish BAC
-                            try await doBACAuthentication(tagReader: tagReader)
+                            // Failed Chip Auth, need to re-establish secure messaging
+                            try await reestablishSecureMessaging(tagReader: tagReader)
                         }
                     }
                 }
@@ -561,8 +611,8 @@ extension PassportReader {
                 }
                 
                 if redoBAC {
-                    // Redo BAC and try again
-                    try await doBACAuthentication(tagReader : tagReader)
+                    // Redo BAC (or PACE, with the CAN) and try again
+                    try await reestablishSecureMessaging(tagReader : tagReader)
                 } else {
                     // Some other error lets have another try
                 }

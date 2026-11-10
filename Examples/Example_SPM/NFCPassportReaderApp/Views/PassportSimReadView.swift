@@ -17,6 +17,7 @@ struct PassportSimReadView: View {
     @AppStorage("passportSim.host") private var host = "127.0.0.1"
     @AppStorage("passportSim.port") private var port = "9077"
     @AppStorage("passportSim.preset") private var preset = "pace-im"
+    @AppStorage("passportSim.useCAN") private var useCAN = false
     @State private var reading = false
     @State private var error: String?
 
@@ -25,7 +26,7 @@ struct PassportSimReadView: View {
 
     private let presets = [
         "pace-im", "pace-im-3des", "pace-im-aes256", "pace-gm", "pace-gm-3des", "pace-gm-aes256",
-        "pace-only", "pace-full", "full", "bac-photo", "bac-ca-aes", "neg-pace-bad-token",
+        "pace-only", "pace-full", "full", "bac-photo", "bac-ca-aes", "neg-pace-bad-token", "pace-can-unsupported",
     ]
 
     var body: some View {
@@ -46,6 +47,9 @@ struct PassportSimReadView: View {
                     TextField("Or type a preset id", text: $preset)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
+                }
+                Section(footer: Text("PACE only, no BAC fallback. PassportSim presets print the CAN 123456; pace-can-unsupported rejects it.")) {
+                    Toggle("Unlock with the profile's CAN", isOn: $useCAN)
                 }
                 if let error = error {
                     Section { Text(error).foregroundColor(.red).font(.footnote) }
@@ -79,11 +83,19 @@ struct PassportSimReadView: View {
         let host = self.host
         let skipPACE = settings.skipPACE
         let skipCA = settings.skipCA
+        let useCAN = self.useCAN
         Task {
             do {
                 let tag = try PassportSimTag(host: host, port: portNumber)
-                let mrzKey = try tag.selectProfile(preset)
-                let passport = try await passportReader.readPassport(tag: tag, mrzKey: mrzKey, skipCA: skipCA, skipPACE: skipPACE)
+                let (mrzKey, can) = try tag.selectProfile(preset)
+                let accessKey: PassportAccessKey
+                if useCAN {
+                    guard let can else { throw NFCPassportReaderError.InvalidDataPassed("Profile \(preset) has no CAN") }
+                    accessKey = .can(can)
+                } else {
+                    accessKey = .mrz(mrzKey)
+                }
+                let passport = try await passportReader.readPassport(tag: tag, accessKey: accessKey, skipCA: skipCA, skipPACE: skipPACE)
                 await MainActor.run {
                     reading = false
                     presentationMode.wrappedValue.dismiss()

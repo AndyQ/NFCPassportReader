@@ -57,13 +57,24 @@ struct MainView : View {
                 }).navigationTitle("Scan MRZ"), isActive: $showScanMRZ){ Text("") }
 
                 VStack {
-                    HStack {
-                        Spacer()
-                        Button(action: {self.showScanMRZ.toggle()}) {
-                            Label("Scan MRZ", systemImage:"camera")
-                        }.padding([.top, .trailing])
+                    Picker("Unlock with", selection: $settings.useCAN) {
+                        Text("MRZ").tag(false)
+                        Text("CAN").tag(true)
                     }
-                    MRZEntryView()
+                    .pickerStyle(.segmented)
+                    .padding([.horizontal, .top])
+
+                    if settings.useCAN {
+                        CANEntryView()
+                    } else {
+                        HStack {
+                            Spacer()
+                            Button(action: {self.showScanMRZ.toggle()}) {
+                                Label("Scan MRZ", systemImage:"camera")
+                            }.padding([.top, .trailing])
+                        }
+                        MRZEntryView()
+                    }
                     
                     Button(action: {
                         self.scanPassport()
@@ -166,6 +177,9 @@ extension MainView {
 
     
     var isValid : Bool {
+        if settings.useCAN {
+            return settings.can.count == 6
+        }
         return settings.passportNumber.count >= 8
     }
 
@@ -188,7 +202,8 @@ extension MainView {
 extension MainView {
 
     /// Simulator only: launch with `-passportSimAutoRead <preset>` to read that PassportSim preset from
-    /// the APDU server on 127.0.0.1:9077 at start-up and open the Trace view.
+    /// the APDU server on 127.0.0.1:9077 at start-up and open the Trace view. Add `-passportSimAutoReadCAN YES`
+    /// to unlock it with the profile's CAN instead of the MRZ.
     func autoReadFromPassportSim() {
         #if targetEnvironment(simulator)
         guard let preset = UserDefaults.standard.string(forKey: "passportSimAutoRead"), !preset.isEmpty else { return }
@@ -201,8 +216,9 @@ extension MainView {
         Task {
             do {
                 let tag = try PassportSimTag(host: "127.0.0.1", port: 9077)
-                let mrzKey = try tag.selectProfile(preset)
-                let passport = try await passportReader.readPassport(tag: tag, mrzKey: mrzKey)
+                let (mrzKey, can) = try tag.selectProfile(preset)
+                let accessKey: PassportAccessKey = UserDefaults.standard.bool(forKey: "passportSimAutoReadCAN") ? .can(can ?? "") : .mrz(mrzKey)
+                let passport = try await passportReader.readPassport(tag: tag, accessKey: accessKey)
                 await MainActor.run { self.settings.passport = passport }
             } catch {
                 appLogging.error("PassportSim auto read failed: \(error.localizedDescription)")
@@ -241,6 +257,8 @@ extension MainView {
 
         let passportUtils = PassportUtils()
         let mrzKey = passportUtils.getMRZKey( passportNumber: pptNr, dateOfBirth: dob, dateOfExpiry: doe)
+        // The CAN only works with PACE; there's no BAC fallback with it.
+        let accessKey: PassportAccessKey = settings.useCAN ? .can(settings.can) : .mrz(mrzKey)
 
         // Record an APDU trace for the Trace view
         configureLogging()
@@ -270,7 +288,7 @@ extension MainView {
             }
             
             do {
-                let passport = try await passportReader.readPassport( mrzKey: mrzKey, skipCA: skipCA, skipPACE: skipPACE, useExtendedMode: useExtendedMode, customDisplayMessage:customMessageHandler)
+                let passport = try await passportReader.readPassport( accessKey: accessKey, skipCA: skipCA, skipPACE: skipPACE, useExtendedMode: useExtendedMode, customDisplayMessage:customMessageHandler)
                 
                 if let _ = passport.faceImageInfo {
                     print( "Got face Image details")

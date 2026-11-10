@@ -24,6 +24,8 @@ final class SettingsStore: ObservableObject {
         static let passportNumber = "passportNumber"
         static let dateOfBirth = "dateOfBirth"
         static let dateOfExpiry = "dateOfExpiry"
+        static let useCAN = "useCAN"
+        static let can = "can"
     }
     
     private var cancellable: Cancellable?
@@ -41,7 +43,9 @@ final class SettingsStore: ObservableObject {
         Keys.skipCA,
         Keys.passportNumber,
         Keys.dateOfBirth,
-        Keys.dateOfExpiry
+        Keys.dateOfExpiry,
+        Keys.useCAN,
+        Keys.can
     ]
     
     let objectWillChange = PassthroughSubject<Void, Never>()
@@ -62,6 +66,8 @@ final class SettingsStore: ObservableObject {
             Keys.passportNumber: "",
             Keys.dateOfBirth: Date().timeIntervalSince1970,
             Keys.dateOfExpiry: Date().timeIntervalSince1970,
+            Keys.useCAN: false,
+            Keys.can: "",
         ])
 
         // Ignore unrelated UserDefaults changes, such as the trace view's AppStorage filters.
@@ -125,6 +131,18 @@ final class SettingsStore: ObservableObject {
         get { defaults.string(forKey: Keys.passportNumber) ?? "" }
     }
     
+    /// Unlock the chip with the Card Access Number (PACE only) instead of the MRZ.
+    var useCAN: Bool {
+        set { defaults.set(newValue, forKey: Keys.useCAN) }
+        get { defaults.bool(forKey: Keys.useCAN) }
+    }
+
+    /// The Card Access Number printed on the document.
+    var can: String {
+        set { defaults.set(newValue, forKey: Keys.can) }
+        get { defaults.string(forKey: Keys.can) ?? "" }
+    }
+
     var dateOfBirth: Date {
         set {
             defaults.set(newValue.timeIntervalSince1970, forKey: Keys.dateOfBirth)

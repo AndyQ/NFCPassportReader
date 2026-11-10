@@ -33,6 +33,9 @@ public enum NFCPassportReaderError: Error {
     case TimeOutError
     case UserCanceled
     case InvalidMRZKey
+    /// PACE with the Card Access Number failed: the chip rejected the reader's authentication token (6300)
+    /// or its own token didn't verify, so the CAN doesn't match this document.
+    case InvalidCAN
     case MoreThanOneTagFound
     case InvalidHashAlgorithmSpecified
     case UnsupportedCipherAlgorithm
@@ -68,6 +71,7 @@ public enum NFCPassportReaderError: Error {
             case .TimeOutError: return "TimeOutError"
             case .UserCanceled: return "UserCanceled"
             case .InvalidMRZKey: return "InvalidMRZKey"
+            case .InvalidCAN: return "InvalidCAN"
             case .MoreThanOneTagFound: return "MoreThanOneTagFound"
             case .InvalidHashAlgorithmSpecified: return "InvalidHashAlgorithmSpecified"
             case .UnsupportedCipherAlgorithm: return "UnsupportedCipherAlgorithm"

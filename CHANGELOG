@@ -1,3 +1,13 @@
+V3.0.1
+   Added PACE with the Card Access Number (CAN) as the password (ICAO 9303-11 4.4, 9.7.3): readPassport(accessKey: .can(...)) and
+      readPassport(tag:accessKey:...), with the new PassportAccessKey (.mrz / .can). With the CAN there is no BAC fallback, a failed CA or dropped session is recovered by re-running PACE, and a wrong CAN throws the new NFCPassportReaderError.InvalidCAN.
+      Tested against the CAN-derived K_pi of ICAO Appendix H and Italian ID Card. Based on ideas from PRs #106, #160, and #249 - thanks @TWilb, @xlokk73 and @visav-tietoevry
+   Deprecated readPassport(mrzKey:...), readPassport(tag:mrzKey:...) and PACEHandler.doPACE(mrzKey:) now default to using .mrz(mrzkey)
+   Fixed PACE with Diffie-Hellman groups (id-PACE-DH-*), broken since the OpenSSL 3 change: step 3 only generated EC keys and failed with "Failed to generate EC key".
+   Fixed SOD signature verification when the signature algorithm doesn't name its hash (rsaEncryption, id-ecPublicKey) or is RSASSA-PSS with a hash other than SHA-256: the hash now comes from the SignerInfo digestAlgorithm or the PSS parameters (including the MGF1 hash). The algorithms and key are logged on failure.
+   Fixed DSC chain verification through a CSCA link certificate (error 25, path length constraint exceeded): every master list certificate is now a trust anchor (X509_V_FLAG_PARTIAL_CHAIN)
+   Sample app: MRZ / CAN picker on the main screen
+
 V3.0.0
    Fixed Chip Authentication being reported as successful when the chip accepted the key but derived different session
       keys: CA is now only reported as successful once a command under the new keys succeeds (ICAO 9303-11 6.2)

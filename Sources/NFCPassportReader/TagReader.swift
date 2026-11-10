@@ -239,15 +239,19 @@ public class TagReader {
         // By executing above SELECT command (with data=0x3F00) master file should be selected and you should be able to read EF.CardAccess from passport.
         
         // First select master file
-        let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 0x00, instructionCode: 0xA4, p1Parameter: 0x00, p2Parameter: 0x0C, data: Data([0x3f,0x00]), expectedResponseLength: -1)
-        
-        _ = try await send( cmd: cmd)
-            
+        _ = try await selectMasterFile()
+
         // Now read EC.CardAccess
         let data = try await self.selectFileAndRead(tag: [0x01,0x1C])
         return data
     }
     
+    /// SELECT MF (3F00), ISO/IEC 7816-4 6.11.3: where EF.CardAccess lives and PACE starts.
+    func selectMasterFile() async throws -> ResponseAPDU {
+        let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 0x00, instructionCode: 0xA4, p1Parameter: 0x00, p2Parameter: 0x0C, data: Data([0x3f,0x00]), expectedResponseLength: -1)
+        return try await send( cmd: cmd)
+    }
+
     func selectPassportApplication() async throws -> ResponseAPDU {
         // Finally reselect the eMRTD application so the rest of the reading works as normal
         PassportLog.tagReader.debug( "Re-selecting eMRTD Application" )

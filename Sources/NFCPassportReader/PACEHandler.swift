@@ -39,7 +39,7 @@ public class PACEHandler {
     
     
     private static let MRZ_PACE_KEY_REFERENCE : UInt8 = 0x01
-    private static let CAN_PACE_KEY_REFERENCE : UInt8 = 0x02 // Not currently supported
+    private static let CAN_PACE_KEY_REFERENCE : UInt8 = 0x02
     private static let PIN_PACE_KEY_REFERENCE : UInt8 = 0x03 // Not currently supported
     private static let CUK_PACE_KEY_REFERENCE : UInt8 = 0x04 // Not currently supported
 
@@ -52,6 +52,7 @@ public class PACEHandler {
     // Params used
     private var paceKey : [UInt8] = []
     private var paceKeyType : UInt8 = 0
+    private var accessKey : PassportAccessKey = .mrz("")
     private var paceOID : String = ""
     private var parameterSpec : Int32 = -1
     private var mappingType : PACEMappingType!
@@ -71,7 +72,16 @@ public class PACEHandler {
         isPACESupported = true
     }
     
+    @available(*, deprecated, renamed: "doPACE(accessKey:)")
     public func doPACE( mrzKey : String ) async throws {
+        try await doPACE(accessKey: .mrz(mrzKey))
+    }
+
+    /// Runs PACE with the MRZ or the CAN as password (ICAO 9303-11, 4.4).
+    ///
+    /// With the CAN, a wrong CAN throws `NFCPassportReaderError.InvalidCAN`, and a chip that doesn't accept the CAN
+    /// (MSE:Set AT rejected) throws a `PACEError` saying so.
+    public func doPACE( accessKey : PassportAccessKey ) async throws {
         guard isPACESupported else {
             throw NFCPassportReaderError.NotYetSupported( "PACE not supported" )
         }
@@ -87,8 +97,9 @@ public class PACEHandler {
         digestAlg = try paceInfo.getDigestAlgorithm()  // Either SHA-1 or SHA-256.
         keyLength = try paceInfo.getKeyLength()  // Get key length  the enc cipher. Either 128, 192, or 256.
 
-        paceKeyType = PACEHandler.MRZ_PACE_KEY_REFERENCE
-        paceKey = try createPaceKey( from: mrzKey )
+        self.accessKey = accessKey
+        paceKeyType = accessKey.paceKeyReference
+        paceKey = try createPaceKey( for: accessKey )
         
         PassportLog.pace.debug(
             "doPace - input parameters",
@@ -102,12 +113,12 @@ public class PACEHandler {
                 keyLength - \(self.keyLength)
                 """
         )
-        PassportLog.pace.debug(
-            "MRZ key",
-            content: mrzKey,
-            sensitive: true,
-            redactedMessage: "PACE MRZ credential derived"
-        )
+        switch accessKey {
+            case .mrz(let mrzKey):
+                PassportLog.pace.debug("MRZ key", content: mrzKey, sensitive: true, redactedMessage: "PACE MRZ credential derived")
+            case .can(let can):
+                PassportLog.pace.debug("CAN", content: can, sensitive: true, redactedMessage: "PACE CAN credential derived")
+        }
         PassportLog.pace.debug(
             "PACE key",
             content: binToHexRep(self.paceKey, asArray: true),
@@ -116,23 +127,35 @@ public class PACEHandler {
         )
 
         tagReader.tracer?.emit(.info, "PACE: \(self.paceInfo.getProtocolOIDString())",
-                               detail: "OID=\(paceOID) parameterId=\(paceInfo.getParameterId().map(String.init) ?? "-") K_pi=\(binToHexRep(paceKey))",
+                               detail: "OID=\(paceOID) parameterId=\(paceInfo.getParameterId().map(String.init) ?? "-") password=\(accessKey.passwordName) K_pi=\(binToHexRep(paceKey))",
                                component: .pace,
                                sensitive: true)
 
-        // First start the initial auth call
-        _ = try await tagReader.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType, parameterId: paceInfo.getParameterId())
-            
-        let decryptedNonce = try await self.doStep1()
+        // First start the initial auth call. The chip only says whether it accepts the CAN here: nothing in
+        // EF.CardAccess advertises it (ICAO 9303-11, 4.4: the chip MAY accept the CAN).
+        do {
+            _ = try await tagReader.sendMSESetATMutualAuth(oid: paceOID, keyType: paceKeyType, parameterId: paceInfo.getParameterId())
+        } catch NFCPassportReaderError.ResponseError(let reason, let sw1, let sw2) where paceKeyType == PACEHandler.CAN_PACE_KEY_REFERENCE {
+            let message = "Chip did not accept the CAN for PACE (\(binToHexRep(sw1))\(binToHexRep(sw2)) \(reason))"
+            tagReader.tracer?.emit(.error, "PACE: \(message)", component: .pace)
+            throw NFCPassportReaderError.PACEError("MSE:Set AT", message)
+        }
 
-        let ephemeralParams = try await self.doStep2(passportNonce: decryptedNonce)
-        defer { EVP_PKEY_free( ephemeralParams ) }
+        do {
+            let decryptedNonce = try await self.doStep1()
 
-        let (ephemeralKeyPair, passportPublicKey) = try await self.doStep3KeyExchange(ephemeralParams: ephemeralParams)
-        defer { EVP_PKEY_free(ephemeralKeyPair); EVP_PKEY_free(passportPublicKey) }
+            let ephemeralParams = try await self.doStep2(passportNonce: decryptedNonce)
+            defer { EVP_PKEY_free( ephemeralParams ) }
 
-        let (encKey, macKey) = try await self.doStep4KeyAgreement( pcdKeyPair: ephemeralKeyPair, passportPublicKey: passportPublicKey)
-        try self.paceCompleted( ksEnc: encKey, ksMac: macKey )
+            let (ephemeralKeyPair, passportPublicKey) = try await self.doStep3KeyExchange(ephemeralParams: ephemeralParams)
+            defer { EVP_PKEY_free(ephemeralKeyPair); EVP_PKEY_free(passportPublicKey) }
+
+            let (encKey, macKey) = try await self.doStep4KeyAgreement( pcdKeyPair: ephemeralKeyPair, passportPublicKey: passportPublicKey)
+            try self.paceCompleted( ksEnc: encKey, ksMac: macKey )
+        } catch NFCPassportReaderError.InvalidMRZKey where paceKeyType == PACEHandler.CAN_PACE_KEY_REFERENCE {
+            // TagReader reports 6300 (authentication failed) as InvalidMRZKey; here it was the CAN.
+            throw NFCPassportReaderError.InvalidCAN
+        }
         PassportLog.pace.debug("PACE SUCCESSFUL" )
     }
     
@@ -161,7 +184,7 @@ public class PACEHandler {
 */
     }
     
-    /// Performs PACE Step 1- receives an encrypted nonce from the passport and decypts it with the  PACE key - derived from MRZ, CAN (not yet supported)
+    /// Performs PACE Step 1- receives an encrypted nonce from the passport and decypts it with the PACE key - derived from the MRZ or the CAN
     func doStep1() async throws -> [UInt8] {
         PassportLog.pace.debug("Doing PACE Step1...")
         let response = try await tagReader.sendGeneralAuthenticate(data: [], isLast: false)
@@ -335,31 +358,14 @@ public class PACEHandler {
     func doStep3KeyExchange(ephemeralParams: OpaquePointer) async throws -> (OpaquePointer, OpaquePointer) {
         PassportLog.pace.debug( "Doing PACE Step3 - Key Exchange")
 
-        // Create a new EC_KEY with the same group
-        guard let ephEcKey = EC_KEY_new() else {
-            throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to create EC key" )
-        }
-        defer { EC_KEY_free(ephEcKey) }
-
-        guard
-            let ecParams = EVP_PKEY_get0_EC_KEY(ephemeralParams),
-            let group = EC_KEY_get0_group(ecParams),
-            EC_KEY_set_group(ephEcKey, group) == 1,
-            EC_KEY_generate_key(ephEcKey) == 1 else {
-            throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to generate EC key" )
-        }
-
-        // Wrap the EC_KEY into an EVP_PKEY
-        var ephKeyPair = EVP_PKEY_new()
+        // Generate the ephemeral key pair on the mapped domain parameters. (OpenSSL 3's EVP_PKEY_keygen
+        // can't use these legacy keys, which carry a mapped generator, so build the key directly.)
+        var ephKeyPair: OpaquePointer? = try Self.generateEphemeralKeyPair(params: ephemeralParams)
         guard let ephemeralKeyPair = ephKeyPair else {
             throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Unable to get create ephermeral key pair" )
         }
         defer { EVP_PKEY_free(ephKeyPair) }
 
-        guard EVP_PKEY_set1_EC_KEY(ephemeralKeyPair, ephEcKey) == 1 else {
-            throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to set ephemeral key pair private key" )
-        }
-        
         PassportLog.pace.debug( "Generated Ephemeral key pair")
 
         guard let publicKey = OpenSSLUtils.getPublicKeyData( from: ephemeralKeyPair ) else {
@@ -476,6 +482,8 @@ public class PACEHandler {
                 sensitive: true,
                 redactedMessage: "PACE chip authentication token mismatch"
             )
+            // The chip accepted our token, so with the CAN a mismatch here still means the keys differ.
+            if paceKeyType == PACEHandler.CAN_PACE_KEY_REFERENCE { throw NFCPassportReaderError.InvalidCAN }
             throw NFCPassportReaderError.PACEError( "Step3 KeyAgreement", "Error PICC Token mismatch!\npicToken - \(piccToken)\nexpectedPICCToken - \(expectedPICCToken)" )
         }
         
@@ -538,8 +546,11 @@ extension PACEHandler {
         let bn = BN_bin2bn(passportPublicKeyData, Int32(passportPublicKeyData.count), nil)
         defer { BN_free( bn ) }
         
+        // Padded, so a secret with leading zero bytes still converts to the right h
         var secret = [UInt8](repeating: 0, count: Int(DH_size(dh_mapping_key)))
-        DH_compute_key( &secret, bn, dh_mapping_key)
+        guard DH_compute_key_padded( &secret, bn, dh_mapping_key) > 0 else {
+            throw PACEHandlerError.DHKeyAgreementError( "Unable to compute the DH mapping secret" )
+        }
         
         // Convert the secret to a bignum
         let bn_h = BN_bin2bn(secret, Int32(secret.count), nil)
@@ -570,6 +581,7 @@ extension PACEHandler {
         // bn_g = g^nonce mod p
         // ephemeral_key->g = bn_g mod p * h  => (g^nonce mod p) * h mod p
         let bn_ctx = BN_CTX_new()
+        defer { BN_CTX_free(bn_ctx) }
         guard BN_mod_exp(bn_g, g, nonce, p, bn_ctx) == 1,
               BN_mod_mul(new_g, bn_g, bn_h, p, bn_ctx) == 1 else {
             // Error
@@ -708,6 +720,43 @@ extension PACEHandler {
         return authToken
     }
     
+    /// Generates a key pair on the same domain parameters as `params`: an EC key on its group, or a DH key
+    /// on its p, q and g (PACE with id-PACE-DH-*, whose mapped generator g' comes from step 2).
+    /// Caller is responsible for freeing the key.
+    static func generateEphemeralKeyPair( params: OpaquePointer ) throws -> OpaquePointer {
+        let keyType = EVP_PKEY_get_base_id( params )
+        guard let keyPair = EVP_PKEY_new() else {
+            throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Unable to get create ephermeral key pair" )
+        }
+        if keyType == EVP_PKEY_DH || keyType == EVP_PKEY_DHX {
+            guard let dhParams = EVP_PKEY_get0_DH(params), let dh = DHparams_dup(dhParams) else {
+                EVP_PKEY_free(keyPair)
+                throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to copy the mapped DH parameters" )
+            }
+            defer { DH_free(dh) }
+            guard DH_generate_key(dh) == 1, EVP_PKEY_set1_DH(keyPair, dh) == 1 else {
+                EVP_PKEY_free(keyPair)
+                throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to generate DH key" )
+            }
+        } else {
+            guard let ecKey = EC_KEY_new() else {
+                EVP_PKEY_free(keyPair)
+                throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to create EC key" )
+            }
+            defer { EC_KEY_free(ecKey) }
+            guard
+                let ecParams = EVP_PKEY_get0_EC_KEY(params),
+                let group = EC_KEY_get0_group(ecParams),
+                EC_KEY_set_group(ecKey, group) == 1,
+                EC_KEY_generate_key(ecKey) == 1,
+                EVP_PKEY_set1_EC_KEY(keyPair, ecKey) == 1 else {
+                EVP_PKEY_free(keyPair)
+                throw NFCPassportReaderError.PACEError( "Step3 KeyEx", "Failed to generate EC key" )
+            }
+        }
+        return keyPair
+    }
+
     /// Encodes a PublicKey as an TLV strucuture based on TR-SAC 1.01 4.5.1 and 4.5.2
     /// - Parameters:
     ///   - oid: The object identifier specifying the key type
@@ -739,16 +788,25 @@ extension PACEHandler {
         return [UInt8](data)
     }
 
-    /// Computes a key seed based on an MRZ key
-    /// - Parameter the mrz key
-    /// - Returns a encoded key based on the mrz key that can be used for PACE
-    func createPaceKey( from mrzKey: String ) throws -> [UInt8] {
-        let buf: [UInt8] = Array(mrzKey.utf8)
-        let hash = calcSHA1Hash(buf)
-        
+    /// Derives K_pi = KDF(f(pi), 3) from the password (ICAO 9303-11, 9.7.3 and table 8):
+    /// f(MRZ) = SHA-1(MRZ information), and f(CAN) = the CAN as an ISO 8859-1 string, not hashed.
+    func createPaceKey( for accessKey: PassportAccessKey ) throws -> [UInt8] {
+        try Self.paceKey(for: accessKey, cipherAlg: cipherAlg, keyLength: keyLength)
+    }
+
+    static func paceKey( for accessKey: PassportAccessKey, cipherAlg: String, keyLength: Int ) throws -> [UInt8] {
+        let seed: [UInt8]
+        switch accessKey {
+            case .mrz(let mrzKey):
+                seed = calcSHA1Hash(Array(mrzKey.utf8))
+            case .can(let can):
+                guard !can.isEmpty, let bytes = can.data(using: .isoLatin1) else {
+                    throw NFCPassportReaderError.InvalidDataPassed("The CAN must be a non-empty ISO 8859-1 string")
+                }
+                seed = [UInt8](bytes)
+        }
         let smskg = SecureMessagingSessionKeyGenerator()
-        let key = try smskg.deriveKey(keySeed: hash, cipherAlgName: cipherAlg, keyLength: keyLength, nonce: nil, mode: .PACE_MODE, paceKeyReference: paceKeyType)
-        return key
+        return try smskg.deriveKey(keySeed: seed, cipherAlgName: cipherAlg, keyLength: keyLength, nonce: nil, mode: .PACE_MODE, paceKeyReference: accessKey.paceKeyReference)
     }
     
     /// Performs the ECDH PACE GM key agreement protocol by multiplying a private key with a public key

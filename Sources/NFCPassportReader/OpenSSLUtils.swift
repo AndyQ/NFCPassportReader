@@ -194,7 +194,10 @@ public class OpenSSLUtils {
         }
         defer { X509_STORE_CTX_free(store) }
         
-        X509_STORE_set_flags(cert_ctx, 0)
+        // Every certificate in a master list is a trust anchor, including CSCA link certificates (ICAO 9303-12),
+        // so stop at the first trusted one. Otherwise OpenSSL carries on through a link certificate to the new CSCA,
+        // whose pathLenConstraint of 0 then fails the chain (error 25, path length constraint exceeded).
+        X509_STORE_set_flags(cert_ctx, UInt(X509_V_FLAG_PARTIAL_CHAIN))
         rc = X509_STORE_CTX_init(store, cert_ctx, x509.cert, nil)
         if rc == 0 {
             return .failure(OpenSSLError.UnableToVerifyX509CertificateForSOD("Unable to initialise X509_STORE_CTX"))
@@ -271,7 +274,7 @@ public class OpenSSLUtils {
     static func verifyAndReturnSODEncapsulatedData( sod : SOD ) throws -> Data {
         
         let encapsulatedContent = try sod.getEncapsulatedContent()
-        let signedAttribsHashAlgo = try sod.getEncapsulatedContentDigestAlgorithm()
+        let signerDigest = try sod.getSignerInfoDigestAlgorithm()
         let signedAttributes = try sod.getSignedAttributes()
         let messageDigest = try sod.getMessageDigestFromSignedAttributes()
         let signature = try sod.getSignature()
@@ -279,7 +282,8 @@ public class OpenSSLUtils {
         
         let pubKey = try sod.getPublicKey()
         
-        let mdHash : Data = try Data(calcHash(data: [UInt8](encapsulatedContent), hashAlgorithm: signedAttribsHashAlgo))
+        // The messageDigest attribute is the hash of the content with the SignerInfo's digestAlgorithm (RFC 5652 5.4)
+        let mdHash : Data = try Data(calcHash(data: [UInt8](encapsulatedContent), hashAlgorithm: signerDigest))
         
         // Make sure that hash equals the messageDigest
         if messageDigest != mdHash {
@@ -287,10 +291,24 @@ public class OpenSSLUtils {
             throw OpenSSLError.VerifyAndReturnSODEncapsulatedData("messageDigest Hash doesn't hatch that of the signed attributes")
         }
         
+        // The signature's hash: the one named in the signature algorithm (sha256WithRSAEncryption, ecdsa-with-SHA384),
+        // the PSS parameters' for RSASSA-PSS, otherwise (rsaEncryption, id-ecPublicKey) the SignerInfo's digestAlgorithm.
+        // Some documents sign with a different hash from the digestAlgorithm, so the algorithm's own hash comes first.
+        var digest = signerDigest
+        var mgf1Digest : String? = nil
+        if sigType.lowercased().contains("rsassapss") {
+            let pss = sod.getPSSParameters()
+            digest = pss.hash
+            mgf1Digest = pss.mgf1Hash
+        } else if let named = digestName(inSignatureAlgorithm: sigType) {
+            digest = named
+        }
+        
         // Verify signed attributes
-        if  !verifySignature( data : [UInt8](signedAttributes), signature : [UInt8](signature), pubKey : pubKey, digestType: sigType ) {
-            
-            throw OpenSSLError.VerifyAndReturnSODEncapsulatedData("Unable to verify signature for signed attributes")
+        if  !verifySignature( data : [UInt8](signedAttributes), signature : [UInt8](signature), pubKey : pubKey, digestType: sigType, digest: digest, pssMGF1Digest: mgf1Digest ) {
+            let details = "signatureAlgorithm=\(sigType) digest=\(digest)\(mgf1Digest.map { " mgf1=\($0)" } ?? "") digestAlgorithm=\(signerDigest) key=\(keyDescription(pubKey)) \(getOpenSSLError())"
+            PassportLog.openSSL.error("SOD signature over the signed attributes did not verify - \(details)")
+            throw OpenSSLError.VerifyAndReturnSODEncapsulatedData("Unable to verify signature for signed attributes (\(details))")
         }
         
         return encapsulatedContent
@@ -436,21 +454,36 @@ public class OpenSSLUtils {
     /// - Parameter publicKey: The OpenSSL EVP_PKEY  key
     /// - Parameter digestType: the type of hash to use (empty string to use no digest type)
     /// - Returns: True if the signature was verified
-    static func verifySignature( data : [UInt8], signature : [UInt8], pubKey : OpaquePointer, digestType: String ) -> Bool {
-        
-        var digest = "sha256"
-        let digestType = digestType.lowercased()
-        if digestType.contains( "sha1" ) {
-            digest = "sha1"
-        } else if digestType.contains( "sha224" ) {
-            digest = "sha224"
-        } else if digestType.contains( "sha256" ) || digestType.contains( "rsassapss" ) {
-            digest = "sha256"
-        } else if digestType.contains( "sha384" ) {
-            digest = "sha384"
-        } else if digestType.contains( "sha512" ) {
-            digest = "sha512"
+    /// The hash named in a signature algorithm such as sha384WithRSAEncryption or ecdsa-with-SHA512, if it names one
+    static func digestName( inSignatureAlgorithm name: String ) -> String? {
+        let name = name.lowercased()
+        for digest in ["sha1", "sha224", "sha256", "sha384", "sha512"] where name.contains(digest) {
+            return digest
         }
+        return nil
+    }
+    
+    /// A short description of a public key for diagnostics, e.g. "RSA 2048" or "EC 256"
+    static func keyDescription( _ key: OpaquePointer ) -> String {
+        let type: String
+        switch EVP_PKEY_get_base_id(key) {
+            case EVP_PKEY_RSA: type = "RSA"
+            case EVP_PKEY_RSA_PSS: type = "RSA-PSS"
+            case EVP_PKEY_EC: type = "EC"
+            default: type = "type \(EVP_PKEY_get_base_id(key))"
+        }
+        return "\(type) \(EVP_PKEY_get_bits(key))"
+    }
+    
+    /// Verifies `signature` over `data`.
+    /// - Parameters:
+    ///   - digestType: the signature algorithm name; RSASSA-PSS ("rsassaPss") selects PSS padding
+    ///   - digest: the hash to use, otherwise the one named in `digestType` (SHA-256 if none)
+    ///   - pssMGF1Digest: the MGF1 hash for PSS, otherwise the same as the signature hash
+    static func verifySignature( data : [UInt8], signature : [UInt8], pubKey : OpaquePointer, digestType: String, digest: String? = nil, pssMGF1Digest: String? = nil ) -> Bool {
+        
+        let digest = digest ?? digestName(inSignatureAlgorithm: digestType) ?? "sha256"
+        let digestType = digestType.lowercased()
         
         // Fix for some invalid ECDSA based signatures
         // An ECDSA signature comprises of a Sequence of 2 big integers (R & S) and the verification
@@ -462,7 +495,7 @@ public class OpenSSLUtils {
         // we keep the original value
         // If we change any values then we re-generate the signature and use this
         var fixedSignature = signature
-        if digestType.contains( "ecdsa" ) {
+        if digestType.contains( "ecdsa" ) || EVP_PKEY_get_base_id(pubKey) == EVP_PKEY_EC {
             // Decode signature
             if let sequence = TKBERTLVRecord(from:Data(signature)),
                sequence.tag == 0x30,
@@ -518,7 +551,10 @@ public class OpenSSLUtils {
             }
         }
         
-        let md = EVP_get_digestbyname(digest)
+        guard let md = EVP_get_digestbyname(digest) else {
+            PassportLog.openSSL.error("Unknown digest \(digest)")
+            return false
+        }
         
         let ctx = EVP_MD_CTX_new()
         var pkey_ctx : OpaquePointer?
@@ -533,6 +569,9 @@ public class OpenSSLUtils {
         if digestType.contains( "rsassapss" ) {
             EVP_PKEY_CTX_ctrl_str(pkey_ctx, "rsa_padding_mode", "pss" )
             EVP_PKEY_CTX_ctrl_str(pkey_ctx, "rsa_pss_saltlen", "auto" )
+            if let mgf1 = pssMGF1Digest {
+                EVP_PKEY_CTX_ctrl_str(pkey_ctx, "rsa_mgf1_md", mgf1 )
+            }
         }
         
         nRes = EVP_DigestUpdate(ctx, data, data.count);
