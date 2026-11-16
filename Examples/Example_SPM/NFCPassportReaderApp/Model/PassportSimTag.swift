@@ -56,6 +56,13 @@ final class PassportSimTag: NSObject, NFCISO7816Tag {
         return (mrzKey, fields.count > 1 ? fields[1] : nil)
     }
 
+    /// PassportSim's master list PEM (its test CSCA and the link certificate for the previous CSCA), or nil if the
+    /// server is too old to know the command. Use a connection of its own: the server answers "OK\n<PEM>".
+    func masterList() throws -> String? {
+        let reply = String(decoding: try exchange([UInt8]("MASTERLIST".utf8)), as: UTF8.self)
+        return reply.hasPrefix("OK\n") ? String(reply.dropFirst(3)) : nil
+    }
+
     private func exchange(_ payload: [UInt8]) throws -> [UInt8] {
         try write(withUnsafeBytes(of: UInt32(payload.count).bigEndian, Array.init) + payload)
         let header = try read(4)

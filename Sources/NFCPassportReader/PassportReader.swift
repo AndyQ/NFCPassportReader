@@ -437,7 +437,7 @@ extension PassportReader {
         self.passport.verifyPassport(masterListURL: self.masterListURL, useCMSVerification: self.passiveAuthenticationUsesOpenSSL)
         tracer.emit(.info, "Read complete",
                     detail: "password=\(accessKey.passwordName) PACE=\(passport.PACEStatus) BAC=\(passport.BACStatus) CA=\(passport.chipAuthenticationStatus) " +
-                        "SOD signature=\(passport.passportCorrectlySigned) DSC chain=\(passport.documentSigningCertificateVerified) " +
+                        "SOD signature=\(passport.documentSigningCertificateVerified) DSC chain=\(passport.passportCorrectlySigned) " +
                         "DG hashes=\(passport.passportDataNotTampered)")
 
         return self.passport

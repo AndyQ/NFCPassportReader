@@ -1,4 +1,4 @@
-Tests/NFCPassportReaderTests/PACEAccessKeyTests.swift //
+//
 //  PACEAccessKeyTests.swift
 //  NFCPassportReaderTests
 //
