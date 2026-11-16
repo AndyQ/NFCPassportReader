@@ -2,8 +2,8 @@
 //  PACELiveSimulatorTests.swift
 //  NFCPassportReaderTests
 //
-//  End-to-end PACE (GM and IM), Chip Authentication and secure messaging against the PassportSim
-//  chip simulator over TCP, using the real TagReader / PACEHandler code paths.
+//  End-to-end PACE (DH and ECDH GM, ECDH IM, MRZ or CAN), Chip Authentication, secure messaging and Passive
+//  Authentication against the PassportSim chip simulator over TCP, using the real TagReader / PACEHandler code paths.
 //
 //  Skipped unless PASSPORTSIM_PORT is set. To run:
 //    (PassportSim)        ./gradlew :tools:apduServer
@@ -20,13 +20,23 @@ import CoreNFC
 final class PACELiveSimulatorTests: XCTestCase {
 
     private func connect(preset: String) throws -> (SocketISO7816Tag, String) {
+        let (tag, mrzKey, _) = try connectWithCAN(preset: preset)
+        return (tag, mrzKey)
+    }
+
+    /// Also returns the CAN printed on the profile's data page (PassportSim's specimen CAN is 123456).
+    private func connectWithCAN(preset: String) throws -> (SocketISO7816Tag, String, String?) {
+        let (tag, _, _) = try connectWithoutProfile()
+        let (mrzKey, can) = try tag.selectProfile(preset)
+        return (tag, mrzKey, can)
+    }
+
+    private func connectWithoutProfile() throws -> (SocketISO7816Tag, String, String?) {
         guard let port = ProcessInfo.processInfo.environment["PASSPORTSIM_PORT"].flatMap({ UInt16($0) }) else {
             throw XCTSkip("Set PASSPORTSIM_PORT (TEST_RUNNER_PASSPORTSIM_PORT for xcodebuild) and run PassportSim's apduServer")
         }
         let host = ProcessInfo.processInfo.environment["PASSPORTSIM_HOST"] ?? "127.0.0.1"
-        let tag = try SocketISO7816Tag(host: host, port: port)
-        let mrzKey = try tag.selectProfile(preset)
-        return (tag, mrzKey)
+        return (try SocketISO7816Tag(host: host, port: port), "", nil)
     }
 
     /// Mirrors PassportReader.startReading: CardAccess, PACE, re-select the applet, then read under PACE SM.
@@ -35,7 +45,7 @@ final class PACELiveSimulatorTests: XCTestCase {
         let tagReader = TagReader(tag: tag)
         let cardAccess = try CardAccess(try await tagReader.readCardAccess())
         let pace = try PACEHandler(cardAccess: cardAccess, tagReader: tagReader)
-        try await pace.doPACE(mrzKey: override ?? mrzKey)
+        try await pace.doPACE(accessKey: .mrz(override ?? mrzKey))
         _ = try await tagReader.selectPassportApplication()
         XCTAssertNotNil(tagReader.secureMessaging, "\(preset): PACE should start secure messaging")
 
@@ -86,7 +96,14 @@ final class PACELiveSimulatorTests: XCTestCase {
     /// Full PassportReader flow: CA status as reported to the app.
     private func readPassport(preset: String) async throws -> NFCPassportModel {
         let (tag, mrzKey) = try connect(preset: preset)
-        return try await PassportReader().readPassport(tag: tag, mrzKey: mrzKey)
+        return try await PassportReader().readPassport(tag: tag, accessKey: .mrz(mrzKey))
+    }
+
+    /// Full PassportReader flow with the CAN (or `can` instead of the profile's own).
+    private func readPassportWithCAN(preset: String, can override: String? = nil) async throws -> NFCPassportModel {
+        let (tag, _, can) = try connectWithCAN(preset: preset)
+        let profileCAN = try XCTUnwrap(can, "\(preset) has no CAN; update PassportSim")
+        return try await PassportReader().readPassport(tag: tag, accessKey: .can(override ?? profileCAN))
     }
 
     func testChipAuthenticationReportedAsSuccess() async throws {
@@ -106,7 +123,143 @@ final class PACELiveSimulatorTests: XCTestCase {
         XCTAssertFalse(passport.documentNumber.isEmpty)
     }
 
+    // MARK: PACE with the Card Access Number
+
+    func testPACEWithCAN() async throws {
+        for preset in ["pace-gm", "pace-gm-3des", "pace-gm-aes256", "pace-im", "pace-im-3des", "pace-im-aes256", "pace-only"] {
+            let passport = try await readPassportWithCAN(preset: preset)
+            XCTAssertEqual(passport.PACEStatus, .success, preset)
+            XCTAssertEqual(passport.BACStatus, .notDone, "\(preset): BAC must not be used with the CAN")
+            XCTAssertFalse(passport.documentNumber.isEmpty, preset)
+        }
+    }
+
+    func testPACEWithCANThenChipAuthentication() async throws {
+        let passport = try await readPassportWithCAN(preset: "pace-full")
+        XCTAssertEqual(passport.PACEStatus, .success)
+        XCTAssertEqual(passport.chipAuthenticationStatus, .success)
+        XCTAssertEqual(passport.BACStatus, .notDone)
+    }
+
+    /// CA is rejected after PACE. With the MRZ the reader redoes BAC; with the CAN there is no MRZ, so it must
+    /// select the MF and run PACE again before reading on.
+    func testChipAuthenticationFailureAfterPACEWithCANRedoesPACE() async throws {
+        let withCAN = try await readPassportWithCAN(preset: "neg-pace-ca-rejected")
+        XCTAssertEqual(withCAN.chipAuthenticationStatus, .failed)
+        XCTAssertEqual(withCAN.PACEStatus, .success)
+        XCTAssertEqual(withCAN.BACStatus, .notDone)
+        XCTAssertFalse(withCAN.documentNumber.isEmpty)
+
+        let withMRZ = try await readPassport(preset: "neg-pace-ca-rejected")
+        XCTAssertEqual(withMRZ.chipAuthenticationStatus, .failed)
+        XCTAssertEqual(withMRZ.BACStatus, .success)
+    }
+
+    func testWrongCANThrowsInvalidCAN() async throws {
+        for preset in ["pace-gm", "pace-im"] {
+            do {
+                _ = try await readPassportWithCAN(preset: preset, can: "654321")
+                XCTFail("\(preset): PACE should fail with the wrong CAN")
+            } catch let error as XCTSkip {
+                throw error
+            } catch NFCPassportReaderError.InvalidCAN {
+                // Expected: the chip rejects T_PCD (6300) and there is no BAC fallback
+            } catch {
+                XCTFail("\(preset): expected InvalidCAN, got \(error)")
+            }
+        }
+    }
+
+    func testCANRejectedByChipThatOnlyAcceptsTheMRZ() async throws {
+        do {
+            _ = try await readPassportWithCAN(preset: "pace-can-unsupported")
+            XCTFail("MSE:Set AT with the CAN should be rejected")
+        } catch let error as XCTSkip {
+            throw error
+        } catch NFCPassportReaderError.PACEError(let step, let reason) {
+            XCTAssertEqual(step, "MSE:Set AT")
+            XCTAssertTrue(reason.contains("CAN"), reason)
+        }
+        // The same chip still reads with the MRZ.
+        let passport = try await readPassport(preset: "pace-can-unsupported")
+        XCTAssertEqual(passport.PACEStatus, .success)
+    }
+
+    func testCANOnBACOnlyDocumentFailsBeforeBAC() async throws {
+        do {
+            _ = try await readPassportWithCAN(preset: "bac-photo")
+            XCTFail("A BAC-only document can't be read with the CAN")
+        } catch let error as XCTSkip {
+            throw error
+        } catch NFCPassportReaderError.InvalidDataPassed(let reason) {
+            XCTAssertTrue(reason.contains("CAN"), reason)
+        }
+    }
+
     /// The chip rejects MSE:Set KAT outright (6A80); already reported as failed before this fix.
+    // MARK: PACE with Diffie-Hellman (id-PACE-DH-GM-*, RFC 5114 2048-bit groups)
+
+    func testDHPACE() async throws {
+        for preset in ["pace-dh-3des", "pace-dh"] {
+            for useCAN in [false, true] {
+                let label = "\(preset) \(useCAN ? "CAN" : "MRZ")"
+                let passport = try await readPassportVerified(preset: preset, useCAN: useCAN)
+                XCTAssertEqual(passport.PACEStatus, .success, label)
+                XCTAssertEqual(passport.BACStatus, .notDone, label)
+                XCTAssertFalse(passport.documentNumber.isEmpty, label)
+                XCTAssertTrue(passport.passportDataNotTampered, label)
+            }
+        }
+    }
+
+    // MARK: Passive Authentication against PassportSim's master list (the CSCA and its link certificate)
+
+    /// SOD signatures named every way PassportSim can (RSASSA-PSS, rsaEncryption, id-ecPublicKey, a SHA-256 signature
+    /// over a SHA-512 digestAlgorithm), a DSC from the previous CSCA via a link certificate, and DH PACE with the CAN.
+    func testPassiveAuthenticationPasses() async throws {
+        let presets = ["pace-gm", "sod-rsa-pss-sha512", "sod-rsaencryption-sha512", "sod-ecdsa-ecpublickey-sha384",
+                       "sod-sha256-signature-sha512-digest", "pa-link-certificate", "pace-dh-3des"]
+        for preset in presets {
+            let passport = try await readPassportVerified(preset: preset, useCAN: preset == "pace-dh-3des")
+            XCTAssertTrue(passport.documentSigningCertificateVerified, "\(preset): SOD signature \(passport.verificationErrors)")
+            XCTAssertTrue(passport.passportCorrectlySigned, "\(preset): DSC chain \(passport.verificationErrors)")
+            XCTAssertTrue(passport.passportDataNotTampered, "\(preset): DG hashes \(passport.verificationErrors)")
+            XCTAssertTrue(passport.verificationErrors.isEmpty, "\(preset): \(passport.verificationErrors)")
+        }
+    }
+
+    func testPassiveAuthenticationNegatives() async throws {
+        let badSignature = try await readPassportVerified(preset: "neg-bad-sod-signature")
+        XCTAssertFalse(badSignature.documentSigningCertificateVerified)
+        XCTAssertFalse(badSignature.passportDataNotTampered, "hashes aren't trusted from an unsigned SOD")
+        XCTAssertTrue(badSignature.passportCorrectlySigned, "the DSC itself still chains to the CSCA")
+
+        let badHash = try await readPassportVerified(preset: "neg-dg-hash-mismatch")
+        XCTAssertTrue(badHash.documentSigningCertificateVerified)
+        XCTAssertTrue(badHash.passportCorrectlySigned)
+        XCTAssertFalse(badHash.passportDataNotTampered)
+    }
+
+    /// Full PassportReader flow with PassportSim's master list, so Passive Authentication runs.
+    private func readPassportVerified(preset: String, useCAN: Bool = false) async throws -> NFCPassportModel {
+        let masterList = try masterListURL()
+        let (tag, mrzKey, can) = try connectWithCAN(preset: preset)
+        let accessKey: PassportAccessKey = useCAN ? .can(try XCTUnwrap(can, preset)) : .mrz(mrzKey)
+        return try await PassportReader(masterListURL: masterList).readPassport(tag: tag, accessKey: accessKey)
+    }
+
+    private static var masterList: URL?
+
+    /// PassportSim's MASTERLIST, written once to a temporary file.
+    private func masterListURL() throws -> URL {
+        if let url = Self.masterList { return url }
+        let (tag, _, _) = try connectWithoutProfile()
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("passportsim-masterlist.pem")
+        try tag.masterList().write(to: url, atomically: true, encoding: .utf8)
+        Self.masterList = url
+        return url
+    }
+
     func testChipAuthenticationRejectedIsReportedAsFailed() async throws {
         let passport = try await readPassport(preset: "neg-ca-rejected")
         XCTAssertEqual(passport.chipAuthenticationStatus, .failed)
@@ -139,10 +292,19 @@ final class SocketISO7816Tag: NSObject, NFCISO7816Tag {
 
     deinit { close(fd) }
 
-    /// Chooses the PassportSim preset for this session and returns its MRZ key.
-    func selectProfile(_ preset: String) throws -> String {
+    /// Chooses the PassportSim preset for this session and returns its MRZ key and CAN ("OK <mrzKey> [<can>]").
+    func selectProfile(_ preset: String) throws -> (mrzKey: String, can: String?) {
         let reply = String(decoding: try exchange([UInt8]("PROFILE \(preset)".utf8)), as: UTF8.self)
         guard reply.hasPrefix("OK ") else { throw NFCPassportReaderError.UnexpectedError }
+        let fields = reply.dropFirst(3).split(separator: " ").map(String.init)
+        guard let mrzKey = fields.first else { throw NFCPassportReaderError.UnexpectedError }
+        return (mrzKey, fields.count > 1 ? fields[1] : nil)
+    }
+
+    /// PassportSim's master list PEM ("OK\n<PEM>"): its test CSCA and the link certificate for the previous CSCA.
+    func masterList() throws -> String {
+        let reply = String(decoding: try exchange([UInt8]("MASTERLIST".utf8)), as: UTF8.self)
+        guard reply.hasPrefix("OK\n") else { throw NFCPassportReaderError.UnexpectedError }
         return String(reply.dropFirst(3))
     }
 

@@ -93,6 +93,32 @@ struct MRZEntryView : View {
     }
 }
 
+/// Entry for the Card Access Number: 6 digits printed on the data page, used with PACE instead of the MRZ.
+struct CANEntryView : View {
+    @EnvironmentObject var settings: SettingsStore
+
+    var body : some View {
+        let canBinding = Binding<String>(get: {
+            settings.can
+        }, set: {
+            settings.can = String($0.filter(\.isNumber).prefix(6))
+        })
+        VStack(alignment: .leading) {
+            TextField("Card Access Number (CAN)", text: canBinding)
+                .keyboardType(.numberPad)
+                .modifier(ClearButton(text: canBinding))
+                .foregroundColor(Color.primary)
+                .padding([.leading, .trailing, .top])
+            Divider()
+            Text("The 6-digit CAN printed on the document's data page. It only works with PACE, so documents without PACE (or that don't accept the CAN) can't be read with it.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding([.leading, .trailing])
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+}
+
 // This will be removed once DatePicker inline works correctly
 extension MRZEntryView {
     

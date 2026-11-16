@@ -49,14 +49,25 @@ Expiry date checksum - 5
 mrzKey = "12345678898012772508315"
 ```
 
-Then on an instance of PassportReader, call the readPassport method passing in the mrzKey, the datagroups to read and a completion block.  
+Then on an instance of PassportReader, call the readPassport method passing in the access key and, optionally, the datagroups to read.  
 e.g.
 
 ```
-passportReader.readPassport(mrzKey: mrzKey, tags: [.COM, .DG1, .DG2], completed: { (error) in
-   ...
-}
+let passport = try await passportReader.readPassport(accessKey: .mrz(mrzKey), tags: [.COM, .DG1, .DG2])
 ```
+
+### Reading with the CAN
+
+Documents that support PACE can also be unlocked with the Card Access Number (CAN), the number (usually 6 digits) printed on
+the data page, instead of the MRZ (ICAO 9303-11 4.4):
+
+```
+let passport = try await passportReader.readPassport(accessKey: .can("123456"))
+```
+
+Chips aren't required to accept the CAN, and BAC needs the MRZ, so with the CAN there is no BAC fallback: a document without
+PACE, a chip that doesn't accept the CAN (`PACEError("MSE:Set AT", ...)`) or a wrong CAN (`NFCPassportReaderError.InvalidCAN`)
+ends the read. `readPassport(mrzKey:...)` still works but is deprecated in favour of `readPassport(accessKey: .mrz(...))`.
 
 Currently the datagroups supported are: COM, DG1, DG2, DG7, DG11, DG12, DG14 (partial), DG15, and SOD
 
@@ -69,16 +80,15 @@ In addition, you can customise the messages displayed in the NFC Session Reader 
 e.g. to override just the initial request to present passport message:
 
 ```
-passportReader.readPassport(mrzKey: mrzKey, tags: [.COM, .DG1, .DG2],
+let passport = try await passportReader.readPassport(accessKey: .mrz(mrzKey), tags: [.COM, .DG1, .DG2],
     customDisplayMessage: { (displayMessage) in
         switch displayMessage {
             case .requestPresentPassport:
                 return "Hold your iPhone near an NFC enabled passport."
             default: 
                 return nil
-    }, completed: { (error) in
-        ...
-}
+        }
+    })
 ```
 
 Extended mode reads (not supported by all passports) can be enabled by passing in the useExtendedMode flag to the readPassport function.

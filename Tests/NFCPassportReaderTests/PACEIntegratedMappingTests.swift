@@ -14,7 +14,7 @@ import OpenSSL
 final class PACEIntegratedMappingTests: XCTestCase {
 
     // ICAO 9303-11 Appendix H.1: brainpoolP256r1, AES-128. H.1 says it reuses the MRZ key of
-    // Appendix G but prints a different K_pi, so K_pi is taken from H.1 as printed.
+    // Appendix G but prints a different K_pi: it is KDF_pi of the CAN "123456" (see PACEAccessKeyTests).
     let kPi = "591468CDA83D65219CCCB8560233600F"
     let s = "2923BE84E16CD6AE529049F1F1BBE9EB"
     let z = "143DC40C08C8E891FBED7DEDB92B64AD"
