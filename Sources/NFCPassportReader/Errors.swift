@@ -42,6 +42,8 @@ public enum NFCPassportReaderError: Error {
     case UnsupportedMappingType
     case PACEError(String,String)
     case ChipAuthenticationFailed
+    /// Active Authentication ran and the chip's signature did not verify, and `allowActiveAuthenticationFailure` is false.
+    case ActiveAuthenticationFailed
     case InvalidDataPassed(String)
     case NotYetSupported(String)
     case Unknown(Error)
@@ -78,6 +80,7 @@ public enum NFCPassportReaderError: Error {
             case .UnsupportedMappingType: return "UnsupportedMappingType"
             case .PACEError(let step, let reason): return "PACEError (\(step)) - \(reason)"
             case .ChipAuthenticationFailed: return "ChipAuthenticationFailed"
+            case .ActiveAuthenticationFailed: return "ActiveAuthenticationFailed"
             case .InvalidDataPassed(let reason) : return "Invalid data passed - \(reason)"
             case .NotYetSupported(let reason) : return "Not yet supported - \(reason)"
             case .Unknown(let error): return "Unknown error: \(error.localizedDescription)"

@@ -86,6 +86,14 @@ public class PassportReader : NSObject {
     private var skipPACE = false
     /// If PACE is attempted and fails, fall back to BAC. Default true keeps existing behavior.
     public var allowBACFallback: Bool = true
+    /// If Chip Authentication is attempted and fails, re-establish secure messaging, carry on reading and report
+    /// the failure in `chipAuthenticationStatus`. Default true keeps existing behavior; false makes the read throw
+    /// `NFCPassportReaderError.ChipAuthenticationFailed` instead.
+    public var allowChipAuthenticationFailure: Bool = true
+    /// If Active Authentication runs and the chip's signature does not verify, finish the read and report it in
+    /// `activeAuthenticationPassed`. Default true keeps existing behavior; false makes the read throw
+    /// `NFCPassportReaderError.ActiveAuthenticationFailed` instead.
+    public var allowActiveAuthenticationFailure: Bool = true
     
     // Extended mode is used for reading eMRTD's that support extended length APDUs
     private var useExtendedMode = false
@@ -459,6 +467,9 @@ extension PassportReader {
         tracer.emit(self.passport.activeAuthenticationPassed ? .info : .error,
                     "Active Authentication \(self.passport.activeAuthenticationPassed ? "passed" : "FAILED")",
                     detail: "challenge=\(binToHexRep(challenge))")
+        if !self.passport.activeAuthenticationPassed && !allowActiveAuthenticationFailure {
+            throw NFCPassportReaderError.ActiveAuthenticationFailed
+        }
     }
     
 
@@ -535,7 +546,12 @@ extension PassportReader {
                             PassportLog.passportReader.info( "Chip Authentication failed - re-establishing secure messaging")
                             tracer.emit(.error, "Chip Authentication failed, redoing \(accessKey.mrzKey == nil ? "PACE" : "BAC"): \(error.localizedDescription)")
                             self.passport.chipAuthenticationStatus = .failed
-                            
+
+                            // The caller asked for a chip that proves itself, so don't carry on without that proof.
+                            if !allowChipAuthenticationFailure {
+                                throw NFCPassportReaderError.ChipAuthenticationFailed
+                            }
+
                             // Failed Chip Auth, need to re-establish secure messaging
                             try await reestablishSecureMessaging(tagReader: tagReader)
                         }
