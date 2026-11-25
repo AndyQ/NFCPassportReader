@@ -10,6 +10,7 @@ import Foundation
 public class DataGroup11 : DataGroup {
     
     public private(set) var fullName : String?
+    public private(set) var otherNames : [String]?
     public private(set) var personalNumber : String?
     public private(set) var dateOfBirth : String?
     public private(set) var placeOfBirth : String?
@@ -35,6 +36,10 @@ public class DataGroup11 : DataGroup {
         
         repeat {
             tag = try getNextTag()
+            if tag == 0xA0 {
+                otherNames = try parseOtherNames()
+                continue
+            }
             let val = try String( bytes:getNextValue(), encoding:.utf8)
             if tag == 0x5F0E {
                 fullName = val
@@ -62,5 +67,23 @@ public class DataGroup11 : DataGroup {
                 custodyInfo = val
             }
         } while pos < data.count
+    }
+
+    /// Other names (tag A0): the number of names (tag 02), then each name (tag 5F0F)
+    private func parseOtherNames() throws -> [String] {
+        _ = try getNextLength()
+        let countTag = try getNextTag()
+        try verifyTag(countTag, equals: 0x02)
+        let count = try getNextValue().first ?? 0
+
+        var names = [String]()
+        for _ in 0 ..< count {
+            let tag = try getNextTag()
+            try verifyTag(tag, equals: 0x5F0F)
+            if let name = try String( bytes:getNextValue(), encoding:.utf8) {
+                names.append(name)
+            }
+        }
+        return names
     }
 }

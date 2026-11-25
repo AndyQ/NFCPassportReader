@@ -96,6 +96,21 @@ final class DataGroupParsingTests: XCTestCase {
         }
     }
 
+    func testDatagroup11OtherNames() throws {
+        // Full name, two other names (A0: count 02, then 5F0F for each), personal number
+        let dg11Val = hexRepToBin("6B3D5C055F0EA05F105F0E0B42524F574E3C3C4A414E45A01D0201025F0F0B534D4954483C3C4A414E455F0F09444F453C3C4A414E455F1006313233343536")
+        let dg11 = try XCTUnwrap(try DataGroupParser().parseDG(data: dg11Val) as? DataGroup11)
+
+        XCTAssertEqual( dg11.fullName, "BROWN<<JANE" )
+        XCTAssertEqual( dg11.otherNames, ["SMITH<<JANE", "DOE<<JANE"] )
+        XCTAssertEqual( dg11.personalNumber, "123456" )
+    }
+
+    func testDatagroup11OtherNamesWrongTag() {
+        let dg11Val = hexRepToBin("6B415C055F0EA05F105F0E0B42524F574E3C3C4A414E45A0210201025F1001585F0F0B534D4954483C3C4A414E455F0F09444F453C3C4A414E455F1006313233343536")
+        XCTAssertThrowsError( try DataGroupParser().parseDG(data: dg11Val) )
+    }
+
     func testDatagroup12Parsing() {
         
         // This is a cut down version of the DG7 record. It contains everything up to the end of the image header - no actuall image data as its way too big to include here
