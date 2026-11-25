@@ -86,6 +86,10 @@ public class PassportReader : NSObject {
     private var skipPACE = false
     /// If PACE is attempted and fails, fall back to BAC. Default true keeps existing behavior.
     public var allowBACFallback: Bool = true
+
+    /// Elementary files outside ICAO 9303 to read after the data groups, by file identifier (e.g. [0x01, 0x22]).
+    /// Raw contents go to `NFCPassportModel.additionalFiles`; a file that can't be read is skipped.
+    public var additionalFiles: [[UInt8]] = []
     
     // Extended mode is used for reading eMRTD's that support extended length APDUs
     private var useExtendedMode = false
@@ -429,6 +433,9 @@ extension PassportReader {
 
         try await doActiveAuthenticationIfNeccessary(tagReader : tagReader)
 
+        // Last, as a failed read can break secure messaging
+        await readAdditionalFiles(tagReader: tagReader)
+
         self.updateReaderSessionMessage(alertMessage: NFCViewDisplayMessage.successfulRead)
         self.shouldNotReportNextReaderSessionInvalidationErrorUserCanceled = true
         self.readerSession?.invalidate()
@@ -560,6 +567,26 @@ extension PassportReader {
         }
     }
     
+    func readAdditionalFiles( tagReader : TagReader ) async {
+        for (index, fileId) in additionalFiles.enumerated() {
+            let name = binToHexRep(fileId)
+            PassportLog.passportReader.info( "Reading additional file - \(name)" )
+            tracer.emit(.info, "Reading additional file \(name)")
+            do {
+                let data = try await tagReader.selectFileAndRead(tag: fileId)
+                self.passport.addAdditionalFile(fileId, data: data)
+            } catch {
+                PassportLog.passportReader.error( "Error reading additional file \(name) - \(error)" )
+                tracer.emit(.error, "Additional file \(name) not read: \(error.localizedDescription)")
+
+                // The error may have broken secure messaging for the next file
+                if index < additionalFiles.count - 1 {
+                    try? await reestablishSecureMessaging(tagReader: tagReader)
+                }
+            }
+        }
+    }
+
     func readDataGroup( tagReader : TagReader, dgId : DataGroupId ) async throws -> DataGroup?  {
 
         self.currentlyReadingDataGroup = dgId
