@@ -112,6 +112,9 @@ public class NFCPassportModel {
     // Parsed datagroup hashes
     public private(set) var dataGroupsAvailable = [DataGroupId]()
     public private(set) var dataGroupsRead : [DataGroupId:DataGroup] = [:]
+
+    /// Raw contents of `PassportReader.additionalFiles`, by file identifier
+    public private(set) var additionalFiles : [[UInt8]:[UInt8]] = [:]
     public private(set) var dataGroupHashes = [DataGroupId: DataGroupHash]()
 
     public internal(set) var cardAccess : CardAccess?
@@ -217,6 +220,10 @@ public class NFCPassportModel {
         }
     }
     
+    public func addAdditionalFile(_ fileId : [UInt8], data: [UInt8] ) {
+        self.additionalFiles[fileId] = data
+    }
+
     public func addDataGroup(_ id : DataGroupId, dataGroup: DataGroup ) {
         self.dataGroupsRead[id] = dataGroup
         if id != .COM && id != .SOD {
